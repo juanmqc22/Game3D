@@ -47,7 +47,10 @@ scripts/balanceamento.js    simulação dos confrontos (não é teste)
 
 - Testes: `node --test`
 - Balanceamento: `node scripts/balanceamento.js` (faces opcionais:
-  `--faces 25,25,25,25` na ordem ATAQUE,DEFESA,ESPECIAL,TROPECO)
+  `--faces 25,25,25,25` na ordem ATAQUE,DEFESA,ESPECIAL,TROPECO; testar números
+  sem editar a tabela: `--ajuste SAP06.vida=15,SAP06.recuo=1`)
+- Guarda-corpo de bichinho novo (em `test/criaturas.test.js`): maior dano + 2
+  do TROPECO <= 60% da vida de qualquer alvo. Não afrouxar esse limite.
 - Rodar local: `npx serve`
 
 ## Restrições

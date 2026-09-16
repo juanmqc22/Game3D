@@ -28,6 +28,26 @@ for (const c of CRIATURAS) {
   });
 }
 
+// Guarda-corpo de balanceamento: o pior golpe único (maior dano + 2 do TROPECO)
+// não pode passar de 60% da vida do alvo — nenhum bichinho morre de vida cheia
+// em uma ou duas rodadas por causa de um único golpe.
+const BONUS_TROPECO = 2;
+const FRACAO_MAXIMA = 0.6;
+
+for (const atacante of CRIATURAS) {
+  for (const alvo of CRIATURAS) {
+    test(`golpe máximo: ${atacante.codigo} -> ${alvo.codigo}`, () => {
+      const piorGolpe = Math.max(atacante.forca, atacante.especial.dano) + BONUS_TROPECO;
+      const limite = FRACAO_MAXIMA * alvo.vida;
+      // Compara em inteiros (piorGolpe * 5 <= vida * 3) para evitar erro de ponto flutuante.
+      assert.ok(
+        piorGolpe * 5 <= alvo.vida * 3,
+        `pior golpe ${piorGolpe} > ${limite.toFixed(1)} (60% de ${alvo.vida}); excesso ${(piorGolpe - limite).toFixed(1)}`,
+      );
+    });
+  }
+}
+
 test('buscarCriatura aceita minúsculas e espaços', () => {
   assert.equal(buscarCriatura(' sap 02 ').nome, 'Bocão');
 });

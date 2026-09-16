@@ -264,9 +264,13 @@ describe('regra 7 — vida travada em 0 e fim de partida', () => {
     const { fim } = resolverRodada(partida(FORTE, ESPINHO, [{ vida: 3 }, {}]), ATAQUE, ESPECIAL);
     assert.deepEqual(fim, { terminou: true, vencedor: 1 });
   });
-  test('Trovão pode se matar numa rodada que venceu: o oponente ganha', () => {
-    const { resumo, fim } = resolverRodada(partida(BOMBA, ESPINHO, [{ vida: 2 }, {}]), ESPECIAL, ATAQUE);
+  test('Trovão (recuo) pode se matar numa rodada que venceu: o oponente ganha', () => {
+    const recuo = 1;
+    const trovao = criatura('TrovaoTeste', 14, 3, { dano: 6, recuo });
+    const { estado, resumo, fim } = resolverRodada(partida(trovao, ESPINHO, [{ vida: recuo }, {}]), ESPECIAL, ATAQUE);
     assert.equal(resumo.vencedor, 0);
+    assert.equal(estado.jogadores[0].vida, 0);
+    assert.equal(estado.jogadores[1].vida, 12 - 6);
     assert.deepEqual(fim, { terminou: true, vencedor: 1 });
   });
   test('empate duplo: os dois zeram na mesma rodada', () => {

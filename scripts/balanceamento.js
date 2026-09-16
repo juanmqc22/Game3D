@@ -6,17 +6,62 @@
 //
 // --faces: peso de cada face na ordem ATAQUE,DEFESA,ESPECIAL,TROPECO
 //          (não precisa somar 100; padrão 25,25,25,25 = peça justa).
+// --ajuste: testa números sem editar js/criaturas.js. CODIGO.campo=valor,
+//           separados por vírgula. Campos: vida, forca, dano, cura, recuo.
+//           Ex.: --ajuste SAP06.vida=15,SAP06.recuo=1
 //
 // Alvos: taxa de vitória entre 30% e 70%, mediana de rodadas entre 5 e 15,
-// nenhuma partida chegando ao limite de rodadas.
+// nenhuma partida chegando ao limite de rodadas, e média de cada bichinho
+// contra o resto do elenco entre MEDIA_ELENCO_MIN e MEDIA_ELENCO_MAX.
 
 import { pathToFileURL } from 'node:url';
 import { CRIATURAS } from '../js/criaturas.js';
 import { SIMBOLOS, estadoInicial, resolverRodada } from '../js/regras.js';
 
+// Faixa da taxa média de vitória de cada bichinho contra o resto do elenco.
+export const MEDIA_ELENCO_MIN = 0.45;
+export const MEDIA_ELENCO_MAX = 0.57;
+
 export const FACES_UNIFORMES = [25, 25, 25, 25];
 export const LIMITE_RODADAS = 40;
 export const ALVOS = { taxaMin: 0.3, taxaMax: 0.7, medianaMin: 5, medianaMax: 15 };
+
+const CAMPOS_DA_CRIATURA = ['vida', 'forca'];
+const CAMPOS_DO_ESPECIAL = ['dano', 'cura', 'recuo'];
+
+// Devolve uma cópia das criaturas com os ajustes aplicados ("SAP06.vida=15,SAP06.recuo=1").
+export function aplicarAjustes(criaturas, texto) {
+  const copia = structuredClone(criaturas);
+  if (!texto) return copia;
+  for (const item of texto.split(',')) {
+    const m = item.trim().match(/^([A-Za-z0-9]+)\.(\w+)=(\d+)$/);
+    if (!m) throw new Error(`Ajuste inválido: "${item}" (use CODIGO.campo=valor)`);
+    const [, codigo, campo, valor] = m;
+    const c = copia.find((x) => x.codigo === codigo.toUpperCase());
+    if (!c) throw new Error(`Ajuste: código desconhecido ${codigo}`);
+    if (CAMPOS_DA_CRIATURA.includes(campo)) c[campo] = Number(valor);
+    else if (CAMPOS_DO_ESPECIAL.includes(campo)) c.especial[campo] = Number(valor);
+    else throw new Error(`Ajuste: campo desconhecido ${campo}`);
+  }
+  return copia;
+}
+
+// Para cada bichinho: taxa média contra os outros (espelhos fora, as duas ordens
+// contam) e a pior linha em que ele aparece.
+export function resumoPorCriatura(resultados, criaturas) {
+  return criaturas.map((c) => {
+    const linhas = [];
+    for (const r of resultados) {
+      if (r.a.codigo === r.b.codigo) continue;
+      if (r.a.codigo === c.codigo) linhas.push({ taxa: r.taxaA, oponente: r.b, ordem: 'A' });
+      else if (r.b.codigo === c.codigo) linhas.push({ taxa: 1 - r.taxaA, oponente: r.a, ordem: 'B' });
+    }
+    const media = linhas.reduce((s, l) => s + l.taxa, 0) / linhas.length;
+    const pior = linhas.reduce((p, l) => (l.taxa < p.taxa ? l : p));
+    const foraDaFaixa = media < MEDIA_ELENCO_MIN ? 'abaixo' : media > MEDIA_ELENCO_MAX ? 'acima' : null;
+    return { criatura: c, media, pior, foraDaFaixa };
+  });
+}
 
 // Gerador com semente (mulberry32): os mesmos parâmetros dão sempre a mesma tabela.
 export function criarGerador(semente) {
@@ -50,22 +95,25 @@ export function criarSorteioDeFace(faces, aleatorio) {
 // Joga uma partida até o fim ou até o limite de rodadas.
 export function simularPartida(a, b, sortearFace, limite = LIMITE_RODADAS) {
   let estado = estadoInicial(a, b);
+  let maiorDano = 0;
   while (estado.rodada < limite) {
     const r = resolverRodada(estado, sortearFace(), sortearFace());
     estado = r.estado;
+    maiorDano = Math.max(maiorDano, r.resumo.dano);
     if (r.fim.terminou) {
-      return { vencedor: r.fim.vencedor, rodadas: estado.rodada, bateuLimite: false };
+      return { vencedor: r.fim.vencedor, rodadas: estado.rodada, bateuLimite: false, maiorDano };
     }
   }
-  return { vencedor: null, rodadas: estado.rodada, bateuLimite: true };
+  return { vencedor: null, rodadas: estado.rodada, bateuLimite: true, maiorDano };
 }
 
 export function simularConfronto(a, b, { partidas = 2000, faces = FACES_UNIFORMES, semente = 1, limite = LIMITE_RODADAS } = {}) {
   const sortearFace = criarSorteioDeFace(faces, criarGerador(semente));
-  const r = { a, b, vitoriasA: 0, vitoriasB: 0, empates: 0, noLimite: 0, rodadas: [] };
+  const r = { a, b, vitoriasA: 0, vitoriasB: 0, empates: 0, noLimite: 0, maiorDano: 0, rodadas: [] };
   for (let i = 0; i < partidas; i++) {
     const p = simularPartida(a, b, sortearFace, limite);
     r.rodadas.push(p.rodadas);
+    r.maiorDano = Math.max(r.maiorDano, p.maiorDano);
     if (p.bateuLimite) r.noLimite++;
     else if (p.vencedor === 0) r.vitoriasA++;
     else if (p.vencedor === 1) r.vitoriasB++;
@@ -105,27 +153,40 @@ function problemas(r) {
   return lista;
 }
 
-function imprimirTabela(resultados, { partidas, faces, semente, limite }) {
-  const pct = (x) => `${(x * 100).toFixed(1)}%`;
-  const nome = (c) => `${c.codigo} ${c.nome}`;
+const pct = (x) => `${(x * 100).toFixed(1)}%`;
+const nome = (c) => `${c.codigo} ${c.nome}`;
+
+function imprimirTabela(resultados, { partidas, faces, semente, limite, ajuste }) {
   console.log(`Faces (ATQ/DEF/ESP/TRO): ${faces.join('/')}  |  ${partidas} partidas por confronto  |  limite ${limite} rodadas  |  semente ${semente}`);
+  if (ajuste) console.log(`Ajustes: ${ajuste}`);
   console.log(`Taxa = vitórias de A / (vitórias de A + vitórias de B); empates fora.\n`);
-  const linhas = [['#', 'A', 'B', 'Vit A', 'Vit B', 'Emp', 'Taxa A', 'Mediana', 'Máx', 'No limite', 'Fora do alvo']];
+  const linhas = [['#', 'A', 'B', 'Vit A', 'Vit B', 'Emp', 'Taxa A', 'Mediana', 'Máx rod', 'Maior dano', 'No limite', 'Fora do alvo']];
   resultados.forEach((r, i) => {
     linhas.push([
       String(i + 1), nome(r.a), nome(r.b), String(r.vitoriasA), String(r.vitoriasB), String(r.empates),
-      pct(r.taxaA), String(r.mediana), String(r.maximo), String(r.noLimite), r.problemas.join(', ') || '-',
+      pct(r.taxaA), String(r.mediana), String(r.maximo), String(r.maiorDano), String(r.noLimite), r.problemas.join(', ') || '-',
     ]);
   });
   const larguras = linhas[0].map((_, c) => Math.max(...linhas.map((l) => l[c].length)));
   for (const [i, l] of linhas.entries()) {
-    console.log(l.map((cel, c) => (c <= 2 || c === 10 ? cel.padEnd(larguras[c]) : cel.padStart(larguras[c]))).join('  '));
+    console.log(l.map((cel, c) => (c <= 2 || c === 11 ? cel.padEnd(larguras[c]) : cel.padStart(larguras[c]))).join('  '));
     if (i === 0) console.log(larguras.map((w) => '-'.repeat(w)).join('  '));
   }
   const ruins = resultados.filter((r) => r.problemas.length);
   console.log(`\nConfrontos fora do alvo: ${ruins.length} de ${resultados.length}`);
   const noLimite = resultados.reduce((s, r) => s + r.noLimite, 0);
   console.log(`Partidas que bateram no limite de ${limite} rodadas: ${noLimite}`);
+}
+
+function imprimirResumo(resumo) {
+  console.log(`\nMédia contra o resto do elenco (alvo ${pct(MEDIA_ELENCO_MIN)} a ${pct(MEDIA_ELENCO_MAX)}; espelhos fora):`);
+  for (const r of resumo) {
+    const pior = `pior: ${pct(r.pior.taxa)} contra ${nome(r.pior.oponente)} (como ${r.pior.ordem})`;
+    const marca = r.foraDaFaixa ? `  <- ${r.foraDaFaixa} da faixa` : '';
+    console.log(`  ${nome(r.criatura).padEnd(15)} ${pct(r.media).padStart(6)}  ${pior}${marca}`);
+  }
+  const fora = resumo.filter((r) => r.foraDaFaixa).length;
+  console.log(`Bichinhos fora da faixa: ${fora} de ${resumo.length}`);
 }
 
 function lerArgumentos(argv) {
@@ -137,6 +198,7 @@ function lerArgumentos(argv) {
       case '--partidas': opcoes.partidas = Number(valor); i++; break;
       case '--semente': opcoes.semente = Number(valor); i++; break;
       case '--limite': opcoes.limite = Number(valor); i++; break;
+      case '--ajuste': opcoes.ajuste = valor; i++; break;
       default: throw new Error(`Argumento desconhecido: ${argv[i]}`);
     }
   }
@@ -145,5 +207,8 @@ function lerArgumentos(argv) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const opcoes = lerArgumentos(process.argv.slice(2));
-  imprimirTabela(simularTodos(CRIATURAS, opcoes), opcoes);
+  const criaturas = aplicarAjustes(CRIATURAS, opcoes.ajuste);
+  const resultados = simularTodos(criaturas, opcoes);
+  imprimirTabela(resultados, opcoes);
+  imprimirResumo(resumoPorCriatura(resultados, criaturas));
 }
