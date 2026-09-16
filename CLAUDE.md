@@ -41,8 +41,11 @@ js/regras.js                lógica pura (sem DOM, sem estado global)
 js/app.js                   UI, navegação, deep link ?b=, placar em localStorage
 test/regras.test.js         testes das regras (node:test)
 scripts/balanceamento.js    simulação dos confrontos (não é teste)
-serve.json                  cleanUrls=false: sem isso o `npx serve` perde o ?b= ao redirecionar index.html
+serve.json                  config do `npx serve`: cleanUrls=false (senão perde o ?b=) + raiz -> index.html
 ```
+
+Deep link do QR (forma curta, preferida): `https://juanmqc22.github.io/Game3D/?b=TAT01`.
+Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3D/.
 
 ## Comandos
 

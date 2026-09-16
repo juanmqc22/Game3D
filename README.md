@@ -21,8 +21,10 @@ Abra o endereço que aparecer (normalmente http://localhost:3000).
 > Abrir o `index.html` com dois cliques (`file://`) **não funciona**: o
 > navegador bloqueia ES modules fora de um servidor.
 
-O arquivo `serve.json` desliga as "clean URLs" do `serve`. Sem ele, o endereço
-`index.html?b=TAT01` é redirecionado para `/index` e perde o `?b=`.
+O arquivo `serve.json` desliga as "clean URLs" do `serve` e manda a raiz para o
+`index.html`. Sem ele, `index.html?b=TAT01` é redirecionado para `/index` e
+perde o `?b=`. Com ele, as duas formas funcionam: `/?b=TAT01` e
+`/index.html?b=TAT01`.
 
 ### Testar no celular (mesma rede Wi-Fi)
 
@@ -31,7 +33,7 @@ O arquivo `serve.json` desliga as "clean URLs" do `serve`. Sem ele, o endereço
    `http://192.168.0.12:3000`, e abra esse endereço no celular.
 3. Se não abrir, libere o Node.js no firewall do Windows quando ele perguntar.
 
-Para testar o QR de uma peça, abra `http://<endereço>/index.html?b=SAP02`: a
+Para testar o QR de uma peça, abra `http://<endereço>/?b=SAP02`: a
 tela de escolha deve abrir com o Bocão já marcado.
 
 ## Testes
@@ -96,8 +98,9 @@ O repositório já aponta para `https://github.com/juanmqc22/Game3D`.
 4. Em um ou dois minutos, o site fica em:
    **https://juanmqc22.github.io/Game3D/**
 5. Os QR codes das peças devem apontar para:
-   `https://juanmqc22.github.io/Game3D/index.html?b=TAT01`
-   (troque `TAT01` pelo código de cada peça).
+   `https://juanmqc22.github.io/Game3D/?b=TAT01`
+   (troque `TAT01` pelo código de cada peça). A forma longa, com
+   `index.html?b=TAT01`, também funciona, mas deixa o QR mais denso.
 
 Observações:
 
