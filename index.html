@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#ffd23f">
+  <title>Arena dos Bichinhos</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="css/estilo.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <main id="app">
+
+    <!-- 1. Início -->
+    <section id="tela-inicio" class="tela">
+      <h1 class="logo">Arena dos<br>Bichinhos</h1>
+      <p class="sub">Arremesse seu bichinho e toque no símbolo que saiu!</p>
+      <button type="button" class="botao botao-principal" id="btn-nova-batalha">Nova batalha</button>
+      <button type="button" class="botao botao-secundario" id="btn-meus-bichinhos">Meus bichinhos</button>
+    </section>
+
+    <!-- 2. Escolher bichinho -->
+    <section id="tela-escolha" class="tela" hidden>
+      <h2 id="escolha-titulo">Jogador 1: escolha seu bichinho</h2>
+      <p id="escolha-anterior" class="aviso-leve" hidden></p>
+      <form id="form-codigo" class="form-codigo" autocomplete="off" novalidate>
+        <label for="campo-codigo">Código da peça</label>
+        <div class="linha-codigo">
+          <input id="campo-codigo" name="codigo" type="text" inputmode="text"
+                 autocapitalize="characters" spellcheck="false" maxlength="12"
+                 placeholder="ex: TAT01">
+          <button type="submit" class="botao botao-ok">OK</button>
+        </div>
+        <p id="erro-codigo" class="erro" role="alert" hidden></p>
+      </form>
+      <p class="ou">ou toque no seu bichinho:</p>
+      <div id="lista-criaturas" class="lista-criaturas"></div>
+      <div class="rodape-fixo">
+        <button type="button" class="botao botao-secundario" id="btn-escolha-voltar">Voltar</button>
+        <button type="button" class="botao botao-principal" id="btn-escolha-confirmar" disabled>Escolha um bichinho</button>
+      </div>
+    </section>
+
+    <!-- 3. Batalha -->
+    <section id="tela-batalha" class="tela" hidden>
+      <div class="topo-batalha">
+        <h2 id="batalha-rodada">Rodada 1</h2>
+        <button type="button" class="botao-link" id="btn-sair">Sair</button>
+      </div>
+      <p class="instrucao">Arremessem juntos e toquem no símbolo que saiu.</p>
+      <div id="painel-0" class="painel"></div>
+      <div id="painel-1" class="painel"></div>
+      <div class="rodape-fixo">
+        <button type="button" class="botao botao-principal" id="btn-resolver" disabled>Resolver rodada</button>
+      </div>
+    </section>
+
+    <!-- 4. Resultado da rodada -->
+    <section id="tela-resultado" class="tela" hidden>
+      <h2 id="resultado-rodada">Rodada 1</h2>
+      <p id="resultado-confronto" class="confronto"></p>
+      <p id="resultado-frase" class="frase" aria-live="polite"></p>
+      <p id="resultado-destaque" class="destaque-escudo" role="alert" hidden></p>
+      <ul id="resultado-detalhes" class="detalhes"></ul>
+      <div id="resultado-barras" class="barras-resultado"></div>
+      <div class="rodape-fixo">
+        <button type="button" class="botao botao-principal" id="btn-proxima">Próxima rodada</button>
+      </div>
+    </section>
+
+    <!-- 5. Fim -->
+    <section id="tela-fim" class="tela" hidden>
+      <p class="trofeu" aria-hidden="true">🏆</p>
+      <h2 id="fim-titulo" class="fim-titulo"></h2>
+      <p id="fim-sub" class="sub"></p>
+      <div id="fim-barras" class="barras-resultado"></div>
+      <p id="fim-placar" class="aviso-leve" hidden></p>
+      <button type="button" class="botao botao-principal" id="btn-revanche">Revanche</button>
+      <button type="button" class="botao botao-secundario" id="btn-fim-nova">Nova batalha</button>
+    </section>
+
+    <!-- Meus bichinhos (placar histórico) -->
+    <section id="tela-placar" class="tela" hidden>
+      <h2>Meus bichinhos</h2>
+      <p class="sub">Vitórias e derrotas neste celular.</p>
+      <div id="lista-placar" class="lista-criaturas"></div>
+      <p id="placar-indisponivel" class="aviso-leve" hidden>
+        Este navegador não deixa guardar o placar. As partidas funcionam normalmente.
+      </p>
+      <button type="button" class="botao botao-secundario" id="btn-placar-voltar">Voltar</button>
+    </section>
+
+    <noscript><p class="erro">Este jogo precisa de JavaScript ligado.</p></noscript>
+  </main>
+</body>
+</html>
