@@ -48,6 +48,11 @@ serve.json                  config do `npx serve`: cleanUrls=false (senão perde
 Deep link do QR (forma curta, preferida): `https://juanmqc22.github.io/Game3D/?b=TAT01`.
 Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3D/.
 
+**Cache (Pages usa max-age=600):** ao mudar `app.js`, `icones.js`, `regras.js`, `estilo.css`
+ou a estrutura do `index.html`, aumente o `?v=N` em `index.html` (CSS e app.js) **e** nos
+imports do topo de `js/app.js`. Sem isso o celular mistura HTML novo com JS antigo e trava.
+Mudar só `criaturas.js` não exige (no pior caso o bichinho novo aparece ~10 min depois).
+
 ## Comandos
 
 - Testes: `node --test`

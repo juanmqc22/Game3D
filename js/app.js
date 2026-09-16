@@ -1,11 +1,12 @@
 // Interface da Arena dos Bichinhos: telas, animações, deep link ?b= e placar em localStorage.
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
-import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js';
-import { DEFESA, ESPECIAL, SIMBOLOS, estadoInicial, resolverRodada } from './regras.js';
+// ?v= igual ao de index.html (ver comentário lá).
+import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=7';
+import { DEFESA, ESPECIAL, SIMBOLOS, estadoInicial, resolverRodada } from './regras.js?v=7';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeTrofeu, iconeEmpate,
-} from './icones.js';
+} from './icones.js?v=7';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',

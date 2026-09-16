@@ -4,11 +4,23 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#ffd23f">
+  <meta name="theme-color" content="#111111">
   <title>Arena dos Bichinhos</title>
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./css/estilo.css">
-  <script type="module" src="./js/app.js"></script>
+  <!-- ?v=: ao mudar app.js, icones.js, regras.js, estilo.css ou index.html,
+       aumente o número aqui E nos imports do topo de js/app.js.
+       Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
+  <link rel="stylesheet" href="./css/estilo.css?v=7">
+  <script>
+    // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
+    window.mostrarFalha = function () {
+      var f = document.getElementById('falha');
+      if (f) f.hidden = false;
+    };
+    window.addEventListener('error', function () { window.mostrarFalha(); });
+    window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
+  </script>
+  <script type="module" src="./js/app.js?v=7" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -105,5 +117,10 @@
 
     <noscript><p class="erro">Este jogo precisa de JavaScript ligado.</p></noscript>
   </main>
+
+  <div id="falha" class="falha" role="alert" hidden>
+    <p>Algo deu errado.</p>
+    <button type="button" class="botao botao-principal" onclick="location.reload()">Recarregar</button>
+  </div>
 </body>
 </html>

@@ -486,6 +486,26 @@ h2 { font-size: 1.5rem; }
   100% { opacity: 1; transform: scale(1); }
 }
 
+/* ---------- Aviso de erro ---------- */
+
+.falha {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  gap: 10px;
+  padding: 16px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 16px);
+  border-top: 4px solid var(--erro);
+  background: var(--erro-fundo);
+  color: var(--erro);
+  font-size: 1.3rem;
+  font-weight: 900;
+  text-align: center;
+}
+.falha p { margin: 0; }
+
 /* ---------- Movimento reduzido: tudo instantâneo ---------- */
 
 @media (prefers-reduced-motion: reduce) {
