@@ -41,6 +41,7 @@ js/regras.js                lógica pura (sem DOM, sem estado global)
 js/app.js                   UI, navegação, deep link ?b=, placar em localStorage
 test/regras.test.js         testes das regras (node:test)
 scripts/balanceamento.js    simulação dos confrontos (não é teste)
+serve.json                  cleanUrls=false: sem isso o `npx serve` perde o ?b= ao redirecionar index.html
 ```
 
 ## Comandos
