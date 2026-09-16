@@ -38,7 +38,8 @@ index.html                  telas (trocadas com `hidden`)
 css/estilo.css              estilo mobile-first, alvo de toque >= 64px
 js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um
 js/regras.js                lógica pura (sem DOM, sem estado global)
-js/app.js                   UI, navegação, deep link ?b=, placar em localStorage
+js/app.js                   UI, navegação, animações, deep link ?b=, placar em localStorage
+js/icones.js                SVGs dos 4 símbolos (mesma forma da peça) e ícones da UI
 test/regras.test.js         testes das regras (node:test)
 scripts/balanceamento.js    simulação dos confrontos (não é teste)
 serve.json                  config do `npx serve`: cleanUrls=false (senão perde o ?b=) + raiz -> index.html

@@ -1,17 +1,29 @@
-// Interface da Arena dos Bichinhos: telas, deep link ?b= e placar em localStorage.
+// Interface da Arena dos Bichinhos: telas, animações, deep link ?b= e placar em localStorage.
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js';
 import { DEFESA, ESPECIAL, SIMBOLOS, estadoInicial, resolverRodada } from './regras.js';
+import {
+  iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeTrofeu, iconeEmpate,
+} from './icones.js';
 
 const ROTULOS = {
-  ATAQUE: { texto: 'ATAQUE', icone: '⚔️' },
-  DEFESA: { texto: 'DEFESA', icone: '🛡️' },
-  ESPECIAL: { texto: 'ESPECIAL', icone: '⭐' },
-  TROPECO: { texto: 'TROPEÇO', icone: '🌀' },
+  ATAQUE: 'ATAQUE',
+  DEFESA: 'DEFESA',
+  ESPECIAL: 'ESPECIAL',
+  TROPECO: 'TROPEÇO',
 };
 
 const CHAVE_PLACAR = 'arena-dos-bichinhos:placar';
+
+// Linha do tempo da rodada (ms). O total não pode passar de 1200.
+const TEMPO = {
+  impacto: 300,
+  barras: 500,
+  duracaoBarras: 500,
+  texto: 1000,
+  fim: 1150,
+};
 
 const app = {
   escolhas: [null, null], // criaturas escolhidas pelos jogadores 1 e 2
@@ -19,7 +31,8 @@ const app = {
   selecionada: null, // criatura marcada na tela de escolha
   partida: null, // estado de js/regras.js
   simbolos: [null, null], // símbolos tocados na rodada atual
-  ultimaRodada: null, // { antes, resultado }
+  ultimaRodada: null, // { antes, resultado, placarGravado }
+  animacao: null, // { timers, barras, finalizar } enquanto a rodada anima
 };
 
 const $ = (id) => document.getElementById(id);
@@ -40,6 +53,17 @@ function el(tag, props = {}, ...filhos) {
   return e;
 }
 
+// Converte a string SVG de js/icones.js (conteúdo fixo) em elemento.
+function icone(svgTexto) {
+  const t = document.createElement('template');
+  t.innerHTML = svgTexto.trim();
+  return t.content.firstElementChild;
+}
+
+function movimentoReduzido() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
 function mostrarTela(id) {
   for (const tela of document.querySelectorAll('.tela')) {
     tela.hidden = tela.id !== id;
@@ -48,7 +72,7 @@ function mostrarTela(id) {
 }
 
 function rotulo(simbolo) {
-  return ROTULOS[simbolo].texto;
+  return ROTULOS[simbolo];
 }
 
 function corDaEspecie(criatura) {
@@ -56,7 +80,19 @@ function corDaEspecie(criatura) {
 }
 
 function linhaEspecial(criatura) {
-  return el('span', {}, el('b', {}, `⭐ ${criatura.especial.nome}: `), criatura.especial.texto);
+  return el('span', { class: 'linha-especial' },
+    icone(iconeEspecial()),
+    el('b', {}, `${criatura.especial.nome}: `),
+    criatura.especial.texto,
+  );
+}
+
+function seloEscudo() {
+  return el('span', { class: 'selo-escudo' }, icone(iconeEscudoAtivo()), 'ESCUDO');
+}
+
+function seloSimbolo(simbolo) {
+  return el('span', { class: 'selo-simbolo', 'data-simbolo': simbolo }, icone(iconeSimbolo(simbolo)));
 }
 
 // Em partida espelhada os dois têm o mesmo nome; o número do jogador desfaz a dúvida.
@@ -66,7 +102,13 @@ function nomeJogador(estado, i) {
   return a.criatura.codigo === b.criatura.codigo ? `${nome} (J${i + 1})` : nome;
 }
 
-// ---------- barra de vida ----------
+// ---------- barra de vida (transform: scaleX) ----------
+
+function faixaDaVida(p) {
+  if (p > 0.5) return 'alta';
+  if (p >= 0.2) return 'media';
+  return 'baixa';
+}
 
 function barraVida(vida, max) {
   const barra = el('div', { class: 'vida-barra' });
@@ -75,15 +117,41 @@ function barraVida(vida, max) {
     el('div', { class: 'vida-trilho', role: 'presentation' }, barra),
     numero,
   );
-  bloco.atualizar = (v) => {
+  let quadro = null;
+
+  const pintar = (v) => {
     const p = max > 0 ? v / max : 0;
-    barra.style.width = `${Math.round(p * 100)}%`;
-    barra.classList.toggle('media', p <= 0.5 && p > 0.25);
-    barra.classList.toggle('baixa', p <= 0.25);
-    numero.textContent = `${v}/${max}`;
+    barra.style.transform = `scaleX(${p})`;
+    const faixa = faixaDaVida(p);
+    barra.classList.toggle('faixa-media', faixa === 'media');
+    barra.classList.toggle('faixa-baixa', faixa === 'baixa');
     bloco.setAttribute('aria-label', `Vida ${v} de ${max}`);
   };
-  bloco.atualizar(vida);
+  const escrever = (v) => { numero.textContent = `${v}/${max}`; };
+
+  bloco.definir = (v) => {
+    if (quadro) cancelAnimationFrame(quadro);
+    quadro = null;
+    barra.classList.remove('animar');
+    pintar(v);
+    escrever(v);
+  };
+
+  // Desliza a barra e conta o número junto.
+  bloco.animarPara = (de, para, duracao) => {
+    barra.classList.add('animar');
+    pintar(para);
+    if (de === para) return;
+    const inicio = performance.now();
+    const passo = (agora) => {
+      const t = Math.min(1, (agora - inicio) / duracao);
+      escrever(Math.round(de + (para - de) * t));
+      quadro = t < 1 ? requestAnimationFrame(passo) : null;
+    };
+    quadro = requestAnimationFrame(passo);
+  };
+
+  bloco.definir(vida);
   return bloco;
 }
 
@@ -121,28 +189,45 @@ function gravarPlacar(estado, fim) {
   }
 }
 
-// ---------- tela: escolher bichinho ----------
-
-// Cartão tocável (tela de escolha) ou só informativo (placar, com `extra`).
-function cartaoCriatura(c, extra = null) {
-  const props = extra
-    ? { class: 'cartao cartao-info', style: `--cor: ${corDaEspecie(c)}` }
-    : { type: 'button', class: 'cartao', style: `--cor: ${corDaEspecie(c)}`, 'data-codigo': c.codigo, 'aria-pressed': 'false' };
-  return el(extra ? 'div' : 'button', props,
-    el('span', { class: 'cartao-topo' },
-      el('span', { class: 'cartao-nome' }, c.nome),
-      el('span', { class: 'cartao-codigo' }, `${ESPECIES[c.especie]?.rotulo ?? c.especie} · ${c.codigo}`),
-    ),
-    el('span', { class: 'cartao-status' }, `❤️ ${c.vida} de vida   💪 ${c.forca} de força`),
-    el('span', { class: 'cartao-especial' }, linhaEspecial(c)),
-    extra,
+function textoPlacar(placar, codigo) {
+  const { v = 0, d = 0 } = placar?.[codigo] ?? {};
+  return el('span', { class: 'cartao-placar' },
+    el('span', { class: 'v' }, `${v} ${v === 1 ? 'vitória' : 'vitórias'}`),
+    ' · ',
+    el('span', { class: 'd' }, `${d} ${d === 1 ? 'derrota' : 'derrotas'}`),
   );
 }
 
+// ---------- cartão de criatura ----------
+
+// tocavel: botão na tela de escolha; senão, cartão só informativo.
+// placar: objeto do localStorage, ou null quando indisponível (linha omitida).
+function cartaoCriatura(c, { tocavel, placar }) {
+  const especie = ESPECIES[c.especie]?.rotulo ?? c.especie;
+  const props = tocavel
+    ? { type: 'button', class: 'cartao', style: `--cor: ${corDaEspecie(c)}`, 'data-codigo': c.codigo, 'aria-pressed': 'false' }
+    : { class: 'cartao cartao-info', style: `--cor: ${corDaEspecie(c)}` };
+  return el(tocavel ? 'button' : 'div', props,
+    el('span', { class: 'cartao-topo' },
+      el('span', {},
+        el('span', { class: 'cartao-nome' }, c.nome),
+        tocavel ? el('span', { class: 'cartao-marca' }, 'ESCOLHIDO') : null,
+      ),
+      el('span', { class: 'cartao-codigo' }, `${especie} · ${c.codigo}`),
+    ),
+    el('span', { class: 'cartao-status' },
+      el('span', {}, icone(iconeVida()), ` ${c.vida} de vida`),
+      el('span', {}, `Força ${c.forca}`),
+    ),
+    el('span', { class: 'cartao-especial' }, linhaEspecial(c)),
+    placar === null ? null : textoPlacar(placar, c.codigo),
+  );
+}
+
+// ---------- tela: escolher bichinho ----------
+
 function montarListaEscolha() {
-  const lista = $('lista-criaturas');
-  lista.replaceChildren(...CRIATURAS.map((c) => cartaoCriatura(c)));
-  lista.addEventListener('click', (ev) => {
+  $('lista-criaturas').addEventListener('click', (ev) => {
     const cartao = ev.target.closest('.cartao');
     if (!cartao) return;
     esconderErro();
@@ -153,6 +238,8 @@ function montarListaEscolha() {
 function abrirEscolha(jogador, codigoInicial = null) {
   app.jogadorEscolhendo = jogador;
   app.selecionada = null;
+  const placar = lerPlacar();
+  $('lista-criaturas').replaceChildren(...CRIATURAS.map((c) => cartaoCriatura(c, { tocavel: true, placar })));
   $('escolha-titulo').textContent = `Jogador ${jogador + 1}: escolha seu bichinho`;
   const anterior = $('escolha-anterior');
   anterior.hidden = jogador === 0;
@@ -238,8 +325,8 @@ function renderBatalha() {
     painel.style.setProperty('--cor', corDaEspecie(j.criatura));
     const botoes = SIMBOLOS.map((s) =>
       el('button', { type: 'button', class: 'simbolo', 'data-jogador': String(i), 'data-simbolo': s, 'aria-pressed': 'false' },
-        el('span', { class: 'icone', 'aria-hidden': 'true' }, ROTULOS[s].icone),
-        el('span', {}, ROTULOS[s].texto),
+        icone(iconeSimbolo(s)),
+        el('span', {}, rotulo(s)),
       ));
     painel.replaceChildren(
       el('div', { class: 'painel-cabeca' },
@@ -247,7 +334,7 @@ function renderBatalha() {
           el('div', { class: 'painel-jogador' }, `Jogador ${i + 1}`),
           el('div', { class: 'painel-nome' }, j.criatura.nome),
         ),
-        j.escudo ? el('span', { class: 'selo-escudo' }, '🔒 ESCUDO LIGADO') : null,
+        j.escudo ? seloEscudo() : null,
       ),
       barraVida(j.vida, j.criatura.vida),
       el('p', { class: 'painel-especial' }, linhaEspecial(j.criatura)),
@@ -284,13 +371,13 @@ function resolver() {
   const resultado = resolverRodada(antes, app.simbolos[0], app.simbolos[1]);
   app.partida = resultado.estado;
   app.simbolos = [null, null];
-  app.ultimaRodada = { antes, resultado };
+  app.ultimaRodada = { antes, resultado, placarGravado: false };
   if (resultado.fim.terminou) {
     app.ultimaRodada.placarGravado = gravarPlacar(resultado.estado, resultado.fim);
   }
-  renderResultado();
+  const cena = renderResultado();
   mostrarTela('tela-resultado');
-  animarBarras($('resultado-barras'));
+  animarRodada(cena);
 }
 
 // ---------- tela: resultado da rodada ----------
@@ -347,7 +434,7 @@ function descreverRodada(estado, resumo) {
   }
 
   const destaque = resumo.bloqueado
-    ? `🛡️ O ESCUDO do ${nome(p)} bloqueou todo o dano! O escudo acabou.`
+    ? `O ESCUDO do ${nome(p)} bloqueou todo o dano! O escudo acabou.`
     : null;
 
   const [va, vb] = estado.jogadores.map((j) => j.vida);
@@ -360,49 +447,137 @@ function descreverRodada(estado, resumo) {
   return { confronto, principal, destaque, detalhes };
 }
 
+// O que cada painel faz na animação (papel e números flutuantes).
+function efeitosDoPainel(resumo, i) {
+  if (resumo.vencedor === null) return { papel: null, flutuantes: [] };
+  if (i !== resumo.vencedor) {
+    if (resumo.bloqueado) {
+      return { papel: 'protegido', flutuantes: [{ tipo: 'bloqueado', valor: resumo.danoBase + resumo.bonusTropeco }] };
+    }
+    return { papel: 'levou-dano', flutuantes: [{ tipo: 'dano', texto: `-${resumo.dano}` }] };
+  }
+  const flutuantes = [];
+  if (resumo.cura > 0) flutuantes.push({ tipo: 'cura', texto: `+${resumo.cura}` });
+  if (resumo.recuo > 0) flutuantes.push({ tipo: 'dano', texto: `-${resumo.recuo}` });
+  return { papel: 'venceu', flutuantes };
+}
+
+function numeroFlutuante(f) {
+  if (f.tipo === 'bloqueado') {
+    return el('span', { class: 'flutua bloqueado', 'aria-label': `${f.valor} de dano bloqueado` }, el('s', {}, String(f.valor)));
+  }
+  return el('span', { class: `flutua ${f.tipo}` }, f.texto);
+}
+
+// Desenha a tela no estado "antes" e devolve o que a animação precisa.
 function renderResultado() {
   const { antes, resultado } = app.ultimaRodada;
   const { estado, resumo, fim } = resultado;
   const texto = descreverRodada(estado, resumo);
+  const tela = $('tela-resultado');
+  tela.classList.remove('fase-choque', 'fase-impacto', 'fase-texto', 'sem-transicao');
 
   $('resultado-rodada').textContent = `Rodada ${resumo.numero}`;
+
+  const paineis = estado.jogadores.map((j, i) => {
+    const jAntes = antes.jogadores[i];
+    const efeitos = efeitosDoPainel(resumo, i);
+    const barra = barraVida(jAntes.vida, j.criatura.vida);
+    const escudo = seloEscudo();
+    escudo.classList.toggle('desligado', !jAntes.escudo);
+    const flutuantes = el('div', { class: 'flutuantes' });
+    const painel = $(`res-painel-${i}`);
+    painel.className = `painel-res${efeitos.papel ? ` ${efeitos.papel}` : ''}`;
+    painel.style.setProperty('--cor', corDaEspecie(j.criatura));
+    painel.replaceChildren(
+      el('div', { class: 'painel-res-cabeca' },
+        el('span', { class: 'painel-res-nome' }, `J${i + 1} · ${j.criatura.nome}`),
+        escudo,
+      ),
+      barra,
+      flutuantes,
+      el('div', { class: 'halo' }),
+    );
+
+    const ficha = $(`ficha-${i}`);
+    const simbolo = resumo.simbolos[i];
+    ficha.className = 'ficha';
+    if (resumo.vencedor !== null) ficha.classList.add(resumo.vencedor === i ? 'venceu' : 'perdeu');
+    ficha.dataset.simbolo = simbolo;
+    ficha.replaceChildren(icone(iconeSimbolo(simbolo)), el('span', {}, rotulo(simbolo)));
+
+    return {
+      barra, escudo, flutuantes,
+      vidaAntes: jAntes.vida, vidaDepois: j.vida,
+      escudoDepois: j.escudo, lista: efeitos.flutuantes,
+    };
+  });
+
   $('resultado-confronto').textContent = texto.confronto;
   $('resultado-frase').textContent = texto.principal;
   const destaque = $('resultado-destaque');
   destaque.hidden = !texto.destaque;
-  destaque.textContent = texto.destaque ?? '';
+  destaque.replaceChildren(...(texto.destaque ? [icone(iconeEscudoAtivo()), el('span', {}, texto.destaque)] : []));
   $('resultado-detalhes').replaceChildren(...texto.detalhes.map((d) => el('li', {}, d)));
-  $('resultado-barras').replaceChildren(...barrasComparadas(antes, estado));
   $('btn-proxima').textContent = fim.terminou ? 'Ver quem ganhou' : 'Próxima rodada';
+
+  return { tela, paineis };
 }
 
-// Barras que começam na vida de antes e animam até a vida de agora.
-function barrasComparadas(antes, depois) {
-  return depois.jogadores.map((j, i) => {
-    const vidaAntes = antes.jogadores[i].vida;
-    const diferenca = j.vida - vidaAntes;
-    const barra = barraVida(vidaAntes, j.criatura.vida);
-    barra.vidaFinal = j.vida;
-    const mudanca = diferenca === 0 ? null
-      : el('span', { class: `barra-mudanca ${diferenca < 0 ? 'perdeu' : 'ganhou'}` }, ` ${diferenca > 0 ? '+' : ''}${diferenca}`);
-    const escudo = j.escudo ? el('span', { class: 'selo-escudo' }, ' 🔒 ESCUDO') : null;
-    return el('div', {},
-      el('div', { class: 'barra-rotulo' }, `J${i + 1} · ${j.criatura.nome}`, mudanca, ' ', escudo),
-      barra,
-    );
-  });
-}
+// Sequência de no máximo 1,2s. Um toque em qualquer lugar pula para o final.
+function animarRodada(cena) {
+  const { tela, paineis } = cena;
+  const botao = $('btn-proxima');
+  const timers = [];
 
-function animarBarras(container) {
-  // dois quadros: o navegador precisa pintar a largura inicial antes da transição
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    for (const barra of container.querySelectorAll('.vida')) {
-      if (barra.vidaFinal !== undefined) barra.atualizar(barra.vidaFinal);
+  const finalizar = () => {
+    if (app.animacao !== anim) return;
+    for (const t of timers) clearTimeout(t);
+    tela.classList.add('sem-transicao', 'fase-choque', 'fase-impacto', 'fase-texto');
+    for (const p of paineis) {
+      p.barra.definir(p.vidaDepois);
+      p.escudo.classList.toggle('desligado', !p.escudoDepois);
+      p.flutuantes.replaceChildren();
     }
-  }));
+    app.animacao = null;
+    botao.setAttribute('aria-disabled', 'false');
+  };
+  const anim = { finalizar };
+  app.animacao = anim;
+  botao.setAttribute('aria-disabled', 'true');
+
+  if (movimentoReduzido()) {
+    finalizar();
+    return;
+  }
+
+  const em = (ms, fn) => timers.push(setTimeout(fn, ms));
+  void tela.offsetWidth; // aplica o estado inicial antes de começar as transições
+
+  // 1. (0-300) símbolos crescem e se aproximam
+  tela.classList.add('fase-choque');
+  // 2. (300-500) impacto: clarão, tremida em quem levou dano, pulinho no vencedor, halo do escudo
+  em(TEMPO.impacto, () => {
+    tela.classList.add('fase-impacto');
+    for (const p of paineis) {
+      if (!p.escudoDepois) p.escudo.classList.add('desligado');
+    }
+  });
+  // 3. (500-1000) barras deslizam, número conta, dano flutua
+  em(TEMPO.barras, () => {
+    for (const p of paineis) {
+      p.barra.animarPara(p.vidaAntes, p.vidaDepois, TEMPO.duracaoBarras);
+      p.flutuantes.replaceChildren(...p.lista.map(numeroFlutuante));
+      if (p.escudoDepois) p.escudo.classList.remove('desligado');
+    }
+  });
+  // 4. (1000-1200) frase aparece
+  em(TEMPO.texto, () => tela.classList.add('fase-texto'));
+  em(TEMPO.fim, finalizar);
 }
 
 function proximaRodada() {
+  if (app.animacao) return;
   if (app.ultimaRodada?.resultado.fim.terminou) {
     renderFim();
     mostrarTela('tela-fim');
@@ -419,14 +594,25 @@ function renderFim() {
   const { estado, fim } = resultado;
   const titulo = $('fim-titulo');
   const sub = $('fim-sub');
-  if (fim.vencedor === null) {
+  const iconeFim = $('fim-icone');
+  const empate = fim.vencedor === null;
+  if (empate) {
     titulo.textContent = 'Empate!';
     sub.textContent = 'Os dois ficaram sem vida na mesma rodada.';
   } else {
     titulo.textContent = `${nomeJogador(estado, fim.vencedor)} venceu!`;
     sub.textContent = `Parabéns, Jogador ${fim.vencedor + 1}! (${estado.rodada} rodadas)`;
   }
-  document.querySelector('#tela-fim .trofeu').textContent = fim.vencedor === null ? '🤝' : '🏆';
+  iconeFim.replaceChildren(icone(empate ? iconeEmpate() : iconeTrofeu()));
+  iconeFim.classList.toggle('empate', empate);
+
+  // entrada de ~600ms (reinicia a cada fim de partida)
+  for (const alvo of [iconeFim, titulo]) {
+    alvo.classList.remove('fim-entrada');
+    void alvo.offsetWidth;
+    alvo.classList.add('fim-entrada');
+  }
+
   $('fim-barras').replaceChildren(...estado.jogadores.map((j, i) =>
     el('div', {},
       el('div', { class: 'barra-rotulo' }, `J${i + 1} · ${j.criatura.nome}`),
@@ -436,7 +622,7 @@ function renderFim() {
   const aviso = $('fim-placar');
   const espelhada = estado.jogadores[0].criatura.codigo === estado.jogadores[1].criatura.codigo;
   aviso.hidden = placarGravado;
-  if (fim.vencedor === null) aviso.textContent = 'Empate não conta no placar.';
+  if (empate) aviso.textContent = 'Empate não conta no placar.';
   else if (espelhada) aviso.textContent = 'Bichinhos iguais: esta partida não conta no placar.';
   else aviso.textContent = 'Não foi possível guardar o placar neste navegador.';
 }
@@ -446,16 +632,7 @@ function renderFim() {
 function abrirPlacar() {
   const placar = lerPlacar();
   $('placar-indisponivel').hidden = placar !== null;
-  const dados = placar ?? {};
-  $('lista-placar').replaceChildren(...CRIATURAS.map((c) => {
-    const { v = 0, d = 0 } = dados[c.codigo] ?? {};
-    const cartao = cartaoCriatura(c, el('span', { class: 'cartao-placar' },
-      el('span', { class: 'v' }, `${v} ${v === 1 ? 'vitória' : 'vitórias'}`),
-      ' · ',
-      el('span', { class: 'd' }, `${d} ${d === 1 ? 'derrota' : 'derrotas'}`),
-    ));
-    return cartao;
-  }));
+  $('lista-placar').replaceChildren(...CRIATURAS.map((c) => cartaoCriatura(c, { tocavel: false, placar: placar ?? {} })));
   mostrarTela('tela-placar');
 }
 
@@ -467,6 +644,14 @@ function novaBatalha() {
 }
 
 function ligarEventos() {
+  // Durante a animação da rodada, qualquer toque só pula para o final.
+  document.addEventListener('click', (ev) => {
+    if (!app.animacao) return;
+    ev.preventDefault();
+    ev.stopPropagation();
+    app.animacao.finalizar();
+  }, true);
+
   $('btn-nova-batalha').addEventListener('click', novaBatalha);
   $('btn-meus-bichinhos').addEventListener('click', abrirPlacar);
   $('btn-placar-voltar').addEventListener('click', () => mostrarTela('tela-inicio'));
@@ -494,9 +679,10 @@ function ligarEventos() {
 }
 
 function iniciar() {
+  $('logo-simbolos').replaceChildren(...SIMBOLOS.map(seloSimbolo));
   montarListaEscolha();
   ligarEventos();
-  // Deep link do QR da peça: index.html?b=TAT01
+  // Deep link do QR da peça: index.html?b=TAT01 (ou só ?b=TAT01 na raiz)
   const codigo = new URLSearchParams(window.location.search).get('b');
   if (codigo !== null) {
     abrirEscolha(0, codigo);

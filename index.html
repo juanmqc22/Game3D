@@ -15,6 +15,7 @@
 
     <!-- 1. Início -->
     <section id="tela-inicio" class="tela">
+      <div id="logo-simbolos" class="logo-simbolos" aria-hidden="true"></div>
       <h1 class="logo">Arena dos<br>Bichinhos</h1>
       <p class="sub">Arremesse seu bichinho e toque no símbolo que saiu!</p>
       <button type="button" class="botao botao-principal" id="btn-nova-batalha">Nova batalha</button>
@@ -60,11 +61,21 @@
     <!-- 4. Resultado da rodada -->
     <section id="tela-resultado" class="tela" hidden>
       <h2 id="resultado-rodada">Rodada 1</h2>
-      <p id="resultado-confronto" class="confronto"></p>
-      <p id="resultado-frase" class="frase" aria-live="polite"></p>
-      <p id="resultado-destaque" class="destaque-escudo" role="alert" hidden></p>
-      <ul id="resultado-detalhes" class="detalhes"></ul>
-      <div id="resultado-barras" class="barras-resultado"></div>
+      <div class="palco">
+        <div id="res-painel-0" class="painel-res"></div>
+        <div class="arena" aria-hidden="true">
+          <div id="ficha-0" class="ficha"></div>
+          <div class="clarao"></div>
+          <div id="ficha-1" class="ficha"></div>
+        </div>
+        <div id="res-painel-1" class="painel-res"></div>
+      </div>
+      <div class="resultado-texto">
+        <p id="resultado-confronto" class="confronto"></p>
+        <p id="resultado-frase" class="frase" aria-live="polite"></p>
+        <p id="resultado-destaque" class="destaque-escudo" hidden></p>
+        <ul id="resultado-detalhes" class="detalhes"></ul>
+      </div>
       <div class="rodape-fixo">
         <button type="button" class="botao botao-principal" id="btn-proxima">Próxima rodada</button>
       </div>
@@ -72,7 +83,7 @@
 
     <!-- 5. Fim -->
     <section id="tela-fim" class="tela" hidden>
-      <p class="trofeu" aria-hidden="true">🏆</p>
+      <div id="fim-icone" class="fim-icone" aria-hidden="true"></div>
       <h2 id="fim-titulo" class="fim-titulo"></h2>
       <p id="fim-sub" class="sub"></p>
       <div id="fim-barras" class="barras-resultado"></div>

@@ -1,21 +1,32 @@
-/* Arena dos Bichinhos — mobile-first, alto contraste, alvo de toque >= 64px. */
+/* Arena dos Bichinhos — mobile-first, alto contraste, alvo de toque >= 64px.
+   Animações só com transform e opacity. */
 
 :root {
   --fundo: #fffdf5;
   --texto: #111;
   --texto-suave: #3d3d3d;
   --borda: #111;
-  --amarelo: #ffd23f;
   --erro: #b00020;
   --erro-fundo: #ffe3e8;
+
+  /* Símbolos: cor fixa, sempre acompanhada da forma (js/icones.js) */
+  --ataque: #1b7a2f;
+  --ataque-texto: #fff;
+  --defesa: #1554b8;
+  --defesa-texto: #fff;
+  --especial: #ffc400;
+  --especial-texto: #111;
+  --tropeco: #c62828;
+  --tropeco-texto: #fff;
+
+  /* Faixas da barra de vida */
   --vida-alta: #1b8a3a;
-  --vida-media: #d98a00;
+  --vida-media: #e0a800;
   --vida-baixa: #c62828;
 
-  --ataque: #c62828;
-  --defesa: #1554b8;
-  --especial: #6a1b9a;
-  --tropeco: #4a5560;
+  --escudo: #1554b8;
+  --escudo-fundo: #dbe8ff;
+  --cura: #1b7a2f;
 
   --toque: 64px;
   --raio: 14px;
@@ -48,6 +59,8 @@ h2 { font-size: 1.5rem; }
 
 .tela { display: flex; flex-direction: column; gap: 14px; }
 
+.icone { display: inline-block; width: 1em; height: 1em; flex: none; vertical-align: -0.15em; }
+
 /* ---------- Botões ---------- */
 
 .botao {
@@ -63,14 +76,14 @@ h2 { font-size: 1.5rem; }
   touch-action: manipulation;
 }
 .botao:active { transform: translateY(2px); }
-.botao:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+.botao:disabled, .botao[aria-disabled="true"] { opacity: 0.4; cursor: not-allowed; transform: none; }
 .botao:focus-visible, .cartao:focus-visible, .simbolo:focus-visible, input:focus-visible {
   outline: 4px solid #0a58ca;
   outline-offset: 3px;
 }
 
-.botao-principal { background: var(--amarelo); color: var(--texto); box-shadow: 0 4px 0 var(--borda); }
-.botao-principal:disabled { box-shadow: none; }
+.botao-principal { background: var(--texto); color: #fff; box-shadow: 0 4px 0 #555; }
+.botao-principal:disabled, .botao-principal[aria-disabled="true"] { box-shadow: none; }
 .botao-secundario { background: #fff; color: var(--texto); }
 .botao-ok { width: auto; min-width: 96px; background: var(--texto); color: #fff; }
 
@@ -97,8 +110,10 @@ h2 { font-size: 1.5rem; }
 
 /* ---------- Início ---------- */
 
+.logo-simbolos { display: flex; justify-content: center; gap: 10px; margin-top: 5vh; }
+.logo-simbolos .selo-simbolo { width: 56px; height: 56px; font-size: 32px; }
 .logo {
-  margin-top: 8vh;
+  margin-top: 12px;
   font-size: 3rem;
   text-align: center;
   text-transform: uppercase;
@@ -106,6 +121,22 @@ h2 { font-size: 1.5rem; }
 }
 .sub { margin: 0; text-align: center; color: var(--texto-suave); font-weight: 600; }
 #tela-inicio .botao-principal { margin-top: 24px; font-size: 1.6rem; min-height: 88px; }
+
+/* Símbolo isolado (quadrado colorido com a forma) */
+.selo-simbolo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid var(--borda);
+  border-radius: 12px;
+  background: var(--cor-simbolo);
+  color: var(--cor-simbolo-texto);
+}
+
+[data-simbolo="ATAQUE"] { --cor-simbolo: var(--ataque); --cor-simbolo-texto: var(--ataque-texto); }
+[data-simbolo="DEFESA"] { --cor-simbolo: var(--defesa); --cor-simbolo-texto: var(--defesa-texto); }
+[data-simbolo="ESPECIAL"] { --cor-simbolo: var(--especial); --cor-simbolo-texto: var(--especial-texto); }
+[data-simbolo="TROPECO"] { --cor-simbolo: var(--tropeco); --cor-simbolo-texto: var(--tropeco-texto); }
 
 /* ---------- Escolha ---------- */
 
@@ -138,7 +169,9 @@ h2 { font-size: 1.5rem; }
 .ou { margin: 4px 0 0; font-weight: 700; color: var(--texto-suave); }
 .aviso-leve { margin: 0; font-weight: 700; color: var(--texto-suave); text-align: center; }
 
-.lista-criaturas { display: grid; gap: 12px; }
+.lista-criaturas { display: grid; gap: 14px; }
+
+/* ---------- Cartão de criatura ---------- */
 
 .cartao {
   display: grid;
@@ -154,21 +187,37 @@ h2 { font-size: 1.5rem; }
   font: inherit;
   text-align: left;
   cursor: pointer;
+  transition: transform 120ms ease-out;
 }
 .cartao-info { cursor: default; }
 .cartao[aria-pressed="true"] {
-  background: #fff4c2;
-  box-shadow: 0 0 0 4px var(--amarelo), 0 0 0 7px var(--borda);
+  border-width: 5px 5px 5px 14px;
+  padding: 10px 12px 10px 18px;
+  background: #fffbea;
+  transform: translateY(-4px);
+  box-shadow: 0 6px 0 var(--borda);
 }
 .cartao-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
 .cartao-nome { font-size: 1.4rem; font-weight: 900; }
+.cartao-marca { display: none; margin-left: 6px; font-size: 0.9rem; font-weight: 900; }
+.cartao[aria-pressed="true"] .cartao-marca { display: inline; }
 .cartao-codigo { font-weight: 800; color: var(--texto-suave); letter-spacing: 0.05em; }
-.cartao-status { font-weight: 700; }
+.cartao-status { display: flex; flex-wrap: wrap; gap: 4px 16px; font-weight: 700; }
+.cartao-status .icone-vida { color: var(--vida-baixa); }
 .cartao-especial { font-size: 1rem; font-weight: 600; color: var(--texto-suave); }
-.cartao-especial b { color: var(--especial); }
-.cartao-placar { font-size: 1.2rem; font-weight: 900; }
+.cartao-placar { font-size: 1rem; font-weight: 800; }
 .cartao-placar .v { color: var(--vida-alta); }
 .cartao-placar .d { color: var(--vida-baixa); }
+
+.linha-especial b { color: var(--texto); }
+.linha-especial .icone-especial {
+  color: var(--especial);
+  stroke: var(--borda);
+  stroke-width: 1.2px;
+  paint-order: stroke;
+  font-size: 1.1em;
+  margin-right: 2px;
+}
 
 /* ---------- Batalha ---------- */
 
@@ -183,25 +232,27 @@ h2 { font-size: 1.5rem; }
   border-radius: var(--raio);
   background: #fff;
 }
-.painel-cabeca { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.painel-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
 .painel-jogador { font-size: 0.95rem; font-weight: 800; color: var(--texto-suave); text-transform: uppercase; }
 .painel-nome { font-size: 1.5rem; font-weight: 900; }
 .painel-especial { margin: 6px 0 12px; font-size: 1rem; font-weight: 600; }
-.painel-especial b { color: var(--especial); }
 
 .selo-escudo {
-  display: inline-block;
-  padding: 2px 10px;
-  border: 2px solid var(--borda);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 6px;
+  border: 2px solid var(--escudo);
   border-radius: 999px;
-  background: #cfe3ff;
-  font-size: 0.95rem;
+  background: var(--escudo-fundo);
+  color: var(--escudo);
+  font-size: 0.9rem;
   font-weight: 900;
 }
+.selo-escudo .icone { font-size: 1.5rem; }
 
 .simbolos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .simbolo {
-  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -211,88 +262,235 @@ h2 { font-size: 1.5rem; }
   border: 3px solid var(--borda);
   border-radius: var(--raio);
   background: var(--cor-simbolo);
-  color: #fff;
+  color: var(--cor-simbolo-texto);
   font: inherit;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 900;
   letter-spacing: 0.03em;
   cursor: pointer;
   touch-action: manipulation;
+  transition: transform 120ms ease-out, opacity 120ms;
 }
-.simbolo .icone { font-size: 1.6rem; line-height: 1; }
-.simbolo[data-simbolo="ATAQUE"] { --cor-simbolo: var(--ataque); }
-.simbolo[data-simbolo="DEFESA"] { --cor-simbolo: var(--defesa); }
-.simbolo[data-simbolo="ESPECIAL"] { --cor-simbolo: var(--especial); }
-.simbolo[data-simbolo="TROPECO"] { --cor-simbolo: var(--tropeco); }
-.simbolos.tem-escolha .simbolo[aria-pressed="false"] { opacity: 0.45; }
+.simbolo .icone { font-size: 1.9rem; }
+.simbolos.tem-escolha .simbolo[aria-pressed="false"] { opacity: 0.4; }
 .simbolo[aria-pressed="true"] {
-  box-shadow: 0 0 0 4px var(--amarelo), 0 0 0 7px var(--borda);
-}
-.simbolo[aria-pressed="true"]::after {
-  content: "✓";
-  position: absolute;
-  top: -12px;
-  right: -8px;
-  width: 30px;
-  height: 30px;
-  border: 3px solid var(--borda);
-  border-radius: 50%;
-  background: var(--amarelo);
-  color: var(--texto);
-  font-size: 1rem;
-  line-height: 24px;
-  text-align: center;
+  border-width: 5px;
+  transform: translateY(-4px);
+  box-shadow: 0 6px 0 var(--borda);
 }
 
-/* ---------- Barra de vida ---------- */
+/* ---------- Barra de vida (animada só com transform) ---------- */
 
 .vida { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin-top: 6px; }
 .vida-trilho {
-  height: 28px;
+  position: relative;
+  height: 26px;
   border: 3px solid var(--borda);
   border-radius: 999px;
   background: #e6e6e6;
   overflow: hidden;
 }
 .vida-barra {
-  height: 100%;
-  width: 100%;
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
   background: var(--vida-alta);
-  transition: width 0.7s ease-out, background-color 0.7s;
 }
-.vida-barra.media { background: var(--vida-media); }
-.vida-barra.baixa { background: var(--vida-baixa); }
+.vida-barra.animar { transition: transform 500ms ease-out; }
+.vida-barra.faixa-media { background: var(--vida-media); }
+.vida-barra.faixa-baixa { background: var(--vida-baixa); animation: pulso-vida 1.4s ease-in-out infinite alternate; }
 .vida-numero { font-size: 1.4rem; font-weight: 900; font-variant-numeric: tabular-nums; min-width: 4.5ch; text-align: right; }
 
-/* ---------- Resultado ---------- */
-
-.confronto { margin: 0; font-weight: 800; color: var(--texto-suave); }
-.frase { margin: 0; font-size: 1.6rem; font-weight: 900; line-height: 1.25; }
-.destaque-escudo {
-  margin: 0;
-  padding: 14px;
-  border: 4px solid var(--borda);
-  border-radius: var(--raio);
-  background: #cfe3ff;
-  font-size: 1.4rem;
-  font-weight: 900;
-  text-align: center;
+@keyframes pulso-vida {
+  from { opacity: 1; }
+  to { opacity: 0.45; }
 }
+
+/* ---------- Resultado da rodada ---------- */
+
+.palco { display: grid; gap: 6px; }
+
+.painel-res {
+  position: relative;
+  padding: 8px 12px 10px;
+  border: 3px solid var(--borda);
+  border-left: 10px solid var(--cor, var(--borda));
+  border-radius: var(--raio);
+  background: #fff;
+}
+.painel-res-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 32px; }
+.painel-res-nome { font-weight: 900; font-size: 1.15rem; }
+.painel-res .selo-escudo { transition: opacity 200ms, transform 200ms; }
+.painel-res .selo-escudo.desligado { opacity: 0; transform: scale(0.5); }
+
+.halo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180px;
+  height: 180px;
+  margin: -90px 0 0 -90px;
+  border: 10px solid var(--escudo);
+  border-radius: 50%;
+  background: rgba(21, 84, 184, 0.15);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flutuantes {
+  position: absolute;
+  right: 96px;
+  top: 28px;
+  display: flex;
+  gap: 8px;
+  pointer-events: none;
+}
+.flutua {
+  font-size: 2rem;
+  font-weight: 900;
+  opacity: 0;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff;
+  animation: flutuar 600ms ease-out forwards;
+}
+.flutua.dano { color: var(--vida-baixa); }
+.flutua.cura { color: var(--cura); }
+.flutua.bloqueado { color: var(--escudo); font-size: 2.6rem; }
+.flutua.bloqueado s { text-decoration-thickness: 4px; }
+
+.arena {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 104px;
+  padding: 0 4px;
+}
+.ficha {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 104px;
+  height: 88px;
+  border: 3px solid var(--borda);
+  border-radius: var(--raio);
+  background: var(--cor-simbolo);
+  color: var(--cor-simbolo-texto);
+  font-size: 0.85rem;
+  font-weight: 900;
+  opacity: 0.2;
+  transform: translateX(var(--de)) scale(0.6);
+  transition: transform 300ms ease-out, opacity 300ms ease-out;
+}
+.ficha .icone { font-size: 2.6rem; }
+#ficha-0 { --de: -24px; --para: 44px; }
+#ficha-1 { --de: 24px; --para: -44px; }
+
+.clarao {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 90px;
+  height: 90px;
+  margin: -45px 0 0 -45px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 35%, rgba(255, 196, 0, 0.9) 36% 60%, rgba(255, 196, 0, 0) 61%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.resultado-texto {
+  display: grid;
+  gap: 10px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+.confronto { margin: 0; font-weight: 800; color: var(--texto-suave); }
+.frase { margin: 0; font-size: 1.45rem; font-weight: 900; line-height: 1.25; }
+.destaque-escudo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 12px;
+  border: 4px solid var(--escudo);
+  border-radius: var(--raio);
+  background: var(--escudo-fundo);
+  color: var(--texto);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+.destaque-escudo .icone { font-size: 2.6rem; color: var(--escudo); }
 .detalhes { margin: 0; padding-left: 1.2em; font-weight: 700; }
 .detalhes:empty { display: none; }
 .detalhes li + li { margin-top: 4px; }
 
-.barras-resultado { display: grid; gap: 12px; }
-.barra-rotulo { font-weight: 900; font-size: 1.15rem; }
-.barra-mudanca { font-weight: 900; }
-.barra-mudanca.perdeu { color: var(--vida-baixa); }
-.barra-mudanca.ganhou { color: var(--vida-alta); }
+/* Fases da sequência (classes na #tela-resultado) */
+.fase-choque .ficha { opacity: 1; transform: translateX(var(--para)) scale(1.1); }
+.fase-impacto .ficha.venceu { transform: translateX(var(--para)) scale(1.25); }
+.fase-impacto .ficha.perdeu { opacity: 0.45; transform: translateX(var(--para)) scale(0.9); }
+.fase-impacto .clarao { animation: clarao 200ms ease-out; }
+.fase-impacto .painel-res.levou-dano { animation: tremer 200ms linear; }
+.fase-impacto .painel-res.venceu { animation: pulinho 200ms ease-out; }
+.fase-impacto .painel-res.protegido .halo { animation: halo 500ms ease-out; }
+.fase-texto .resultado-texto { opacity: 1; transform: none; }
+
+/* Pular / estado final: nada anima */
+.sem-transicao *, .sem-transicao *::before, .sem-transicao *::after {
+  transition: none !important;
+  animation: none !important;
+}
+.sem-transicao .flutuantes { display: none; }
+
+@keyframes clarao {
+  0% { opacity: 0; transform: scale(0.4); }
+  30% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.4); }
+}
+@keyframes tremer {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+@keyframes pulinho {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.04); }
+}
+@keyframes halo {
+  0% { opacity: 0.95; transform: scale(0.2); }
+  100% { opacity: 0; transform: scale(1.7); }
+}
+@keyframes flutuar {
+  0% { opacity: 0; transform: translateY(10px); }
+  20% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-34px); }
+}
 
 /* ---------- Fim ---------- */
 
-.trofeu { margin: 6vh 0 0; font-size: 5rem; text-align: center; line-height: 1; }
+.fim-icone { margin: 5vh auto 0; font-size: 6rem; line-height: 1; color: #b88600; }
+.fim-icone.empate { color: var(--texto-suave); }
 .fim-titulo { font-size: 2.3rem; text-align: center; }
+.fim-entrada { animation: entrada 600ms ease-out both; }
+.barras-resultado { display: grid; gap: 12px; }
+.barra-rotulo { font-weight: 900; font-size: 1.15rem; }
+
+@keyframes entrada {
+  0% { opacity: 0; transform: scale(0.6); }
+  70% { opacity: 1; transform: scale(1.08); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* ---------- Movimento reduzido: tudo instantâneo ---------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .vida-barra { transition: none; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
