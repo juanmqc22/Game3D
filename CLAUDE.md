@@ -59,6 +59,7 @@ test/escaneio.test.js       loop de escaneio
 test/colecao.test.js        coleção
 test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
+scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
 serve.json                  config do `npx serve`: cleanUrls=false (senão perde o ?b=) + raiz -> index.html
 ```
 
@@ -71,6 +72,33 @@ Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3
 mistura HTML novo com JS antigo e trava. Mudar só `criaturas.js` não exige (no pior caso o
 bichinho novo aparece ~10 min depois).
 
+## Sistema visual
+
+Direção: **instrumento de batalha em luz do dia** — chassi claro de alto
+contraste, com o preto reservado aos visores (vida, chips, placas). O jogo é
+usado em pé, sob sol forte: tema escuro perde porque o reflexo domina a luz
+emitida. Detalhes e números medidos em ENTREGA.md.
+
+Regras que não podem regredir:
+
+- **Contraste >= 4.5:1 em todo texto.** Confira com `node scripts/contraste.js`
+  ao mexer em `:root`. Nunca use `opacity` para marcar estado "não escolhido" ou
+  "desabilitado": texto lavado some no sol. Use contorno ou cinza sólido.
+- **Animar só `transform` e `opacity`.** Nada de animar width/height/top/left/
+  box-shadow/filter, e nada de `backdrop-filter`. Efeitos decorativos rodam uma
+  vez; loop infinito só onde é sinal de estado (vida baixa, escudo, leitura do QR).
+- **Teto de 1,2s por rodada**, incluindo a latência do toque. A linha do tempo
+  está em `TEMPO` no topo de `js/app.js` (hoje 1080ms internos, ~1126ms medidos).
+- **`prefers-reduced-motion`** desliga tudo e a informação continua completa.
+- **Alvos de toque >= 44px**; os principais em 64px (`--toque`).
+- **Sem `:has()`, `color-mix()` ou `backdrop-filter`** — faltam em WebView antiga
+  de Android de entrada. Precisa de estado no CSS? Ponha uma classe pelo JS.
+- Validar em **360x640** além dos tamanhos grandes: sem rolagem lateral.
+- A cor da espécie vem do CSS por `data-especie`; `--cor-base` (de
+  `js/criaturas.js`) é o fallback de uma espécie nova.
+- Efeitos por especial são mapeados por código da criatura em `css/estilo.css`;
+  código desconhecido cai no efeito genérico.
+
 ## Comandos
 
 - Testes: `node --test`
@@ -82,6 +110,7 @@ bichinho novo aparece ~10 min depois).
   possível numa rodada, em cada modo (`danoMaximoDoModo`), <= 60% da vida de
   qualquer alvo. Não afrouxar esse limite; se um modo estourar, ajuste o
   bônus do modo, nunca a tabela.
+- Contraste da paleta: `node scripts/contraste.js`
 - Rodar local: `npx serve`
 
 ## Restrições

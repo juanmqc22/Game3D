@@ -52,13 +52,14 @@ const INFO_MODO = {
 const armazemEspera = () => window.sessionStorage;
 const armazemColecao = () => window.localStorage;
 
-// Linha do tempo da rodada (ms). O total não pode passar de 1200.
+// Linha do tempo da rodada (ms). O total não pode passar de 1200 — medindo do
+// toque em "Resolver" até o botão liberar, com folga para a latência do toque.
 const TEMPO = {
-  impacto: 300,
-  barras: 500,
-  duracaoBarras: 500,
-  texto: 1000,
-  fim: 1150,
+  impacto: 280,
+  barras: 460,
+  duracaoBarras: 440,
+  texto: 920,
+  fim: 1080,
 };
 
 const app = {

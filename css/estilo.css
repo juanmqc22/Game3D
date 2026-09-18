@@ -5,7 +5,7 @@
 
    Regras deste arquivo:
    - animação só com transform e opacity (nunca width/height/top/left/box-shadow/filter);
-   - todo texto tem contraste >= 4.5:1 medido (scripts/contraste.mjs);
+   - todo texto tem contraste >= 4.5:1 medido (scripts/contraste.js);
    - nada de backdrop-filter, color-mix() ou :has() (WebView antiga de Android de entrada).
 */
 
@@ -564,8 +564,8 @@ input:focus-visible {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.14);
   border-radius: 999px;
 }
-.vida-barra.animar { transition: transform 240ms cubic-bezier(0.3, 0, 0.2, 1); }
-.vida-fantasma.animar { transition: transform 460ms cubic-bezier(0.4, 0, 0.5, 1) 140ms; }
+.vida-barra.animar { transition: transform 220ms cubic-bezier(0.3, 0, 0.2, 1); }
+.vida-fantasma.animar { transition: transform 400ms cubic-bezier(0.4, 0, 0.5, 1) 120ms; }
 .vida-barra.faixa-media { background-color: var(--vida-media); }
 .vida-barra.faixa-baixa { background-color: var(--vida-baixa); }
 .vida-numero {
@@ -1141,6 +1141,10 @@ input:focus-visible {
   letter-spacing: 0.22em;
   color: var(--sistema);
 }
+
+/* os raios passam da largura da carta de propósito; a tela segura o transbordo
+   para não criar rolagem lateral no celular */
+#tela-desbloqueio { overflow: hidden; }
 
 /* Carta de bichinho novo: o primeiro contato depois de escanear a peça */
 .carta-nova {
