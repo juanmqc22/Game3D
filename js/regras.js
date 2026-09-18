@@ -11,8 +11,25 @@ export const ESPECIAL = 'ESPECIAL';
 export const TROPECO = 'TROPECO';
 export const SIMBOLOS = [ATAQUE, DEFESA, ESPECIAL, TROPECO];
 
+// Modos de jogo. ROLAR é o clássico; ARENA e MIRA reaproveitam as regras 1 a 7
+// e acrescentam um modificador de dano (ver resolverRodadaArena / resolverRodadaMira).
+export const ROLAR = 'ROLAR';
+export const ARENA = 'ARENA';
+export const MIRA = 'MIRA';
+export const MODOS = [ROLAR, ARENA, MIRA];
+
 // Regra 5: dano extra quando o perdedor tirou TROPECO.
 export const BONUS_TROPECO = 2;
+// ARENA: quem ficou fora do círculo leva a força do adversário + este bônus.
+// Era +2 na especificação; com +2 o Bocão fica em ~44,8% no simulador (abaixo
+// da faixa de 45%), com +1 fica em ~45,5% em todas as sementes.
+export const BONUS_FORA = 1;
+// MIRA: quem venceu e acertou o alvo causa este bônus a mais. Não soma com o
+// bônus do TROPECO: o extra de uma rodada nunca passa de +2 (guarda-corpo de
+// 60% da vida em test/criaturas.test.js).
+export const BONUS_ACERTO = 2;
+// MIRA: quem venceu e errou o alvo causa metade do dano (arredondado para baixo).
+export const DIVISOR_ERRO = 2;
 
 // Regra 1: cada símbolo vence o símbolo indicado.
 const VENCE = {
@@ -51,32 +68,138 @@ export function verificarFim(estado) {
   return { terminou: false };
 }
 
-// Resolve uma rodada. Retorna { estado, resumo, fim } — `estado` é um objeto novo.
+// Resolve uma rodada do modo ROLAR (clássico). Retorna { estado, resumo, fim } —
+// `estado` é um objeto novo.
 //
 // resumo: {
-//   numero, simbolos, vencedor (0|1|null), simboloVencedor,
-//   danoBase    — forca (ATAQUE/DEFESA) ou dano do especial
+//   modo, numero, simbolos, vencedor (0|1|null), simboloVencedor,
+//   nula         — true quando a rodada não conta (ARENA: ninguém dentro)
+//   dentro       — [bool, bool] só em ARENA;  acertou — [bool, bool] só em MIRA
+//   danoBase     — forca (ATAQUE/DEFESA/fora do círculo) ou dano do especial
 //   bonusTropeco — +2 se o perdedor tirou TROPECO
-//   bloqueado   — true se o escudo do perdedor anulou o dano
-//   dano        — dano que o perdedor realmente sofreu
-//   cura        — vida que o vencedor realmente recuperou
-//   recuo       — dano que o vencedor causou em si mesmo
+//   bonusFora    — +2 se o perdedor ficou fora do círculo (ARENA)
+//   bonusAcerto  — +2 se o vencedor acertou o alvo (MIRA), limitado pelo teto do extra
+//   metade       — true se o vencedor errou o alvo (MIRA) e o dano caiu pela metade
+//   danoPrevisto — dano calculado, antes do escudo
+//   bloqueado    — true se o escudo do perdedor anulou o dano
+//   dano         — dano que o perdedor realmente sofreu
+//   cura         — vida que o vencedor realmente recuperou
+//   recuo        — dano que o vencedor causou em si mesmo
 //   escudoAtivado — true se o vencedor ganhou escudo nesta rodada
 // }
 export function resolverRodada(estado, simboloA, simboloB) {
+  const simbolos = [simboloA, simboloB];
+  return resolver(estado, {
+    modo: ROLAR,
+    simbolos,
+    vencedor: vencedorDoConfronto(simboloA, simboloB),
+    usarEspecial: true,
+  });
+}
+
+// Modo ARENA. dentro = [bool, bool] (quem ficou dentro do círculo);
+// simbolos = [s, s] (só importam quando os dois ficaram dentro).
+//   - os dois dentro: igual ao modo ROLAR;
+//   - só um dentro: ele vence, a face não importa, o outro leva forca + BONUS_FORA;
+//   - nenhum dentro: rodada nula.
+// O escudo continua valendo (regra 6): anula qualquer dano recebido.
+export function resolverRodadaArena(estado, dentro, simbolos = [null, null]) {
+  validarDupla(dentro, 'dentro');
+  const [da, db] = dentro;
+  if (da && db) {
+    return resolver(estado, {
+      modo: ARENA, dentro, simbolos: [simbolos[0], simbolos[1]],
+      vencedor: vencedorDoConfronto(simbolos[0], simbolos[1]), usarEspecial: true,
+    });
+  }
+  if (!da && !db) {
+    return resolver(estado, { modo: ARENA, dentro, simbolos: [null, null], vencedor: null, nula: true });
+  }
+  const vencedor = da ? 0 : 1;
+  const face = simbolos[vencedor] ?? null;
+  if (face !== null) validarSimbolo(face);
+  const mostrados = [null, null];
+  mostrados[vencedor] = face;
+  return resolver(estado, {
+    modo: ARENA, dentro, simbolos: mostrados, vencedor, usarEspecial: false, bonusFora: BONUS_FORA,
+  });
+}
+
+// Modo MIRA. acertou = [bool, bool] (quem parou dentro do alvo); simbolos = [s, s].
+// Resolve como ROLAR e aplica ao dano do vencedor:
+//   - acertou: +BONUS_ACERTO (o extra da rodada, tropeço + acerto, não passa de +2);
+//   - errou: dano dividido por DIVISOR_ERRO, arredondado para baixo.
+// Cura, recuo e escudo não mudam.
+export function resolverRodadaMira(estado, acertou, simbolos) {
+  validarDupla(acertou, 'acertou');
+  const vencedor = vencedorDoConfronto(simbolos[0], simbolos[1]);
+  return resolver(estado, {
+    modo: MIRA, acertou, simbolos: [simbolos[0], simbolos[1]], vencedor, usarEspecial: true,
+    acertouAlvo: vencedor === null ? null : acertou[vencedor],
+  });
+}
+
+// Porta única para a interface e o simulador. entradas = [{ simbolo, dentro, acertou }, { ... }].
+export function resolverRodadaModo(modo, estado, entradas) {
+  const simbolos = entradas.map((e) => e.simbolo ?? null);
+  if (modo === ROLAR) return resolverRodada(estado, simbolos[0], simbolos[1]);
+  if (modo === ARENA) return resolverRodadaArena(estado, entradas.map((e) => Boolean(e.dentro)), simbolos);
+  if (modo === MIRA) return resolverRodadaMira(estado, entradas.map((e) => Boolean(e.acertou)), simbolos);
+  throw new Error(`Modo inválido: ${modo}`);
+}
+
+// Maior dano que `atacante` consegue causar numa única rodada do modo, contra um
+// alvo com vida cheia e sem escudo. Calculado por força bruta com as próprias
+// funções de resolução, para nunca divergir das regras.
+export function danoMaximoDoModo(modo, atacante, alvo = atacante) {
+  const estado = estadoInicial(atacante, alvo);
+  let maior = 0;
+  const testar = (entradas) => {
+    const { resumo } = resolverRodadaModo(modo, estado, entradas);
+    if (resumo.vencedor === 0) maior = Math.max(maior, resumo.dano);
+  };
+  const bools = [false, true];
+  for (const sa of SIMBOLOS) {
+    for (const sb of SIMBOLOS) {
+      if (modo === ROLAR) testar([{ simbolo: sa }, { simbolo: sb }]);
+      if (modo === ARENA) {
+        for (const da of bools) {
+          for (const db of bools) testar([{ simbolo: sa, dentro: da }, { simbolo: sb, dentro: db }]);
+        }
+      }
+      if (modo === MIRA) {
+        for (const aa of bools) {
+          for (const ab of bools) testar([{ simbolo: sa, acertou: aa }, { simbolo: sb, acertou: ab }]);
+        }
+      }
+    }
+  }
+  return maior;
+}
+
+// ---------- núcleo comum aos três modos ----------
+
+function resolver(estado, plano) {
   if (verificarFim(estado).terminou) {
     throw new Error('A partida já terminou.');
   }
-  const simbolos = [simboloA, simboloB];
-  const vencedor = vencedorDoConfronto(simboloA, simboloB);
+  const { modo, simbolos, vencedor } = plano;
   const jogadores = estado.jogadores.map((j) => ({ ...j }));
   const resumo = {
+    modo,
     numero: estado.rodada + 1,
     simbolos,
+    nula: Boolean(plano.nula),
+    dentro: plano.dentro ?? null,
+    acertou: plano.acertou ?? null,
     vencedor,
     simboloVencedor: vencedor === null ? null : simbolos[vencedor],
     danoBase: 0,
     bonusTropeco: 0,
+    bonusFora: 0,
+    bonusAcerto: 0,
+    metade: false,
+    danoPrevisto: 0,
     bloqueado: false,
     dano: 0,
     cura: 0,
@@ -87,19 +210,31 @@ export function resolverRodada(estado, simboloA, simboloB) {
   if (vencedor !== null) {
     const venc = jogadores[vencedor];
     const perd = jogadores[1 - vencedor];
-    const especial = resumo.simboloVencedor === ESPECIAL ? venc.criatura.especial : null;
+    const especial = plano.usarEspecial && resumo.simboloVencedor === ESPECIAL ? venc.criatura.especial : null;
 
     // Regra 4: força para ATAQUE/DEFESA, dano do especial para ESPECIAL.
     resumo.danoBase = especial ? especial.dano : venc.criatura.forca;
     // Regra 5.
     resumo.bonusTropeco = simbolos[1 - vencedor] === TROPECO ? BONUS_TROPECO : 0;
+    // ARENA: perdedor ficou fora do círculo.
+    resumo.bonusFora = plano.bonusFora ?? 0;
+    // MIRA: o extra da rodada (tropeço + acerto) tem teto de BONUS_ACERTO.
+    if (plano.acertouAlvo === true) {
+      resumo.bonusAcerto = Math.max(0, BONUS_ACERTO - resumo.bonusTropeco);
+    }
+    let total = resumo.danoBase + resumo.bonusTropeco + resumo.bonusFora + resumo.bonusAcerto;
+    if (plano.acertouAlvo === false) {
+      resumo.metade = true;
+      total = Math.floor(total / DIVISOR_ERRO);
+    }
+    resumo.danoPrevisto = total;
 
     // Regra 6: escudo anula todo o dano da rodada e é consumido.
     if (perd.escudo) {
       resumo.bloqueado = true;
       perd.escudo = false;
     } else {
-      resumo.dano = resumo.danoBase + resumo.bonusTropeco;
+      resumo.dano = total;
       perd.vida = limitarVida(perd.vida - resumo.dano, perd.criatura);
     }
 
@@ -136,5 +271,11 @@ function limitarVida(vida, criatura) {
 function validarSimbolo(s) {
   if (!SIMBOLOS.includes(s)) {
     throw new Error(`Símbolo inválido: ${s}`);
+  }
+}
+
+function validarDupla(lista, nome) {
+  if (!Array.isArray(lista) || lista.length !== 2 || lista.some((x) => typeof x !== 'boolean')) {
+    throw new Error(`${nome} deve ser [boolean, boolean]`);
   }
 }

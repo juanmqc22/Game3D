@@ -3,6 +3,11 @@
 // Uso:
 //   node scripts/balanceamento.js
 //   node scripts/balanceamento.js --faces 20,20,20,40 --partidas 2000 --semente 1
+//   node scripts/balanceamento.js --modo ARENA --chance 50
+//
+// --modo:  ROLAR (padrão), ARENA ou MIRA.
+// --chance: em ARENA, chance (%) de cada peça parar dentro do círculo; em MIRA,
+//           chance (%) de cada peça acertar o alvo. Padrão 50. Independente por jogador.
 //
 // --faces: peso de cada face na ordem ATAQUE,DEFESA,ESPECIAL,TROPECO
 //          (não precisa somar 100; padrão 25,25,25,25 = peça justa).
@@ -16,7 +21,7 @@
 
 import { pathToFileURL } from 'node:url';
 import { CRIATURAS } from '../js/criaturas.js';
-import { SIMBOLOS, estadoInicial, resolverRodada } from '../js/regras.js';
+import { SIMBOLOS, MODOS, ROLAR, ARENA, MIRA, estadoInicial, resolverRodadaModo } from '../js/regras.js';
 
 // Faixa da taxa média de vitória de cada bichinho contra o resto do elenco.
 export const MEDIA_ELENCO_MIN = 0.45;
@@ -93,11 +98,18 @@ export function criarSorteioDeFace(faces, aleatorio) {
 }
 
 // Joga uma partida até o fim ou até o limite de rodadas.
-export function simularPartida(a, b, sortearFace, limite = LIMITE_RODADAS) {
+// sortearSim: devolve true/false (ARENA: ficou dentro; MIRA: acertou o alvo).
+export function simularPartida(a, b, sortearFace, limite = LIMITE_RODADAS, modo = ROLAR, sortearSim = () => true) {
   let estado = estadoInicial(a, b);
   let maiorDano = 0;
   while (estado.rodada < limite) {
-    const r = resolverRodada(estado, sortearFace(), sortearFace());
+    const entradas = [0, 1].map(() => {
+      const e = { simbolo: sortearFace() };
+      if (modo === ARENA) e.dentro = sortearSim();
+      if (modo === MIRA) e.acertou = sortearSim();
+      return e;
+    });
+    const r = resolverRodadaModo(modo, estado, entradas);
     estado = r.estado;
     maiorDano = Math.max(maiorDano, r.resumo.dano);
     if (r.fim.terminou) {
@@ -107,11 +119,13 @@ export function simularPartida(a, b, sortearFace, limite = LIMITE_RODADAS) {
   return { vencedor: null, rodadas: estado.rodada, bateuLimite: true, maiorDano };
 }
 
-export function simularConfronto(a, b, { partidas = 2000, faces = FACES_UNIFORMES, semente = 1, limite = LIMITE_RODADAS } = {}) {
-  const sortearFace = criarSorteioDeFace(faces, criarGerador(semente));
+export function simularConfronto(a, b, { partidas = 2000, faces = FACES_UNIFORMES, semente = 1, limite = LIMITE_RODADAS, modo = ROLAR, chance = 50 } = {}) {
+  const aleatorio = criarGerador(semente);
+  const sortearFace = criarSorteioDeFace(faces, aleatorio);
+  const sortearSim = () => aleatorio() * 100 < chance;
   const r = { a, b, vitoriasA: 0, vitoriasB: 0, empates: 0, noLimite: 0, maiorDano: 0, rodadas: [] };
   for (let i = 0; i < partidas; i++) {
-    const p = simularPartida(a, b, sortearFace, limite);
+    const p = simularPartida(a, b, sortearFace, limite, modo, sortearSim);
     r.rodadas.push(p.rodadas);
     r.maiorDano = Math.max(r.maiorDano, p.maiorDano);
     if (p.bateuLimite) r.noLimite++;
@@ -156,7 +170,9 @@ function problemas(r) {
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 const nome = (c) => `${c.codigo} ${c.nome}`;
 
-function imprimirTabela(resultados, { partidas, faces, semente, limite, ajuste }) {
+function imprimirTabela(resultados, { partidas, faces, semente, limite, ajuste, modo, chance }) {
+  const extra = modo === ROLAR ? '' : `  |  chance de ${modo === ARENA ? 'ficar dentro' : 'acertar'}: ${chance}%`;
+  console.log(`Modo ${modo}${extra}`);
   console.log(`Faces (ATQ/DEF/ESP/TRO): ${faces.join('/')}  |  ${partidas} partidas por confronto  |  limite ${limite} rodadas  |  semente ${semente}`);
   if (ajuste) console.log(`Ajustes: ${ajuste}`);
   console.log(`Taxa = vitórias de A / (vitórias de A + vitórias de B); empates fora.\n`);
@@ -190,7 +206,7 @@ function imprimirResumo(resumo) {
 }
 
 function lerArgumentos(argv) {
-  const opcoes = { partidas: 2000, faces: FACES_UNIFORMES, semente: 1, limite: LIMITE_RODADAS };
+  const opcoes = { partidas: 2000, faces: FACES_UNIFORMES, semente: 1, limite: LIMITE_RODADAS, modo: ROLAR, chance: 50 };
   for (let i = 0; i < argv.length; i++) {
     const valor = argv[i + 1];
     switch (argv[i]) {
@@ -199,6 +215,16 @@ function lerArgumentos(argv) {
       case '--semente': opcoes.semente = Number(valor); i++; break;
       case '--limite': opcoes.limite = Number(valor); i++; break;
       case '--ajuste': opcoes.ajuste = valor; i++; break;
+      case '--modo':
+        opcoes.modo = String(valor).toUpperCase();
+        if (!MODOS.includes(opcoes.modo)) throw new Error(`Modo desconhecido: ${valor} (use ${MODOS.join(', ')})`);
+        i++;
+        break;
+      case '--chance':
+        opcoes.chance = Number(valor);
+        if (!(opcoes.chance >= 0 && opcoes.chance <= 100)) throw new Error('--chance deve estar entre 0 e 100');
+        i++;
+        break;
       default: throw new Error(`Argumento desconhecido: ${argv[i]}`);
     }
   }

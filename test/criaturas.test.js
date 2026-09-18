@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CRIATURAS, ESPECIES, buscarCriatura } from '../js/criaturas.js';
+import { MODOS, ROLAR, BONUS_TROPECO, danoMaximoDoModo } from '../js/regras.js';
 
 test('códigos são únicos', () => {
   const codigos = CRIATURAS.map((c) => c.codigo);
@@ -28,25 +29,33 @@ for (const c of CRIATURAS) {
   });
 }
 
-// Guarda-corpo de balanceamento: o pior golpe único (maior dano + 2 do TROPECO)
-// não pode passar de 60% da vida do alvo — nenhum bichinho morre de vida cheia
-// em uma ou duas rodadas por causa de um único golpe.
-const BONUS_TROPECO = 2;
+// Guarda-corpo de balanceamento: o pior golpe único de cada modo (calculado por
+// força bruta com as próprias regras, em js/regras.js) não pode passar de 60% da
+// vida do alvo — nenhum bichinho morre de vida cheia em uma ou duas rodadas por
+// causa de um único golpe. No modo ROLAR isso é maior dano + 2 do TROPECO.
 const FRACAO_MAXIMA = 0.6;
 
-for (const atacante of CRIATURAS) {
-  for (const alvo of CRIATURAS) {
-    test(`golpe máximo: ${atacante.codigo} -> ${alvo.codigo}`, () => {
-      const piorGolpe = Math.max(atacante.forca, atacante.especial.dano) + BONUS_TROPECO;
-      const limite = FRACAO_MAXIMA * alvo.vida;
-      // Compara em inteiros (piorGolpe * 5 <= vida * 3) para evitar erro de ponto flutuante.
-      assert.ok(
-        piorGolpe * 5 <= alvo.vida * 3,
-        `pior golpe ${piorGolpe} > ${limite.toFixed(1)} (60% de ${alvo.vida}); excesso ${(piorGolpe - limite).toFixed(1)}`,
-      );
-    });
+for (const modo of MODOS) {
+  for (const atacante of CRIATURAS) {
+    for (const alvo of CRIATURAS) {
+      test(`golpe máximo em ${modo}: ${atacante.codigo} -> ${alvo.codigo}`, () => {
+        const piorGolpe = danoMaximoDoModo(modo, atacante, alvo);
+        const limite = FRACAO_MAXIMA * alvo.vida;
+        // Compara em inteiros (piorGolpe * 5 <= vida * 3) para evitar erro de ponto flutuante.
+        assert.ok(
+          piorGolpe * 5 <= alvo.vida * 3,
+          `pior golpe ${piorGolpe} > ${limite.toFixed(1)} (60% de ${alvo.vida}); excesso ${(piorGolpe - limite).toFixed(1)}`,
+        );
+      });
+    }
   }
 }
+
+test('no modo ROLAR o pior golpe é maior dano + 2 do TROPECO', () => {
+  for (const c of CRIATURAS) {
+    assert.equal(danoMaximoDoModo(ROLAR, c), Math.max(c.forca, c.especial.dano) + BONUS_TROPECO);
+  }
+});
 
 test('buscarCriatura aceita minúsculas e espaços', () => {
   assert.equal(buscarCriatura(' sap 02 ').nome, 'Bocão');
