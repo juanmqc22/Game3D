@@ -120,7 +120,6 @@ h2 { font-size: 1.5rem; }
   letter-spacing: 0.02em;
 }
 .sub { margin: 0; text-align: center; color: var(--texto-suave); font-weight: 600; }
-#tela-inicio .botao-principal { margin-top: 24px; font-size: 1.6rem; min-height: 88px; }
 
 /* Símbolo isolado (quadrado colorido com a forma) */
 .selo-simbolo {
@@ -485,6 +484,226 @@ h2 { font-size: 1.5rem; }
   70% { opacity: 1; transform: scale(1.08); }
   100% { opacity: 1; transform: scale(1); }
 }
+
+/* ---------- Modos de jogo ---------- */
+
+.lista-modos { display: grid; gap: 12px; margin-top: 8px; }
+.botao-modo {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 88px;
+  padding: 10px 14px;
+  background: #fff;
+  color: var(--texto);
+  text-align: left;
+}
+.botao-modo[data-modo="ROLAR"] { --cor-modo: var(--ataque); }
+.botao-modo[data-modo="ARENA"] { --cor-modo: var(--defesa); }
+.botao-modo[data-modo="MIRA"] { --cor-modo: #b30059; }
+.botao-modo-icone {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 60px;
+  height: 60px;
+  border: 3px solid var(--borda);
+  border-radius: 14px;
+  background: var(--cor-modo);
+  color: #fff;
+  font-size: 2.2rem;
+}
+.botao-modo-texto { display: grid; gap: 2px; }
+.botao-modo-nome { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; }
+.botao-modo-explicacao { font-size: 0.95rem; font-weight: 600; line-height: 1.25; color: var(--texto-suave); }
+.botao-colecao { margin-top: 10px; }
+.dupla { margin: 0; font-size: 1.4rem; text-align: center; }
+
+.chip-modo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border: 2px solid var(--borda);
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.95rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.chip-modo .icone { font-size: 1.3rem; }
+
+/* pergunta da Arena: quem ficou dentro */
+.pergunta {
+  padding: 12px;
+  border: 3px solid var(--defesa);
+  border-radius: var(--raio);
+  background: var(--escudo-fundo);
+}
+.pergunta-titulo { margin: 0 0 10px; font-size: 1.25rem; font-weight: 900; }
+.opcoes-dentro { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opcao-dentro, .opcao-alvo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--toque);
+  padding: 8px 10px;
+  border: 3px solid var(--borda);
+  border-radius: var(--raio);
+  background: #fff;
+  color: var(--texto);
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.15;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 120ms ease-out, opacity 120ms;
+}
+.opcao-dentro .icone, .opcao-alvo .icone { font-size: 1.7rem; flex: none; }
+.opcao-dentro[aria-pressed="true"], .opcao-alvo[aria-pressed="true"] {
+  border-width: 5px;
+  background: #fffbea;
+  transform: translateY(-4px);
+  box-shadow: 0 6px 0 var(--borda);
+}
+.opcao-dentro:focus-visible, .opcao-alvo:focus-visible { outline: 4px solid #0a58ca; outline-offset: 3px; }
+
+.painel-situacao {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-weight: 900;
+}
+.painel-situacao .icone { font-size: 1.6rem; }
+.painel-situacao.dentro { background: #e3f4e6; color: var(--ataque); }
+.painel-situacao.fora { background: var(--erro-fundo); color: var(--erro); }
+
+/* pergunta da Mira: acertou o alvo? */
+.pergunta-alvo { margin: 0 0 10px; }
+.pergunta-alvo-titulo { display: block; margin-bottom: 6px; font-weight: 900; }
+.opcoes-alvo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.opcao-alvo[data-acertou="sim"] { --cor-alvo: #b30059; }
+.opcao-alvo[data-acertou="nao"] { --cor-alvo: var(--texto-suave); }
+.opcao-alvo .icone { color: var(--cor-alvo); }
+.opcoes-alvo.tem-escolha .opcao-alvo[aria-pressed="false"] { opacity: 0.4; }
+
+/* escudo ativo em destaque no painel */
+.painel.com-escudo {
+  border-color: var(--escudo);
+  box-shadow: 0 0 0 4px var(--escudo-fundo), 0 0 18px 4px rgba(21, 84, 184, 0.45);
+}
+.painel.com-escudo .selo-escudo { animation: brilho-escudo 1.4s ease-in-out infinite alternate; }
+@keyframes brilho-escudo {
+  from { box-shadow: 0 0 0 0 rgba(21, 84, 184, 0.5); }
+  to { box-shadow: 0 0 0 6px rgba(21, 84, 184, 0); }
+}
+
+/* fichas do resultado na Arena e na Mira */
+.ficha.dentro { --cor-simbolo: var(--ataque); --cor-simbolo-texto: #fff; }
+.ficha.fora { --cor-simbolo: #d8d8d8; --cor-simbolo-texto: var(--texto-suave); border-style: dashed; }
+.ficha-alvo {
+  display: inline-flex;
+  margin-top: 2px;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 7px;
+  border: 2px solid var(--borda);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--texto);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+}
+.ficha-alvo .icone { font-size: 1rem; }
+.ficha-alvo.acertou { color: #b30059; }
+.ficha-alvo.errou { color: var(--texto-suave); }
+.ficha:has(.ficha-alvo) { height: 112px; }
+.arena:has(.ficha-alvo) { height: 128px; }
+
+/* ---------- Espera da segunda peça / desbloqueio ---------- */
+
+.tela-centro { text-align: center; }
+.chamada {
+  margin: 4vh 0 0;
+  font-size: 1.6rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #b88600;
+}
+.cartao-grande { text-align: center; justify-items: center; gap: 8px; padding: 20px 16px; border-left-width: 3px; border-top: 12px solid var(--cor, var(--borda)); }
+.cartao-grande .cartao-nome { font-size: 1.7rem; }
+.cartao-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 96px;
+  border: 4px solid var(--borda);
+  border-radius: 50%;
+  background: var(--cor, var(--borda));
+  color: #fff;
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.tela-desbloqueio .cartao-especial, .cartao-grande .cartao-especial { font-size: 1.05rem; }
+#tela-desbloqueio .cartao-desbloqueio { animation: entrada 600ms ease-out both; }
+.espera-selo { margin-top: 5vh; }
+.espera-qr { font-size: 4.5rem; line-height: 1; color: var(--texto-suave); animation: pulso-vida 1.6s ease-in-out infinite alternate; }
+#tela-espera .erro { text-align: left; }
+
+/* ---------- Minha coleção ---------- */
+
+.contador { margin: 0; text-align: center; font-size: 1.6rem; font-weight: 900; }
+.grade-colecao { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.carta {
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 14px 10px 12px;
+  border: 3px solid var(--borda);
+  border-top: 10px solid var(--cor, var(--borda));
+  border-radius: var(--raio);
+  background: #fff;
+  text-align: center;
+}
+.carta .carta-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border: 3px solid var(--borda);
+  border-radius: 50%;
+  background: var(--cor, var(--borda));
+  color: #fff;
+  font-size: 2.2rem;
+  font-weight: 900;
+  line-height: 1;
+}
+.carta-nome { font-size: 1.25rem; font-weight: 900; }
+.carta-especie { font-size: 0.85rem; font-weight: 800; color: var(--texto-suave); letter-spacing: 0.05em; }
+.carta-status { display: flex; gap: 10px; font-weight: 800; font-size: 0.95rem; }
+.carta-status .icone-vida { color: var(--vida-baixa); }
+.carta-especial { font-size: 0.85rem; font-weight: 600; color: var(--texto-suave); line-height: 1.25; }
+.carta-especial b { color: var(--texto); }
+.carta-especial .icone-especial { color: var(--especial); stroke: var(--borda); stroke-width: 1.2px; paint-order: stroke; margin-right: 2px; }
+.carta-placar { margin-top: 2px; font-size: 0.85rem; font-weight: 800; }
+.carta-misterio { --cor: #9a9a9a; border-style: dashed; background: #f1f1f1; color: var(--texto-suave); }
+.carta-misterio .carta-avatar { background: #bdbdbd; font-size: 3.4rem; border-style: dashed; }
+.carta-misterio .carta-nome { font-size: 1.6rem; letter-spacing: 0.15em; }
+.carta-dica { display: inline-flex; align-items: center; gap: 4px; font-size: 0.8rem; font-weight: 700; line-height: 1.2; }
+.carta-dica .icone { font-size: 1.2rem; flex: none; }
+
+/* oponente surpresa (fallback da espera) */
+.cartao-surpresa { --cor: var(--especial); background: #fff8d6; }
 
 /* ---------- Aviso de erro ---------- */
 

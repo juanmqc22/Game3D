@@ -7,10 +7,10 @@
   <meta name="theme-color" content="#111111">
   <title>Arena dos Bichinhos</title>
   <link rel="icon" href="data:,">
-  <!-- ?v=: ao mudar app.js, icones.js, regras.js, estilo.css ou index.html,
-       aumente o número aqui E nos imports do topo de js/app.js.
+  <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
+       ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=7">
+  <link rel="stylesheet" href="./css/estilo.css?v=8">
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -20,21 +20,42 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=7" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=8" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
 
-    <!-- 1. Início -->
+    <!-- 1. Início: escolha do modo -->
     <section id="tela-inicio" class="tela">
       <div id="logo-simbolos" class="logo-simbolos" aria-hidden="true"></div>
       <h1 class="logo">Arena dos<br>Bichinhos</h1>
-      <p class="sub">Arremesse seu bichinho e toque no símbolo que saiu!</p>
-      <button type="button" class="botao botao-principal" id="btn-nova-batalha">Nova batalha</button>
-      <button type="button" class="botao botao-secundario" id="btn-meus-bichinhos">Meus bichinhos</button>
+      <p class="sub">Escaneie o QR da sua peça ou escolha como jogar:</p>
+      <p id="inicio-erro" class="erro" role="alert" hidden></p>
+      <div id="inicio-modos" class="lista-modos"></div>
+      <button type="button" class="botao botao-secundario botao-colecao" id="btn-colecao">
+        <span id="btn-colecao-texto">Minha coleção</span>
+      </button>
     </section>
 
-    <!-- 2. Escolher bichinho -->
+    <!-- 2. Novo bichinho descoberto -->
+    <section id="tela-desbloqueio" class="tela tela-centro" hidden>
+      <p class="chamada">Novo bichinho!</p>
+      <div id="desbloqueio-cartao" class="cartao-desbloqueio"></div>
+      <button type="button" class="botao botao-principal" id="btn-desbloqueio-continuar">Continuar</button>
+    </section>
+
+    <!-- 3. Esperando a segunda peça -->
+    <section id="tela-espera" class="tela tela-centro" hidden>
+      <div id="espera-selo" class="espera-selo" aria-hidden="true"></div>
+      <h2 id="espera-titulo" class="fim-titulo"></h2>
+      <p id="espera-aviso" class="erro" role="alert" hidden></p>
+      <p id="espera-texto" class="sub"></p>
+      <div id="espera-qr" class="espera-qr" aria-hidden="true"></div>
+      <button type="button" class="botao botao-principal" id="btn-espera-sem-peca">Não tenho a segunda peça</button>
+      <button type="button" class="botao botao-secundario" id="btn-espera-recomecar">Recomeçar</button>
+    </section>
+
+    <!-- 4. Escolher bichinho (manual) -->
     <section id="tela-escolha" class="tela" hidden>
       <h2 id="escolha-titulo">Jogador 1: escolha seu bichinho</h2>
       <p id="escolha-anterior" class="aviso-leve" hidden></p>
@@ -48,21 +69,35 @@
         </div>
         <p id="erro-codigo" class="erro" role="alert" hidden></p>
       </form>
-      <p class="ou">ou toque no seu bichinho:</p>
+      <p class="ou" id="escolha-ou">ou toque no seu bichinho:</p>
       <div id="lista-criaturas" class="lista-criaturas"></div>
+      <p id="escolha-vazia" class="aviso-leve" hidden></p>
       <div class="rodape-fixo">
         <button type="button" class="botao botao-secundario" id="btn-escolha-voltar">Voltar</button>
         <button type="button" class="botao botao-principal" id="btn-escolha-confirmar" disabled>Escolha um bichinho</button>
       </div>
     </section>
 
-    <!-- 3. Batalha -->
+    <!-- 5. Escolher o modo (depois de escanear as duas peças) -->
+    <section id="tela-modo" class="tela" hidden>
+      <h2>Como vocês vão jogar?</h2>
+      <p id="modo-dupla" class="dupla"></p>
+      <div id="modo-lista" class="lista-modos"></div>
+      <button type="button" class="botao botao-secundario" id="btn-modo-voltar">Recomeçar</button>
+    </section>
+
+    <!-- 6. Batalha -->
     <section id="tela-batalha" class="tela" hidden>
       <div class="topo-batalha">
         <h2 id="batalha-rodada">Rodada 1</h2>
+        <span id="batalha-modo" class="chip-modo"></span>
         <button type="button" class="botao-link" id="btn-sair">Sair</button>
       </div>
-      <p class="instrucao">Arremessem juntos e toquem no símbolo que saiu.</p>
+      <p id="batalha-instrucao" class="instrucao"></p>
+      <div id="arena-pergunta" class="pergunta" hidden>
+        <p class="pergunta-titulo">Quem ficou dentro do círculo?</p>
+        <div id="arena-opcoes" class="opcoes-dentro" role="group" aria-label="Quem ficou dentro do círculo"></div>
+      </div>
       <div id="painel-0" class="painel"></div>
       <div id="painel-1" class="painel"></div>
       <div class="rodape-fixo">
@@ -70,7 +105,7 @@
       </div>
     </section>
 
-    <!-- 4. Resultado da rodada -->
+    <!-- 7. Resultado da rodada -->
     <section id="tela-resultado" class="tela" hidden>
       <h2 id="resultado-rodada">Rodada 1</h2>
       <div class="palco">
@@ -93,7 +128,7 @@
       </div>
     </section>
 
-    <!-- 5. Fim -->
+    <!-- 8. Fim -->
     <section id="tela-fim" class="tela" hidden>
       <div id="fim-icone" class="fim-icone" aria-hidden="true"></div>
       <h2 id="fim-titulo" class="fim-titulo"></h2>
@@ -104,15 +139,16 @@
       <button type="button" class="botao botao-secundario" id="btn-fim-nova">Nova batalha</button>
     </section>
 
-    <!-- Meus bichinhos (placar histórico) -->
-    <section id="tela-placar" class="tela" hidden>
-      <h2>Meus bichinhos</h2>
-      <p class="sub">Vitórias e derrotas neste celular.</p>
-      <div id="lista-placar" class="lista-criaturas"></div>
-      <p id="placar-indisponivel" class="aviso-leve" hidden>
-        Este navegador não deixa guardar o placar. As partidas funcionam normalmente.
+    <!-- 9. Minha coleção -->
+    <section id="tela-colecao" class="tela" hidden>
+      <h2>Minha coleção</h2>
+      <p id="colecao-contador" class="contador"></p>
+      <p class="sub">Escaneie o QR de uma peça para descobrir o bichinho.</p>
+      <div id="lista-colecao" class="grade-colecao"></div>
+      <p id="colecao-indisponivel" class="aviso-leve" hidden>
+        Este navegador não deixa guardar a coleção. As partidas funcionam normalmente.
       </p>
-      <button type="button" class="botao botao-secundario" id="btn-placar-voltar">Voltar</button>
+      <button type="button" class="botao botao-secundario" id="btn-colecao-voltar">Voltar</button>
     </section>
 
     <noscript><p class="erro">Este jogo precisa de JavaScript ligado.</p></noscript>

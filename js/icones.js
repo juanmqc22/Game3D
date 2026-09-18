@@ -88,3 +88,82 @@ export function iconeEmpate() {
     'icone-empate',
   );
 }
+
+// ---------- modos de jogo ----------
+
+// ROLAR — a peça (dado alongado) rolando
+export function iconeRolar() {
+  return svg(
+    '<rect x="3" y="6" width="18" height="12" rx="4" fill="none" stroke="currentColor" stroke-width="2.6"/>'
+    + '<circle cx="8.5" cy="12" r="1.8" fill="currentColor"/>'
+    + '<circle cx="15.5" cy="12" r="1.8" fill="currentColor"/>',
+    'icone-rolar',
+  );
+}
+
+// ARENA — o círculo no chão
+export function iconeArena() {
+  return svg(
+    '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.8"/>'
+    + '<circle cx="9" cy="13" r="2.2" fill="currentColor"/>'
+    + '<circle cx="15" cy="10.5" r="2.2" fill="currentColor"/>',
+    'icone-arena',
+  );
+}
+
+// MIRA — alvo de círculos concêntricos
+export function iconeAlvo() {
+  return svg(
+    '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+    + '<circle cx="12" cy="12" r="5.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+    + '<circle cx="12" cy="12" r="1.9" fill="currentColor"/>',
+    'icone-alvo',
+  );
+}
+
+// ARENA: peça que ficou dentro do círculo
+export function iconeDentro() {
+  return svg(
+    '<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.6"/>'
+    + '<circle cx="12" cy="12" r="3.4" fill="currentColor"/>',
+    'icone-dentro',
+  );
+}
+
+// ARENA: peça que ficou fora do círculo
+export function iconeFora() {
+  return svg(
+    '<circle cx="10" cy="14" r="7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-dasharray="4 3"/>'
+    + '<circle cx="19" cy="5.5" r="3.2" fill="currentColor"/>',
+    'icone-fora',
+  );
+}
+
+// Erro (alvo) — X pequeno
+export function iconeErrou() {
+  return svg(
+    '<circle cx="12" cy="12" r="9.5" fill="none" stroke="currentColor" stroke-width="2.4"/>'
+    + '<path fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" d="M8.5 8.5l7 7M15.5 8.5l-7 7"/>',
+    'icone-errou',
+  );
+}
+
+// Coleção: bichinho ainda não descoberto
+export function iconeMisterio() {
+  return svg(
+    '<path fill="currentColor" d="M12 2.5c-4.4 0-7.5 3-7.5 6.6 0 1.8.8 3.3 2 4.4-.6 1.6-1.9 2.6-3.4 3.2 2.8.5 5-.3 6.4-1.6.8.2 1.6.3 2.5.3 4.4 0 7.5-3 7.5-6.6S16.4 2.5 12 2.5z"/>'
+    + '<text x="12" y="12.8" text-anchor="middle" font-size="11.5" font-weight="900" fill="#fff" font-family="system-ui, sans-serif">?</text>',
+    'icone-misterio',
+  );
+}
+
+// Coleção: QR (escaneie a peça)
+export function iconeQr() {
+  return svg(
+    '<g fill="none" stroke="currentColor" stroke-width="2.4">'
+    + '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>'
+    + '</g>'
+    + '<path fill="currentColor" d="M5.5 5.5h2v2h-2zM16.5 5.5h2v2h-2zM5.5 16.5h2v2h-2zM14 14h2.5v2.5H14zM18.5 14H21v2.5h-2.5zM14 18.5h2.5V21H14zM18.5 18.5H21V21h-2.5z"/>',
+    'icone-qr',
+  );
+}
