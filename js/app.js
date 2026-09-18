@@ -3,19 +3,19 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=8';
+import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=9';
 import {
   DEFESA, ESPECIAL, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
-} from './regras.js?v=8';
+} from './regras.js?v=9';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeTrofeu, iconeEmpate,
   iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
-} from './icones.js?v=8';
-import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=8';
+} from './icones.js?v=9';
+import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=9';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
-} from './colecao.js?v=8';
+} from './colecao.js?v=9';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -108,6 +108,13 @@ function mostrarTela(id) {
   for (const tela of document.querySelectorAll('.tela')) {
     tela.hidden = tela.id !== id;
   }
+  // Entrada curta (220ms) da tela nova. O @media prefers-reduced-motion desliga.
+  const nova = $(id);
+  if (nova) {
+    nova.classList.remove('entra');
+    void nova.offsetWidth;
+    nova.classList.add('entra');
+  }
   window.scrollTo(0, 0);
 }
 
@@ -154,21 +161,26 @@ function faixaDaVida(p) {
   return 'baixa';
 }
 
+// Visor de vida: barra da frente + "fantasma" que fica para trás mostrando de
+// onde a vida caiu (só quando cai). Tudo animado com transform.
 function barraVida(vida, max) {
+  const fantasma = el('div', { class: 'vida-fantasma' });
   const barra = el('div', { class: 'vida-barra' });
   const numero = el('span', { class: 'vida-numero' });
   const bloco = el('div', { class: 'vida' },
-    el('div', { class: 'vida-trilho', role: 'presentation' }, barra),
+    el('div', { class: 'vida-trilho', role: 'presentation' }, fantasma, barra),
     numero,
   );
   let quadro = null;
 
+  const fracao = (v) => (max > 0 ? v / max : 0);
   const pintar = (v) => {
-    const p = max > 0 ? v / max : 0;
+    const p = fracao(v);
     barra.style.transform = `scaleX(${p})`;
     const faixa = faixaDaVida(p);
     barra.classList.toggle('faixa-media', faixa === 'media');
     barra.classList.toggle('faixa-baixa', faixa === 'baixa');
+    bloco.classList.toggle('baixa', faixa === 'baixa');
     bloco.setAttribute('aria-label', `Vida ${v} de ${max}`);
   };
   const escrever = (v) => { numero.textContent = `${v}/${max}`; };
@@ -177,6 +189,8 @@ function barraVida(vida, max) {
     if (quadro) cancelAnimationFrame(quadro);
     quadro = null;
     barra.classList.remove('animar');
+    fantasma.classList.remove('animar');
+    fantasma.style.transform = `scaleX(${fracao(v)})`;
     pintar(v);
     escrever(v);
   };
@@ -184,6 +198,15 @@ function barraVida(vida, max) {
   // Desliza a barra e conta o número junto.
   bloco.animarPara = (de, para, duracao) => {
     barra.classList.add('animar');
+    if (para < de) {
+      // levou dano: o fantasma parte da vida antiga e alcança a nova depois
+      fantasma.style.transform = `scaleX(${fracao(de)})`;
+      void fantasma.offsetWidth;
+      fantasma.classList.add('animar');
+    } else {
+      fantasma.classList.remove('animar');
+    }
+    fantasma.style.transform = `scaleX(${fracao(para)})`;
     pintar(para);
     if (de === para) return;
     const inicio = performance.now();
@@ -225,9 +248,10 @@ function atualizarBotaoColecao() {
 
 // tocavel: botão na tela de escolha; senão, cartão só informativo.
 function cartaoCriatura(c, { tocavel, colecao }) {
+  const comum = { style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie };
   const props = tocavel
-    ? { type: 'button', class: 'cartao', style: `--cor: ${corDaEspecie(c)}`, 'data-codigo': c.codigo, 'aria-pressed': 'false' }
-    : { class: 'cartao cartao-info', style: `--cor: ${corDaEspecie(c)}` };
+    ? { ...comum, type: 'button', class: 'cartao', 'data-codigo': c.codigo, 'aria-pressed': 'false' }
+    : { ...comum, class: 'cartao cartao-info' };
   return el(tocavel ? 'button' : 'div', props,
     el('span', { class: 'cartao-topo' },
       el('span', {},
@@ -247,7 +271,7 @@ function cartaoCriatura(c, { tocavel, colecao }) {
 
 // Cartão grande do novo bichinho (tela de desbloqueio).
 function cartaoDesbloqueio(c) {
-  return el('div', { class: 'cartao cartao-info cartao-grande', style: `--cor: ${corDaEspecie(c)}` },
+  return el('div', { class: 'cartao cartao-info cartao-grande', style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
     el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
     el('span', { class: 'cartao-nome' }, `${c.nome}, o ${nomeDaEspecie(c).toLowerCase()}`),
     el('span', { class: 'cartao-codigo' }, c.codigo),
@@ -445,7 +469,8 @@ function renderBatalha() {
 
   estado.jogadores.forEach((j, i) => {
     const painel = $(`painel-${i}`);
-    painel.style.setProperty('--cor', corDaEspecie(j.criatura));
+    painel.style.setProperty('--cor-base', corDaEspecie(j.criatura));
+    painel.dataset.especie = j.criatura.especie;
     painel.classList.toggle('com-escudo', j.escudo);
     const botoes = SIMBOLOS.map((s) =>
       el('button', { type: 'button', class: 'simbolo', 'data-jogador': String(i), 'data-simbolo': s, 'aria-pressed': 'false' },
@@ -746,6 +771,7 @@ function preencherFicha(ficha, resumo, i) {
   }
   if (resumo.modo === MIRA) {
     const acertou = resumo.acertou[i];
+    ficha.classList.add('tem-alvo');
     filhos.push(el('span', { class: `ficha-alvo ${acertou ? 'acertou' : 'errou'}` },
       icone(acertou ? iconeAlvo() : iconeErrou()), acertou ? 'acertou' : 'errou'));
   }
@@ -771,7 +797,8 @@ function renderResultado() {
     const flutuantes = el('div', { class: 'flutuantes' });
     const painel = $(`res-painel-${i}`);
     painel.className = `painel-res${efeitos.papel ? ` ${efeitos.papel}` : ''}`;
-    painel.style.setProperty('--cor', corDaEspecie(j.criatura));
+    painel.style.setProperty('--cor-base', corDaEspecie(j.criatura));
+    painel.dataset.especie = j.criatura.especie;
     painel.replaceChildren(
       el('div', { class: 'painel-res-cabeca' },
         el('span', { class: 'painel-res-nome' }, `J${i + 1} · ${j.criatura.nome}`),
@@ -783,6 +810,7 @@ function renderResultado() {
     );
 
     preencherFicha($(`ficha-${i}`), resumo, i);
+    $('arena-palco').classList.toggle('tem-alvo', resumo.modo === MIRA);
 
     return {
       barra, escudo, flutuantes,
@@ -917,7 +945,7 @@ function cartaoColecao(c, colecao) {
     );
   }
   const item = colecao[c.codigo];
-  return el('div', { class: 'carta', style: `--cor: ${corDaEspecie(c)}` },
+  return el('div', { class: 'carta', style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
     el('span', { class: 'carta-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
     el('span', { class: 'carta-nome' }, c.nome),
     el('span', { class: 'carta-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
@@ -944,7 +972,7 @@ function abrirColecao() {
 function abrirEspera(criatura, { repetido = false } = {}) {
   app.escolhas = [criatura, null];
   $('espera-selo').replaceChildren(
-    el('span', { class: 'cartao-avatar', style: `--cor: ${corDaEspecie(criatura)}` }, criatura.nome.charAt(0)),
+    el('span', { class: 'cartao-avatar', style: `--cor-base: ${corDaEspecie(criatura)}`, 'data-especie': criatura.especie }, criatura.nome.charAt(0)),
   );
   $('espera-titulo').textContent = `${criatura.nome} está pronto!`;
   $('espera-texto').textContent = 'Agora escaneie o bichinho do seu oponente.';

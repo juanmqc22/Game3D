@@ -7,10 +7,17 @@
   <meta name="theme-color" content="#111111">
   <title>Arena dos Bichinhos</title>
   <link rel="icon" href="data:,">
+  <!-- Única dependência externa: uma fonte. Com font-display=swap e fallback de
+       sistema, o jogo continua legível offline ou se o Google Fonts não responder. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" media="print" onload="this.media='all'"
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap">
+  <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap"></noscript>
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=8">
+  <link rel="stylesheet" href="./css/estilo.css?v=9">
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -20,7 +27,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=8" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=9" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -111,7 +118,7 @@
       <h2 id="resultado-rodada">Rodada 1</h2>
       <div class="palco">
         <div id="res-painel-0" class="painel-res"></div>
-        <div class="arena" aria-hidden="true">
+        <div class="arena" id="arena-palco" aria-hidden="true">
           <div id="ficha-0" class="ficha"></div>
           <div class="clarao"></div>
           <div id="ficha-1" class="ficha"></div>
