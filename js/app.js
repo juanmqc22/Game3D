@@ -269,17 +269,26 @@ function cartaoCriatura(c, { tocavel, colecao }) {
   );
 }
 
-// Cartão grande do novo bichinho (tela de desbloqueio).
+// Carta grande do bichinho recém-descoberto (tela de desbloqueio).
+// Primeiro contato depois de escanear a peça física: é a tela que tem que dar
+// um sorriso, então ganha raios, varredura holográfica e atributos em placa.
 function cartaoDesbloqueio(c) {
-  return el('div', { class: 'cartao cartao-info cartao-grande', style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
-    el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
-    el('span', { class: 'cartao-nome' }, `${c.nome}, o ${nomeDaEspecie(c).toLowerCase()}`),
-    el('span', { class: 'cartao-codigo' }, c.codigo),
-    el('span', { class: 'cartao-status' },
-      el('span', {}, icone(iconeVida()), ` ${c.vida} de vida`),
-      el('span', {}, `Força ${c.forca}`),
+  const atributo = (valor, nome, extra) => el('span', { class: `atributo ${extra}` },
+    el('b', {}, String(valor)), el('span', {}, nome));
+  return el('div', { class: 'carta-nova', style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
+    el('span', { class: 'carta-nova-raios', 'aria-hidden': 'true' }),
+    el('div', { class: 'carta-nova-chapa' },
+      el('span', { class: 'carta-nova-chip' }, icone(iconeQr()), 'Peça registrada'),
+      el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
+      el('span', { class: 'carta-nova-nome' }, c.nome),
+      el('span', { class: 'carta-nova-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
+      el('div', { class: 'carta-nova-atributos' },
+        atributo(c.vida, 'vida', 'atributo-vida'),
+        atributo(c.forca, 'força', 'atributo-forca'),
+      ),
+      el('span', { class: 'carta-nova-especial' }, linhaEspecial(c)),
+      el('span', { class: 'carta-nova-brilho', 'aria-hidden': 'true' }),
     ),
-    el('span', { class: 'cartao-especial' }, linhaEspecial(c)),
   );
 }
 
@@ -936,16 +945,16 @@ function renderFim() {
 
 // ---------- tela: minha coleção ----------
 
-function cartaoColecao(c, colecao) {
+function cartaoColecao(c, colecao, i = 0) {
   if (!estaDescoberta(colecao, c.codigo)) {
-    return el('div', { class: 'carta carta-misterio', 'aria-label': 'Bichinho ainda não descoberto' },
+    return el('div', { class: 'carta carta-misterio', style: `--i: ${i}`, 'aria-label': 'Bichinho ainda não descoberto' },
       el('span', { class: 'carta-avatar' }, icone(iconeMisterio())),
       el('span', { class: 'carta-nome' }, '???'),
       el('span', { class: 'carta-dica' }, icone(iconeQr()), 'Escaneie a peça para descobrir'),
     );
   }
   const item = colecao[c.codigo];
-  return el('div', { class: 'carta', style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
+  return el('div', { class: 'carta', style: `--cor-base: ${corDaEspecie(c)}; --i: ${i}`, 'data-especie': c.especie },
     el('span', { class: 'carta-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
     el('span', { class: 'carta-nome' }, c.nome),
     el('span', { class: 'carta-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
@@ -963,7 +972,7 @@ function abrirColecao() {
   $('colecao-indisponivel').hidden = colecao !== null;
   const total = contarDescobertos(colecao);
   $('colecao-contador').textContent = `${total} de ${CRIATURAS.length} bichinhos`;
-  $('lista-colecao').replaceChildren(...CRIATURAS.map((c) => cartaoColecao(c, colecao ?? {})));
+  $('lista-colecao').replaceChildren(...CRIATURAS.map((c, i) => cartaoColecao(c, colecao ?? {}, i)));
   mostrarTela('tela-colecao');
 }
 
@@ -979,7 +988,7 @@ function abrirEspera(criatura, { repetido = false } = {}) {
   const aviso = $('espera-aviso');
   aviso.hidden = !repetido;
   aviso.textContent = 'Esse é o mesmo bichinho! Escaneie outro.';
-  $('espera-qr').replaceChildren(icone(iconeQr()));
+  $('espera-qr').replaceChildren(el('span', { class: 'mira-leitura' }, icone(iconeQr())));
   mostrarTela('tela-espera');
 }
 
