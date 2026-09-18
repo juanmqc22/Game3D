@@ -793,7 +793,8 @@ input:focus-visible {
 .flutuantes {
   position: absolute;
   right: 92px;
-  top: 22px;
+  top: 6px;
+  z-index: 5; /* o número do dano nunca fica atrás de um efeito */
   display: flex;
   gap: 8px;
   pointer-events: none;
@@ -814,6 +815,7 @@ input:focus-visible {
 
 .arena {
   position: relative;
+  z-index: 2; /* efeitos e fichas passam por cima dos painéis */
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -960,6 +962,151 @@ input:focus-visible {
   70% { opacity: 1; transform: translate3d(0, -20px, 0) scale(1); }
   100% { opacity: 0; transform: translate3d(0, -40px, 0) scale(0.95); }
 }
+
+
+/* ---------- Efeitos do confronto ----------
+   Uma camada de peças genéricas (anel, estilhaços, língua, domo, carimbo) que
+   o data-efeito de #tela-resultado liga ou desliga. Cada um dos 6 especiais
+   acende uma combinação diferente; código desconhecido cai no anel genérico.
+   Tudo em transform/opacity, tudo termina antes dos 1,2s da rodada. */
+
+.efeitos { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
+.efeitos > * {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: none;
+  opacity: 0;
+}
+.ficha, .clarao { z-index: 2; }
+
+/* cor de cada especial */
+#tela-resultado { --cor-efeito: var(--especial); }
+#tela-resultado[data-efeito="TAT01"] { --cor-efeito: var(--escudo); }   /* Bola de Ferro */
+#tela-resultado[data-efeito="SAP02"] { --cor-efeito: #d1006b; }         /* Língua Chicote */
+#tela-resultado[data-efeito="TAT03"] { --cor-efeito: var(--tatu); }     /* Espinho */
+#tela-resultado[data-efeito="SAP04"] { --cor-efeito: var(--sapo); }     /* Pulo Duplo */
+#tela-resultado[data-efeito="TAT05"] { --cor-efeito: var(--cura); }     /* Casca Dura */
+#tela-resultado[data-efeito="SAP06"] { --cor-efeito: #e35205; }         /* Estouro */
+
+.clarao { background: radial-gradient(circle, #fff 0 32%, var(--cor-efeito) 33% 56%, rgba(255, 255, 255, 0) 60%); }
+
+/* quem aparece em cada especial */
+[data-golpe="dano"] .onda, [data-golpe="bloqueado"] .onda { display: block; }
+/* o segundo anel é só do Pulo Duplo (mesma especificidade: vale a ordem) */
+[data-golpe] .onda-2 { display: none; }
+[data-efeito="SAP04"] .onda-2 { display: block; }
+[data-efeito="TAT03"] .estilhacos, [data-efeito="SAP06"] .estilhacos { display: block; }
+[data-efeito="SAP02"] .lingua { display: block; }
+[data-efeito="TAT01"] .domo, [data-efeito="TAT05"] .domo { display: block; }
+
+/* anel de choque, no ponto de encontro */
+.onda {
+  width: 44px;
+  height: 44px;
+  margin: -22px 0 0 -22px;
+  border: 6px solid var(--cor-efeito);
+  border-radius: 50%;
+}
+.fase-impacto .onda { animation: onda 420ms cubic-bezier(0.1, 0.7, 0.3, 1) both; }
+.fase-impacto .onda-2 { animation: onda 420ms cubic-bezier(0.1, 0.7, 0.3, 1) 140ms both; }
+@keyframes onda {
+  0% { opacity: 0.95; transform: scale(0.2); }
+  100% { opacity: 0; transform: scale(3.6); }
+}
+
+/* espinhos / estouro: raios saindo do centro */
+.estilhacos {
+  width: 170px;
+  height: 170px;
+  margin: -85px 0 0 -85px;
+  background: repeating-conic-gradient(from 0deg,
+    var(--cor-efeito) 0deg 3.5deg, rgba(255, 255, 255, 0) 3.5deg 24deg);
+  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 16%, #000 30%, #000 44%, rgba(0, 0, 0, 0) 56%);
+  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 16%, #000 30%, #000 44%, rgba(0, 0, 0, 0) 56%);
+}
+.fase-impacto .estilhacos { animation: estilhacos 480ms cubic-bezier(0.1, 0.75, 0.3, 1) both; }
+@keyframes estilhacos {
+  0% { opacity: 1; transform: scale(0.25) rotate(-10deg); }
+  100% { opacity: 0; transform: scale(1.5) rotate(10deg); }
+}
+
+/* Língua Chicote: dispara do vencedor até o oponente e recolhe */
+.lingua {
+  width: 168px;
+  height: 14px;
+  margin: -7px 0 0 -84px;
+  border: 3px solid var(--tinta);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--cor-efeito) 0%, #ff8ab4 100%);
+  transform-origin: var(--origem, left) center;
+}
+.fase-impacto .lingua { animation: chicote 460ms cubic-bezier(0.3, 0.9, 0.3, 1) both; }
+@keyframes chicote {
+  0% { opacity: 0; transform: scaleX(0.06); }
+  28% { opacity: 1; transform: scaleX(1.12); }
+  62% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(0.06); }
+}
+
+/* domo: escudo (Bola de Ferro) ou casca (Casca Dura), em volta do vencedor */
+/* domo fica em volta do VENCEDOR, por isso usa --posv e não o centro */
+.domo {
+  left: var(--posv, 50%);
+  width: 132px;
+  height: 132px;
+  margin: -66px 0 0 -66px;
+  border: 8px solid var(--cor-efeito);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0) 52%, rgba(255, 255, 255, 0.45) 100%);
+}
+.fase-impacto .domo { animation: domo 560ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes domo {
+  0% { opacity: 0; transform: scale(0.35); }
+  40% { opacity: 1; transform: scale(1.06); }
+  75% { opacity: 0.9; transform: scale(0.98); }
+  100% { opacity: 0; transform: scale(1.18); }
+}
+
+/* Estouro sacode os dois painéis, não só quem levou */
+.fase-impacto[data-efeito="SAP06"] .painel-res { animation: tremer 260ms linear; }
+
+/* Tropeço: a peça tomba e o carimbo bate */
+.ficha.tombou { transition-timing-function: cubic-bezier(0.3, 1.5, 0.5, 1); }
+[data-tropeco="sim"] .arena { height: 146px; align-items: flex-start; padding-top: 6px; }
+[data-tropeco="sim"] .arena.tem-alvo { height: 168px; }
+.fase-impacto .ficha.tombou {
+  transform: translate3d(calc(var(--para) + 4px), 12px, 0) scale(0.78) rotate(74deg);
+}
+.estampa {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  z-index: 3;
+  display: block;
+  padding: 5px 15px;
+  border: 3px solid var(--tinta);
+  border-radius: var(--raio-p);
+  background: var(--tropeco);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1);
+  pointer-events: none;
+}
+.fase-impacto[data-tropeco="sim"] .estampa { animation: carimbo 560ms cubic-bezier(0.2, 1.5, 0.4, 1) 70ms both; }
+@keyframes carimbo {
+  0% { opacity: 0; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(2.4); }
+  50% { opacity: 1; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(0.9); }
+  68% { opacity: 1; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1.08); }
+  100% { opacity: 1; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1); }
+}
+
+/* golpe forte: o número de dano vem maior */
+.flutua.forte { font-size: 3rem; }
 
 /* ---------- Fim ---------- */
 

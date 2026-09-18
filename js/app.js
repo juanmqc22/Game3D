@@ -5,7 +5,7 @@
 // ?v= igual ao de index.html (ver comentário lá).
 import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=9';
 import {
-  DEFESA, ESPECIAL, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS,
+  DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
 } from './regras.js?v=9';
 import {
@@ -746,7 +746,7 @@ function efeitosDoPainel(resumo, i) {
     if (resumo.bloqueado) {
       return { papel: 'protegido', flutuantes: [{ tipo: 'bloqueado', valor: resumo.danoPrevisto }] };
     }
-    return { papel: 'levou-dano', flutuantes: [{ tipo: 'dano', texto: `-${resumo.dano}` }] };
+    return { papel: 'levou-dano', flutuantes: [{ tipo: 'dano', texto: `-${resumo.dano}`, forte: resumo.dano >= 5 }] };
   }
   const flutuantes = [];
   if (resumo.cura > 0) flutuantes.push({ tipo: 'cura', texto: `+${resumo.cura}` });
@@ -758,7 +758,7 @@ function numeroFlutuante(f) {
   if (f.tipo === 'bloqueado') {
     return el('span', { class: 'flutua bloqueado', 'aria-label': `${f.valor} de dano bloqueado` }, el('s', {}, String(f.valor)));
   }
-  return el('span', { class: `flutua ${f.tipo}` }, f.texto);
+  return el('span', { class: `flutua ${f.tipo}${f.forte ? ' forte' : ''}` }, f.texto);
 }
 
 // Ficha do jogador na arena do resultado: símbolo, ou DENTRO/FORA na Arena.
@@ -767,6 +767,8 @@ function preencherFicha(ficha, resumo, i) {
   ficha.className = 'ficha';
   delete ficha.dataset.simbolo;
   if (resumo.vencedor !== null) ficha.classList.add(resumo.vencedor === i ? 'venceu' : 'perdeu');
+  // quem tropeçou cai de lado: é a face que a criança mais quer evitar
+  if (resumo.vencedor !== null && resumo.vencedor !== i && simbolo === TROPECO) ficha.classList.add('tombou');
   const filhos = [];
   if (resumo.modo === ARENA && !resumo.dentro[i]) {
     ficha.classList.add('fora');
@@ -787,6 +789,23 @@ function preencherFicha(ficha, resumo, i) {
   ficha.replaceChildren(...filhos);
 }
 
+// Liga os efeitos da rodada. Cada especial tem o seu (ver css/estilo.css);
+// um código desconhecido cai no efeito genérico, sem quebrar nada.
+function configurarEfeitos(tela, estado, resumo) {
+  const v = resumo.vencedor;
+  const houveGolpe = v !== null && !resumo.nula;
+  // o especial só "acontece" quando a face especial venceu de verdade
+  const usouEspecial = houveGolpe && resumo.simboloVencedor === ESPECIAL && resumo.bonusFora === 0;
+  tela.dataset.efeito = usouEspecial ? estado.jogadores[v].criatura.codigo : '';
+  tela.dataset.golpe = houveGolpe ? (resumo.bloqueado ? 'bloqueado' : 'dano') : 'nenhum';
+  tela.dataset.tropeco = resumo.bonusTropeco > 0 ? 'sim' : 'nao';
+  // Onde o vencedor para depois de avançar, em % da arena (não em px: precisa
+  // valer igual em 360 e em 560 de largura). A língua cresce a partir dele.
+  tela.style.setProperty('--posv', v === 1 ? '71%' : '29%');
+  tela.style.setProperty('--origem', v === 1 ? 'right' : 'left');
+  $('estampa').textContent = resumo.bonusTropeco > 0 ? 'TROPEÇOU! +2' : '';
+}
+
 // Desenha a tela no estado "antes" e devolve o que a animação precisa.
 function renderResultado() {
   const { antes, resultado } = app.ultimaRodada;
@@ -794,6 +813,7 @@ function renderResultado() {
   const texto = descreverRodada(estado, resumo);
   const tela = $('tela-resultado');
   tela.classList.remove('fase-choque', 'fase-impacto', 'fase-texto', 'sem-transicao');
+  configurarEfeitos(tela, estado, resumo);
 
   $('resultado-rodada').textContent = `Rodada ${resumo.numero} · ${INFO_MODO[resumo.modo].nome}`;
 
