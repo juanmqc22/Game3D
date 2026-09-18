@@ -518,6 +518,8 @@ h2 { font-size: 1.5rem; }
 .botao-modo-nome { font-size: 1.5rem; font-weight: 900; text-transform: uppercase; letter-spacing: 0.03em; }
 .botao-modo-explicacao { font-size: 0.95rem; font-weight: 600; line-height: 1.25; color: var(--texto-suave); }
 .botao-colecao { margin-top: 10px; }
+.botao-espera { background: var(--escudo-fundo); color: var(--texto); border-color: var(--escudo); font-size: 1.1rem; }
+.botao-espera .icone { font-size: 1.6rem; color: var(--escudo); }
 .dupla { margin: 0; font-size: 1.4rem; text-align: center; }
 
 .chip-modo {

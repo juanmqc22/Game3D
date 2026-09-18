@@ -93,6 +93,8 @@ Chromium headless (Playwright) sem erros de console.
    ninguém sabe quem venceu antes de resolver.
 9. Ordem na chegada: registra na coleção → calcula o estado de espera → mostra o
    card de desbloqueio (se for novo) → só depois a espera/partida.
+10. Se a página for recarregada com uma peça esperando, a tela inicial mostra
+    "Couraça está esperando o oponente" com um botão que volta à tela de espera.
 
 ## Bônus ajustados (e por quê)
 

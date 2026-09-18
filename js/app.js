@@ -12,7 +12,7 @@ import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeTrofeu, iconeEmpate,
   iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
 } from './icones.js?v=8';
-import { processarChegada, limparAguardando } from './escaneio.js?v=8';
+import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=8';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
 } from './colecao.js?v=8';
@@ -967,6 +967,15 @@ function recomecar() {
 function irParaInicio() {
   atualizarBotaoColecao();
   $('inicio-erro').hidden = true;
+  // Uma peça já escaneada continua esperando a segunda (até expirar).
+  const aguardando = lerAguardando(armazemEspera());
+  const botao = $('btn-inicio-espera');
+  botao.hidden = !aguardando;
+  if (aguardando) {
+    const criatura = buscarCriatura(aguardando.codigo);
+    botao.replaceChildren(icone(iconeQr()), ` ${criatura.nome} está esperando o oponente`);
+    botao.onclick = () => abrirEspera(criatura);
+  }
   mostrarTela('tela-inicio');
 }
 
