@@ -33,8 +33,9 @@ perde o `?b=`. Com ele, as duas formas funcionam: `/?b=TAT01` e
    `http://192.168.0.12:3000`, e abra esse endereço no celular.
 3. Se não abrir, libere o Node.js no firewall do Windows quando ele perguntar.
 
-Para testar o QR de uma peça, abra `http://<endereço>/?b=SAP02`: a
-tela de escolha deve abrir com o Bocão já marcado.
+Para testar o QR de uma peça, abra `http://<endereço>/?b=SAP02`: aparece o
+card "Novo bichinho!" e depois a tela de espera. Abra em seguida
+`http://<endereço>/?b=TAT01` na mesma aba: a partida Bocão x Couraça é montada.
 
 ## Testes
 
@@ -44,9 +45,13 @@ node --test
 
 - `test/regras.test.js`: as regras do jogo (regras 1 a 7, escudo, cura, roubo
   e recuo).
+- `test/modos.test.js`: os modos Arena e Mira.
+- `test/escaneio.test.js`: o loop de escaneio de duas peças (espera, repetido,
+  expiração, inválido).
+- `test/colecao.test.js`: a coleção em localStorage.
 - `test/criaturas.test.js`: confere os dados dos bichinhos, a busca por código
-  e o **guarda-corpo de golpe máximo**: o maior dano mais os 2 do TROPEÇO não
-  pode passar de 60% da vida de nenhum alvo.
+  e o **guarda-corpo de golpe máximo**: o maior dano possível numa rodada, em
+  cada um dos três modos, não pode passar de 60% da vida de nenhum alvo.
 
 ## Balanceamento
 
@@ -54,6 +59,8 @@ node --test
 node scripts/balanceamento.js
 node scripts/balanceamento.js --faces 20,20,20,40
 node scripts/balanceamento.js --ajuste SAP06.vida=15,SAP06.recuo=1
+node scripts/balanceamento.js --modo ARENA --chance 50
+node scripts/balanceamento.js --modo MIRA --chance 50
 ```
 
 O script simula todos os confrontos (2000 partidas cada) e mostra a taxa de
@@ -64,6 +71,8 @@ bichinho contra o resto do elenco.
   aqui o resultado dos arremessos reais de uma peça.
 - `--ajuste`: testa números novos sem editar a tabela. Campos aceitos: `vida`,
   `forca`, `dano`, `cura` e `recuo`.
+- `--modo`: `ROLAR` (padrão), `ARENA` ou `MIRA`. `--chance`: na Arena, chance
+  (%) de cada peça parar dentro do círculo; na Mira, de acertar o alvo.
 
 Alvos:
 
@@ -108,4 +117,22 @@ Observações:
   `index.html`.
 - No plano gratuito do GitHub, o Pages só funciona com repositório **público**.
 - Depois de publicar, cada `git push` na `main` atualiza o site sozinho.
-- O placar (vitórias e derrotas) fica guardado só no navegador de cada celular.
+- A coleção (bichinhos descobertos, partidas e vitórias) fica guardada só no
+  navegador de cada celular.
+
+## Modos de jogo
+
+- **Rolar**: o clássico. Cada um arremessa e toca no símbolo que saiu.
+- **Arena**: desenhem um círculo no chão (ou usem uma bandeja). Os dois
+  arremessam de fora para dentro. Quem ficar fora não causa dano e leva a força
+  do outro + 1. Os dois dentro: igual ao Rolar. Nenhum dentro: rodada nula.
+- **Mira**: coloquem uma tampa ou um prato a alguns passos. Quem venceu a
+  rodada e parou dentro do alvo causa +2 de dano; quem venceu e errou causa
+  metade do dano.
+
+## Escanear duas peças
+
+O QR de cada peça abre `?b=CODIGO`. O primeiro scan mostra o bichinho e fica
+esperando; o segundo, na mesma aba, monta a partida e pede o modo. Quem só tem
+uma peça toca em "Não tenho a segunda peça" e escolhe um oponente da coleção ou
+um "Oponente surpresa". A espera dura 10 minutos.
