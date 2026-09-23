@@ -55,9 +55,11 @@
 
   /* ---- espécies (o valor de js/criaturas.js entra como --cor-base) ---- */
   --tatu: #95470b;
+  --tatu-corpo: #dda15e;      /* corpo do bichinho: o tom do plástico impresso */
   --tatu-holo-1: rgba(245, 158, 11, 0.28);
   --tatu-holo-2: rgba(180, 83, 9, 0.16);
   --sapo: #0b6b62;
+  --sapo-corpo: #79c9bd;
   --sapo-holo-1: rgba(16, 185, 168, 0.28);
   --sapo-holo-2: rgba(11, 107, 98, 0.16);
 
@@ -279,8 +281,28 @@ input:focus-visible {
 [data-simbolo="TROPECO"] { --cor-simbolo: var(--tropeco); --cor-simbolo-texto: var(--tropeco-texto); }
 
 /* espécie: --cor-tema vem daqui, --cor-base vem de js/criaturas.js (espécie nova) */
-[data-especie="tatu"] { --cor-tema: var(--tatu); --holo-1: var(--tatu-holo-1); --holo-2: var(--tatu-holo-2); }
-[data-especie="sapo"] { --cor-tema: var(--sapo); --holo-1: var(--sapo-holo-1); --holo-2: var(--sapo-holo-2); }
+[data-especie="tatu"] { --cor-tema: var(--tatu); --cor-corpo: var(--tatu-corpo); --holo-1: var(--tatu-holo-1); --holo-2: var(--tatu-holo-2); }
+[data-especie="sapo"] { --cor-tema: var(--sapo); --cor-corpo: var(--sapo-corpo); --holo-1: var(--sapo-holo-1); --holo-2: var(--sapo-holo-2); }
+
+/* ---------- O bichinho (mesma silhueta da peça impressa) ---------- */
+
+/* Alto e estreito: a altura manda, a largura acompanha. O corpo usa o
+   --cor-corpo da espécie; espécie nova cai no --cor-base de js/criaturas.js. */
+.icone.bichinho {
+  width: auto;
+  height: 1em;
+  vertical-align: middle;
+  color: var(--cor-corpo, var(--cor-base, var(--tinta)));
+  overflow: visible;
+}
+.bicho-casco { stroke: var(--tinta); stroke-width: 3px; paint-order: stroke; }
+.bicho-pupila { fill: #1b1b1b; }
+.bicho-traco { fill: rgba(255, 255, 255, 0.45); stroke: rgba(0, 0, 0, 0.35); stroke-width: 1.6px; }
+.bicho-furo { fill: rgba(0, 0, 0, 0.45); }
+.bicho-placa { fill: #fff; stroke: var(--tinta); stroke-width: 2.5px; }
+.bicho-placa-vazia { fill: rgba(255, 255, 255, 0.55); stroke-dasharray: 5 5; }
+/* O peito repete a cor do símbolo que saiu (a mesma dos botões). */
+.bicho-simbolo { color: var(--cor-simbolo); }
 
 /* ---------- Escolha ---------- */
 
@@ -336,8 +358,9 @@ input:focus-visible {
 .cartao {
   --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
   position: relative;
-  display: grid;
-  gap: 3px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
   width: 100%;
   min-height: var(--toque);
   padding: 11px 14px 11px 22px;
@@ -352,6 +375,8 @@ input:focus-visible {
   cursor: pointer;
   transition: transform 120ms ease-out;
 }
+.cartao-dados { position: relative; display: grid; gap: 3px; flex: 1; min-width: 0; }
+.cartao-bicho { position: relative; display: flex; font-size: 64px; }
 /* costela da espécie */
 .cartao::before {
   content: "";
@@ -446,7 +471,17 @@ input:focus-visible {
   border-radius: 3px 16px 0 0;
 }
 .painel > * { position: relative; }
-.painel-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.painel-cabeca { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.painel-bicho { display: flex; font-size: 84px; }
+/* Trocou de símbolo, o retrato é redesenhado: a entrada confirma o toque. */
+.painel-bicho .bichinho { animation: bicho-troca 220ms ease-out; }
+.painel-id { flex: 1; min-width: 0; }
+
+@keyframes bicho-troca {
+  0% { transform: scale(0.82); }
+  60% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
 .painel-jogador {
   font-size: 0.8rem;
   font-weight: 700;
@@ -818,34 +853,42 @@ input:focus-visible {
   z-index: 2; /* efeitos e fichas passam por cima dos painéis */
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  height: 110px;
-  padding: 0 4px;
+  align-items: flex-end;
+  height: 138px;
+  padding: 0 4px 2px;
 }
-.arena.tem-alvo { height: 132px; }
+.arena.tem-alvo { height: 162px; }
 .ficha {
   position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 2px;
-  width: 106px;
-  height: 92px;
-  border: var(--borda) solid var(--tinta);
-  border-radius: var(--raio-p);
-  background-color: var(--cor-simbolo);
-  background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.28) 0%, rgba(0, 0, 0, 0.14) 100%);
-  color: var(--cor-simbolo-texto);
+  justify-content: flex-end;
+  gap: 4px;
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   opacity: 0.25;
   transform: translate3d(var(--de), 0, 0) scale(0.6) rotate(var(--giro, 0deg));
+  transform-origin: bottom center;
   transition: transform 300ms cubic-bezier(0.3, 0.8, 0.4, 1), opacity 260ms ease-out;
 }
-.ficha.tem-alvo { height: 112px; }
-.ficha .icone { font-size: 2.5rem; }
+.ficha .bichinho { height: 92px; transition: transform 300ms cubic-bezier(0.3, 1.4, 0.5, 1); }
+/* placa do símbolo que saiu, embaixo do bichinho */
+.ficha-selo {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border: 2px solid var(--tinta);
+  border-radius: var(--raio-p);
+  background-color: var(--cor-simbolo, var(--chassi-alt));
+  color: var(--cor-simbolo-texto, var(--tinta));
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+.ficha-selo .icone { font-size: 0.95rem; }
+.ficha-selo-fora { border-style: dashed; }
 #ficha-0 { --de: -30px; --para: 46px; --giro: -8deg; }
 #ficha-1 { --de: 30px; --para: -46px; --giro: 8deg; }
 
@@ -869,37 +912,50 @@ input:focus-visible {
   transform: translate3d(0, 10px, 0);
   transition: opacity 160ms ease-out, transform 160ms ease-out;
 }
-.confronto {
-  margin: 0;
-  font-size: 0.9rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--tinta-media);
-}
 .frase { margin: 0; font-size: 1.35rem; font-weight: 700; line-height: 1.22; }
-.destaque-escudo {
-  display: flex;
+.nota { margin: 0; font-size: 0.98rem; font-weight: 600; color: var(--tinta-media); }
+
+/* Os detalhes da rodada viram selos: ícone + duas ou três palavras. */
+.etiquetas { display: flex; flex-wrap: wrap; gap: 7px; }
+.etiquetas:empty { display: none; }
+.etiqueta {
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  margin: 0;
-  padding: 12px;
-  border: var(--borda) solid var(--escudo);
-  border-left-width: 10px;
+  gap: 6px;
+  padding: 4px 11px 4px 8px;
+  border: var(--borda) solid var(--cor-etiqueta, var(--tinta-media));
   border-radius: var(--raio-p);
-  background: var(--escudo-fundo);
+  background: var(--fundo-etiqueta, var(--superficie));
   color: var(--tinta);
-  font-size: 1.15rem;
+  font-size: 1rem;
   font-weight: 700;
 }
-.destaque-escudo .icone { font-size: 2.4rem; color: var(--escudo); flex: none; }
-.detalhes { margin: 0; padding-left: 1.1em; font-weight: 600; font-size: 0.98rem; }
-.detalhes:empty { display: none; }
-.detalhes li + li { margin-top: 4px; }
+.etiqueta .icone { font-size: 1.4rem; color: var(--cor-etiqueta, var(--tinta-media)); flex: none; }
+.etiqueta-especial { --cor-etiqueta: #8a6a00; --fundo-etiqueta: #fff6d6; }
+.etiqueta-especial .icone { color: var(--especial); stroke: var(--tinta); stroke-width: 1.2px; paint-order: stroke; }
+.etiqueta-contra { --cor-etiqueta: var(--defesa); --fundo-etiqueta: var(--escudo-fundo); }
+.etiqueta-tropeco { --cor-etiqueta: var(--tropeco); --fundo-etiqueta: #f4e6ff; }
+.etiqueta-escudo { --cor-etiqueta: var(--escudo); --fundo-etiqueta: var(--escudo-fundo); }
+.etiqueta-dano, .etiqueta-recuo { --cor-etiqueta: var(--perigo); --fundo-etiqueta: var(--perigo-fundo); }
+.etiqueta-cura { --cor-etiqueta: var(--cura); --fundo-etiqueta: #e2f5e6; }
+.etiqueta-alvo { --cor-etiqueta: #b3005c; --fundo-etiqueta: #ffe6f1; }
+.etiqueta-fora, .etiqueta-errou { --cor-etiqueta: var(--tinta-media); --fundo-etiqueta: var(--chassi-alt); }
+
+/* Só para leitor de tela: a rodada por extenso. */
+.so-leitor {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 
 /* fichas de Arena e Mira */
 .ficha.dentro { --cor-simbolo: var(--ataque); --cor-simbolo-texto: #fff; }
-.ficha.fora { --cor-simbolo: var(--chassi-alt); --cor-simbolo-texto: var(--tinta); border-style: dashed; }
+.ficha.fora { --cor-simbolo: var(--chassi-alt); --cor-simbolo-texto: var(--tinta); }
 .ficha-alvo {
   display: inline-flex;
   margin-top: 3px;
@@ -920,9 +976,9 @@ input:focus-visible {
 
 /* Fases da sequência (classes na #tela-resultado) */
 .fase-choque .ficha { opacity: 1; transform: translate3d(var(--para), 0, 0) scale(1.1) rotate(0deg); }
-.fase-impacto .ficha.venceu { transform: translate3d(var(--para), 0, 0) scale(1.26) rotate(0deg); }
+.fase-impacto .ficha.venceu { transform: translate3d(var(--para), 0, 0) scale(1.14) rotate(0deg); }
 /* perdedor encolhe e torce — nunca desbota: texto lavado some no sol */
-.fase-impacto .ficha.perdeu { opacity: 1; transform: translate3d(var(--para), 0, 0) scale(0.8) rotate(var(--giro, 0deg)); }
+.fase-impacto .ficha.perdeu { opacity: 1; transform: translate3d(var(--para), 0, 0) scale(0.86) rotate(var(--giro, 0deg)); }
 .fase-impacto .clarao { animation: clarao 220ms ease-out; }
 .fase-impacto .painel-res.levou-dano { animation: tremer 220ms linear; }
 .fase-impacto .painel-res.venceu { animation: pulinho 220ms ease-out; }
@@ -1073,11 +1129,12 @@ input:focus-visible {
 
 /* Tropeço: a peça tomba e o carimbo bate */
 .ficha.tombou { transition-timing-function: cubic-bezier(0.3, 1.5, 0.5, 1); }
-[data-tropeco="sim"] .arena { height: 146px; align-items: flex-start; padding-top: 6px; }
-[data-tropeco="sim"] .arena.tem-alvo { height: 168px; }
+[data-tropeco="sim"] .arena { height: 176px; padding-bottom: 36px; }
+[data-tropeco="sim"] .arena.tem-alvo { height: 200px; }
 .fase-impacto .ficha.tombou {
-  transform: translate3d(calc(var(--para) + 4px), 12px, 0) scale(0.78) rotate(74deg);
+  transform: translate3d(calc(var(--para) + 4px), 6px, 0) scale(0.84) rotate(0deg);
 }
+.fase-impacto .ficha.tombou .bichinho { transform: translateY(20px) rotate(74deg); }
 .estampa {
   position: absolute;
   left: 50%;
@@ -1110,7 +1167,17 @@ input:focus-visible {
 
 /* ---------- Fim ---------- */
 
-.fim-icone { margin: 4vh auto 0; font-size: 5.6rem; line-height: 1; color: #a87400; }
+.fim-icone {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 10px;
+  margin: 3vh auto 0;
+  font-size: 4.6rem;
+  line-height: 1;
+  color: #a87400;
+}
+.fim-icone .bichinho { height: 150px; }
 .fim-icone.empate { color: var(--tinta-media); }
 .fim-titulo { font-size: 2.1rem; text-align: center; text-transform: uppercase; letter-spacing: 0.02em; }
 .fim-titulo::before { content: none; }
@@ -1279,7 +1346,9 @@ input:focus-visible {
   font-size: 2.9rem;
   font-weight: 700;
   line-height: 1;
+  overflow: hidden;
 }
+.cartao-avatar .bichinho { height: 78px; margin-bottom: -8px; }
 
 /* espera: a peça lida, esperando a segunda */
 .espera-selo { margin-top: 3vh; }
@@ -1394,7 +1463,9 @@ input:focus-visible {
   font-size: 2.1rem;
   font-weight: 700;
   line-height: 1;
+  overflow: hidden;
 }
+.carta .carta-avatar .bichinho { height: 58px; margin-bottom: -6px; }
 .carta-nome { font-size: 1.2rem; font-weight: 700; }
 .carta-especie {
   font-size: 0.75rem;

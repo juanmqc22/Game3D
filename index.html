@@ -17,7 +17,7 @@
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=9">
+  <link rel="stylesheet" href="./css/estilo.css?v=10">
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -27,7 +27,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=9" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=10" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -136,10 +136,12 @@
         <div id="res-painel-1" class="painel-res"></div>
       </div>
       <div class="resultado-texto">
-        <p id="resultado-confronto" class="confronto"></p>
-        <p id="resultado-frase" class="frase" aria-live="polite"></p>
-        <p id="resultado-destaque" class="destaque-escudo" hidden></p>
-        <ul id="resultado-detalhes" class="detalhes"></ul>
+        <p id="resultado-frase" class="frase"></p>
+        <div id="resultado-etiquetas" class="etiquetas"></div>
+        <p id="resultado-nota" class="nota" hidden></p>
+        <!-- A tela conta a rodada por desenho; esta linha conta por extenso
+             para quem usa leitor de tela. -->
+        <p id="resultado-leitura" class="so-leitor" aria-live="polite"></p>
       </div>
       <div class="rodape-fixo">
         <button type="button" class="botao botao-principal" id="btn-proxima">Próxima rodada</button>

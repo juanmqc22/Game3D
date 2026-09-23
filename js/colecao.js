@@ -4,7 +4,7 @@
 // localStorage, chave CHAVE_COLECAO:
 //   { TAT01: { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 3, vitorias: 2 }, ... }
 
-import { CRIATURAS, buscarCriatura } from './criaturas.js?v=9';
+import { CRIATURAS, buscarCriatura } from './criaturas.js?v=10';
 
 export const CHAVE_COLECAO = 'bichinhos:colecao';
 

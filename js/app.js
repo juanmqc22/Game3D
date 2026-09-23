@@ -3,19 +3,20 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=9';
+import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=10';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
-} from './regras.js?v=9';
+} from './regras.js?v=10';
 import {
-  iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeTrofeu, iconeEmpate,
+  iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeVidaPerdida,
+  iconeTrofeu, iconeEmpate, iconeBichinho,
   iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
-} from './icones.js?v=9';
-import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=9';
+} from './icones.js?v=10';
+import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=10';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
-} from './colecao.js?v=9';
+} from './colecao.js?v=10';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -139,6 +140,13 @@ function linhaEspecial(criatura) {
   );
 }
 
+// Retrato do bichinho. simbolo: um dos quatro, 'VAZIO' (esperando o arremesso)
+// ou null (só o bichinho). A cor do corpo vem do CSS (--cor-corpo, por
+// data-especie), então quem contém o retrato precisa carregar data-especie.
+function retrato(criatura, simbolo = null) {
+  return icone(iconeBichinho(criatura.especie, simbolo));
+}
+
 function seloEscudo() {
   return el('span', { class: 'selo-escudo' }, icone(iconeEscudoAtivo()), 'ESCUDO');
 }
@@ -254,6 +262,8 @@ function cartaoCriatura(c, { tocavel, colecao }) {
     ? { ...comum, type: 'button', class: 'cartao', 'data-codigo': c.codigo, 'aria-pressed': 'false' }
     : { ...comum, class: 'cartao cartao-info' };
   return el(tocavel ? 'button' : 'div', props,
+    el('span', { class: 'cartao-bicho', 'aria-hidden': 'true' }, retrato(c)),
+    el('span', { class: 'cartao-dados' },
     el('span', { class: 'cartao-topo' },
       el('span', {},
         el('span', { class: 'cartao-nome' }, c.nome),
@@ -267,6 +277,7 @@ function cartaoCriatura(c, { tocavel, colecao }) {
     ),
     el('span', { class: 'cartao-especial' }, linhaEspecial(c)),
     textoEstatisticas(colecao, c.codigo),
+    ),
   );
 }
 
@@ -280,7 +291,7 @@ function cartaoDesbloqueio(c) {
     el('span', { class: 'carta-nova-raios', 'aria-hidden': 'true' }),
     el('div', { class: 'carta-nova-chapa' },
       el('span', { class: 'carta-nova-chip' }, icone(iconeQr()), 'Peça registrada'),
-      el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
+      el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, retrato(c)),
       el('span', { class: 'carta-nova-nome' }, c.nome),
       el('span', { class: 'carta-nova-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
       el('div', { class: 'carta-nova-atributos' },
@@ -497,7 +508,8 @@ function renderBatalha() {
       ));
     painel.replaceChildren(...[
       el('div', { class: 'painel-cabeca' },
-        el('div', {},
+        el('div', { class: 'painel-bicho', 'aria-hidden': 'true' }, retrato(j.criatura, 'VAZIO')),
+        el('div', { class: 'painel-id' },
           el('div', { class: 'painel-jogador' }, `Jogador ${i + 1}`),
           el('div', { class: 'painel-nome' }, j.criatura.nome),
         ),
@@ -531,6 +543,9 @@ function atualizarEntradas() {
 
   for (let i = 0; i < 2; i++) {
     const painel = $(`painel-${i}`);
+    // O bichinho já mostra no peito o símbolo tocado: confirma a escolha sem texto.
+    painel.querySelector('.painel-bicho')
+      .replaceChildren(retrato(estado.jogadores[i].criatura, app.entradas[i].simbolo ?? 'VAZIO'));
     const grupo = painel.querySelector('.simbolos');
     const mostrarFace = precisaFace();
     grupo.hidden = !mostrarFace;
@@ -641,7 +656,12 @@ function resolver() {
 
 // ---------- tela: resultado da rodada ----------
 
-// Monta as frases da rodada a partir do resumo de js/regras.js.
+// Conta a rodada a partir do resumo de js/regras.js, em camadas — a arena já
+// mostra quem bateu em quem, então aqui sobra o mínimo:
+//   frase     — uma linha só, o que acabou de acontecer
+//   etiquetas — os detalhes viram selos curtos (ícone + duas ou três palavras)
+//   nota      — no máximo uma linha, só para o que a tela sozinha esconderia
+//   leitura   — a rodada por extenso, para quem usa leitor de tela
 function descreverRodada(estado, resumo) {
   const nome = (i) => nomeJogador(estado, i);
   const [sa, sb] = resumo.simbolos;
@@ -650,94 +670,103 @@ function descreverRodada(estado, resumo) {
     const s = resumo.simbolos[i];
     return s === null ? 'DENTRO' : rotulo(s);
   };
-  const confronto = `${nome(0)}: ${face(0)}  ×  ${nome(1)}: ${face(1)}`;
+  const confronto = `${nome(0)}: ${face(0)} × ${nome(1)}: ${face(1)}.`;
 
   if (resumo.nula) {
     return {
-      confronto,
-      principal: 'Ninguém ficou dentro do círculo. Rodada nula!',
-      destaque: null,
-      detalhes: ['Ninguém perde vida. Arremessem de novo.'],
+      frase: 'Ninguém ficou dentro do círculo. Rodada nula!',
+      etiquetas: [],
+      nota: 'Ninguém perde vida. Arremessem de novo.',
+      leitura: `${confronto} Rodada nula: ninguém perde vida.`,
     };
   }
 
   if (resumo.vencedor === null) {
     return {
-      confronto,
-      principal: `Empate! Os dois tiraram ${rotulo(sa)}.`,
-      destaque: null,
-      detalhes: ['Ninguém perde vida.'],
+      frase: `Empate! Os dois tiraram ${rotulo(sa)}.`,
+      etiquetas: [],
+      nota: null,
+      leitura: `${confronto} Empate: ninguém perde vida.`,
     };
   }
 
   const v = resumo.vencedor;
   const p = 1 - v;
-  const detalhes = [];
-  const danoNoPerdedor = resumo.bloqueado ? `0 no ${nome(p)} (escudo)` : `-${resumo.dano} no ${nome(p)}`;
-  let principal;
-
-  if (resumo.bonusFora > 0) {
-    // ARENA: só um ficou dentro
-    principal = `${nome(v)} ficou dentro e ${nome(p)} ficou fora: ${danoNoPerdedor}`;
-    detalhes.push(`Quem fica fora leva a força do outro (${resumo.danoBase}) + ${resumo.bonusFora} = ${resumo.danoPrevisto}.`);
-  } else if (resumo.simboloVencedor === ESPECIAL) {
-    const especial = estado.jogadores[v].criatura.especial;
-    const partes = [danoNoPerdedor];
-    if (resumo.cura > 0) partes.push(`+${resumo.cura} no ${nome(v)}`);
-    if (resumo.recuo > 0) partes.push(`-${resumo.recuo} no ${nome(v)}`);
-    if (resumo.escudoAtivado) partes.push(`escudo ligado no ${nome(v)}`);
-    principal = `${nome(v)} venceu com ESPECIAL — ${especial.nome}: ${partes.join(', ')}`;
-
-    if (especial.roubo && resumo.bloqueado) {
-      detalhes.push(`Sem roubo de vida: o dano não passou, então ${nome(v)} não ganha +${especial.cura}.`);
-    } else if (especial.cura > 0 && resumo.cura < especial.cura) {
-      detalhes.push(`${nome(v)} só ganhou +${resumo.cura}: a vida não passa do máximo.`);
-    }
-    if (especial.escudo && !resumo.escudoAtivado) {
-      detalhes.push(`${nome(v)} já estava com escudo (não acumula).`);
-    }
-    if (resumo.recuo > 0) {
-      detalhes.push(`${especial.nome} machuca quem usa: -${resumo.recuo} no ${nome(v)}.`);
-    }
-  } else {
-    const contra = resumo.simboloVencedor === DEFESA ? ' (contra-ataque)' : '';
-    principal = `${nome(v)} venceu com ${rotulo(resumo.simboloVencedor)}${contra}: ${danoNoPerdedor}`;
-  }
-
-  if (resumo.bonusTropeco > 0) {
-    detalhes.unshift(resumo.bloqueado
-      ? `${nome(p)} tropeçou (+${resumo.bonusTropeco} de dano), mas o escudo segurou tudo.`
-      : `${nome(p)} tropeçou: +${resumo.bonusTropeco} de dano.`);
-  }
-
-  if (resumo.modo === MIRA) {
-    const soma = resumo.danoBase + resumo.bonusTropeco + resumo.bonusAcerto;
-    if (resumo.metade) {
-      detalhes.push(`${nome(v)} errou o alvo: o dano caiu pela metade (${soma} → ${resumo.danoPrevisto}).`);
-    } else if (resumo.bonusAcerto > 0) {
-      detalhes.push(`${nome(v)} acertou o alvo: +${resumo.bonusAcerto} de dano.`);
-    } else {
-      detalhes.push(`${nome(v)} acertou o alvo, mas o extra da rodada já é +${resumo.bonusTropeco} pelo tropeço.`);
-    }
-    if (!resumo.bloqueado && (resumo.bonusTropeco > 0 || resumo.bonusAcerto > 0 || resumo.metade)) {
-      detalhes.push(`Dano final: ${resumo.dano}.`);
-    }
-  } else if (resumo.bonusTropeco > 0 && !resumo.bloqueado) {
-    detalhes.push(`${resumo.danoBase} + ${resumo.bonusTropeco} = ${resumo.dano} de dano.`);
-  }
-
-  const destaque = resumo.bloqueado
-    ? `O ESCUDO do ${nome(p)} bloqueou todo o dano! O escudo acabou.`
+  const porFora = resumo.bonusFora > 0;
+  const especial = !porFora && resumo.simboloVencedor === ESPECIAL
+    ? estado.jogadores[v].criatura.especial
     : null;
+  const etiquetas = [];
 
-  const [va, vb] = estado.jogadores.map((j) => j.vida);
-  if (resumo.recuo > 0 && estado.jogadores[v].vida === 0) {
-    detalhes.push(`${nome(v)} se machucou com o próprio golpe e ficou sem vida!`);
-  } else if (va === 0 && vb === 0) {
-    detalhes.push('Os dois ficaram sem vida!');
+  if (especial) etiquetas.push({ tipo: 'especial', svg: iconeEspecial(), texto: especial.nome });
+  // Vencer com DEFESA não é óbvio para a criança: o selo dá nome à jogada.
+  if (!porFora && resumo.simboloVencedor === DEFESA) {
+    etiquetas.push({ tipo: 'contra', svg: iconeSimbolo(DEFESA), texto: 'Contra-ataque' });
+  }
+  if (porFora) {
+    etiquetas.push({ tipo: 'fora', svg: iconeFora(), texto: `Fora +${resumo.bonusFora}` });
+  }
+  if (resumo.modo === MIRA) {
+    if (resumo.metade) etiquetas.push({ tipo: 'errou', svg: iconeErrou(), texto: 'Errou: metade' });
+    else if (resumo.bonusAcerto > 0) {
+      etiquetas.push({ tipo: 'alvo', svg: iconeAlvo(), texto: `Alvo +${resumo.bonusAcerto}` });
+    }
+  }
+  if (resumo.bonusTropeco > 0) {
+    etiquetas.push({ tipo: 'tropeco', svg: iconeSimbolo(TROPECO), texto: `Tropeço +${resumo.bonusTropeco}` });
+  }
+  if (resumo.bloqueado) {
+    etiquetas.push({ tipo: 'escudo', svg: iconeEscudoAtivo(), texto: 'Escudo segurou' });
+  } else {
+    etiquetas.push({ tipo: 'dano', svg: iconeVidaPerdida(), texto: `-${resumo.dano} ${nome(p)}` });
+  }
+  if (resumo.cura > 0) etiquetas.push({ tipo: 'cura', svg: iconeVida(), texto: `+${resumo.cura} ${nome(v)}` });
+  if (resumo.recuo > 0) {
+    etiquetas.push({ tipo: 'recuo', svg: iconeVidaPerdida(), texto: `-${resumo.recuo} ${nome(v)}` });
+  }
+  if (resumo.escudoAtivado) {
+    etiquetas.push({ tipo: 'escudo', svg: iconeEscudoAtivo(), texto: 'Escudo ligado' });
   }
 
-  return { confronto, principal, destaque, detalhes };
+  let frase;
+  if (resumo.bloqueado) frase = `O escudo do ${nome(p)} segurou o golpe!`;
+  else if (porFora) frase = `${nome(p)} ficou fora do círculo!`;
+  else frase = `${nome(v)} venceu a rodada!`;
+
+  // Uma nota só, e só quando a tela sozinha enganaria a criança.
+  let nota = null;
+  if (resumo.recuo > 0 && estado.jogadores[v].vida === 0) {
+    nota = `${nome(v)} se machucou com o próprio golpe e ficou sem vida!`;
+  } else if (especial?.roubo && resumo.bloqueado) {
+    nota = `O dano não passou, então ${nome(v)} não rouba vida.`;
+  } else if (especial?.escudo && !resumo.escudoAtivado) {
+    nota = `${nome(v)} já estava com escudo (não acumula).`;
+  } else if (especial?.cura > 0 && resumo.cura < especial.cura) {
+    nota = `${nome(v)} já estava quase cheio: a vida não passa do máximo.`;
+  } else if (resumo.modo === MIRA && !resumo.metade && resumo.bonusAcerto === 0 && resumo.acertou?.[v]) {
+    nota = `${nome(v)} acertou o alvo, mas o extra da rodada já é +${resumo.bonusTropeco} pelo tropeço.`;
+  } else if (estado.jogadores.every((j) => j.vida === 0)) {
+    nota = 'Os dois ficaram sem vida!';
+  }
+
+  const golpe = porFora
+    ? `ficou dentro do círculo e ${nome(p)} ficou fora`
+    : (especial ? `venceu com ESPECIAL, ${especial.nome}` : `venceu com ${rotulo(resumo.simboloVencedor)}`);
+  const efeito = resumo.bloqueado
+    ? `o escudo do ${nome(p)} anulou o dano e acabou`
+    : `${resumo.dano} de dano no ${nome(p)}`;
+  const leitura = [`${confronto} ${nome(v)} ${golpe}: ${efeito}.`]
+    .concat(resumo.cura > 0 ? [`${nome(v)} ganhou ${resumo.cura} de vida.`] : [])
+    .concat(resumo.recuo > 0 ? [`${nome(v)} perdeu ${resumo.recuo} de vida com o próprio golpe.`] : [])
+    .concat(resumo.escudoAtivado ? [`${nome(v)} está com escudo.`] : [])
+    .concat(nota ? [nota] : [])
+    .join(' ');
+
+  return { frase, etiquetas, nota, leitura };
+}
+
+function etiqueta(e) {
+  return el('span', { class: `etiqueta etiqueta-${e.tipo}` }, icone(e.svg), el('span', {}, e.texto));
 }
 
 // O que cada painel faz na animação (papel e números flutuantes).
@@ -762,24 +791,29 @@ function numeroFlutuante(f) {
   return el('span', { class: `flutua ${f.tipo}${f.forte ? ' forte' : ''}` }, f.texto);
 }
 
-// Ficha do jogador na arena do resultado: símbolo, ou DENTRO/FORA na Arena.
-function preencherFicha(ficha, resumo, i) {
+// Ficha do jogador na arena do resultado: o bichinho com o símbolo que saiu
+// gravado no peito, e embaixo a etiqueta do símbolo (ou DENTRO/FORA na Arena).
+function preencherFicha(ficha, resumo, i, criatura) {
   const simbolo = resumo.simbolos[i];
   ficha.className = 'ficha';
+  ficha.dataset.especie = criatura.especie;
   delete ficha.dataset.simbolo;
   if (resumo.vencedor !== null) ficha.classList.add(resumo.vencedor === i ? 'venceu' : 'perdeu');
   // quem tropeçou cai de lado: é a face que a criança mais quer evitar
   if (resumo.vencedor !== null && resumo.vencedor !== i && simbolo === TROPECO) ficha.classList.add('tombou');
+  // Classe própria (ficha-selo-*): nomes soltos como "simbolo" colidiriam com
+  // os botões de toque da tela de batalha.
+  const etiqueta = (extra, ...filhos) => el('span', { class: `ficha-selo ficha-selo-${extra}` }, ...filhos);
   const filhos = [];
   if (resumo.modo === ARENA && !resumo.dentro[i]) {
     ficha.classList.add('fora');
-    filhos.push(icone(iconeFora()), el('span', {}, 'FORA'));
+    filhos.push(retrato(criatura, 'VAZIO'), etiqueta('fora', icone(iconeFora()), 'FORA'));
   } else if (simbolo === null) {
     ficha.classList.add('dentro');
-    filhos.push(icone(iconeDentro()), el('span', {}, 'DENTRO'));
+    filhos.push(retrato(criatura, 'VAZIO'), etiqueta('dentro', icone(iconeDentro()), 'DENTRO'));
   } else {
     ficha.dataset.simbolo = simbolo;
-    filhos.push(icone(iconeSimbolo(simbolo)), el('span', {}, rotulo(simbolo)));
+    filhos.push(retrato(criatura, simbolo), etiqueta('simbolo', rotulo(simbolo)));
   }
   if (resumo.modo === MIRA) {
     const acertou = resumo.acertou[i];
@@ -839,7 +873,7 @@ function renderResultado() {
       el('div', { class: 'halo' }),
     );
 
-    preencherFicha($(`ficha-${i}`), resumo, i);
+    preencherFicha($(`ficha-${i}`), resumo, i, j.criatura);
     $('arena-palco').classList.toggle('tem-alvo', resumo.modo === MIRA);
 
     return {
@@ -849,12 +883,12 @@ function renderResultado() {
     };
   });
 
-  $('resultado-confronto').textContent = texto.confronto;
-  $('resultado-frase').textContent = texto.principal;
-  const destaque = $('resultado-destaque');
-  destaque.hidden = !texto.destaque;
-  destaque.replaceChildren(...(texto.destaque ? [icone(iconeEscudoAtivo()), el('span', {}, texto.destaque)] : []));
-  $('resultado-detalhes').replaceChildren(...texto.detalhes.map((d) => el('li', {}, d)));
+  $('resultado-frase').textContent = texto.frase;
+  $('resultado-etiquetas').replaceChildren(...texto.etiquetas.map(etiqueta));
+  const nota = $('resultado-nota');
+  nota.hidden = texto.nota === null;
+  nota.textContent = texto.nota ?? '';
+  $('resultado-leitura').textContent = texto.leitura;
   $('btn-proxima').textContent = fim.terminou ? 'Ver quem ganhou' : 'Próxima rodada';
 
   return { tela, paineis };
@@ -939,7 +973,15 @@ function renderFim() {
     titulo.textContent = `${nomeJogador(estado, fim.vencedor)} venceu!`;
     sub.textContent = `Parabéns, Jogador ${fim.vencedor + 1}! (${estado.rodada} rodadas · modo ${INFO_MODO[app.modo].nome})`;
   }
-  iconeFim.replaceChildren(icone(empate ? iconeEmpate() : iconeTrofeu()));
+  // Quem ganhou aparece em pessoa, com o troféu ao lado.
+  if (empate) {
+    iconeFim.replaceChildren(icone(iconeEmpate()));
+    delete iconeFim.dataset.especie;
+  } else {
+    const campeao = estado.jogadores[fim.vencedor].criatura;
+    iconeFim.dataset.especie = campeao.especie;
+    iconeFim.replaceChildren(retrato(campeao), icone(iconeTrofeu()));
+  }
   iconeFim.classList.toggle('empate', empate);
 
   // entrada de ~600ms (reinicia a cada fim de partida)
@@ -976,7 +1018,7 @@ function cartaoColecao(c, colecao, i = 0) {
   }
   const item = colecao[c.codigo];
   return el('div', { class: 'carta', style: `--cor-base: ${corDaEspecie(c)}; --i: ${i}`, 'data-especie': c.especie },
-    el('span', { class: 'carta-avatar', 'aria-hidden': 'true' }, c.nome.charAt(0)),
+    el('span', { class: 'carta-avatar', 'aria-hidden': 'true' }, retrato(c)),
     el('span', { class: 'carta-nome' }, c.nome),
     el('span', { class: 'carta-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
     el('span', { class: 'carta-status' },
@@ -1002,7 +1044,7 @@ function abrirColecao() {
 function abrirEspera(criatura, { repetido = false } = {}) {
   app.escolhas = [criatura, null];
   $('espera-selo').replaceChildren(
-    el('span', { class: 'cartao-avatar', style: `--cor-base: ${corDaEspecie(criatura)}`, 'data-especie': criatura.especie }, criatura.nome.charAt(0)),
+    el('span', { class: 'cartao-avatar', style: `--cor-base: ${corDaEspecie(criatura)}`, 'data-especie': criatura.especie }, retrato(criatura)),
   );
   $('espera-titulo').textContent = `${criatura.nome} está pronto!`;
   $('espera-texto').textContent = 'Agora escaneie o bichinho do seu oponente.';

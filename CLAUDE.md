@@ -52,7 +52,7 @@ js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global
 js/escaneio.js              loop de escaneio (sessionStorage `bichinhos:aguardando`, 10 min), puro
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), puro
 js/app.js                   UI, navegação, animações, deep link ?b=, modos
-js/icones.js                SVGs dos 4 símbolos (mesma forma da peça) e ícones da UI
+js/icones.js                SVGs: os 4 símbolos, o bichinho (silhueta da peça) e ícones da UI
 test/regras.test.js         regras do modo Rolar (node:test)
 test/modos.test.js          Arena e Mira
 test/escaneio.test.js       loop de escaneio
@@ -96,6 +96,15 @@ Regras que não podem regredir:
 - Validar em **360x640** além dos tamanhos grandes: sem rolagem lateral.
 - A cor da espécie vem do CSS por `data-especie`; `--cor-base` (de
   `js/criaturas.js`) é o fallback de uma espécie nova.
+- O bichinho (`iconeBichinho`) é a silhueta da peça impressa, com o símbolo da
+  rodada gravado no peito. O corpo usa `--cor-corpo` da espécie (tom claro do
+  plástico): espécie nova precisa de `--cor-corpo` junto de `--cor-tema`, e quem
+  contém o retrato tem que carregar `data-especie`.
+- **A rodada é contada por desenho, não por parágrafo:** a arena mostra quem
+  bateu em quem e os detalhes viram selos (`.etiqueta`) de duas ou três
+  palavras; no máximo uma `.nota`, só para o que a tela esconderia. O texto
+  completo continua em `#resultado-leitura` (`.so-leitor`), para leitor de
+  tela — ao mexer no resultado, mantenha essa linha em dia.
 - Efeitos por especial são mapeados por código da criatura em `css/estilo.css`;
   código desconhecido cai no efeito genérico.
 

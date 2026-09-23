@@ -8,7 +8,7 @@
 // cada leitura, troque `window.sessionStorage` por `window.localStorage` em
 // js/app.js (a expiração de 10 minutos continua protegendo).
 
-import { buscarCriatura } from './criaturas.js?v=9';
+import { buscarCriatura } from './criaturas.js?v=10';
 
 export const CHAVE_AGUARDANDO = 'bichinhos:aguardando';
 export const EXPIRACAO_MS = 10 * 60 * 1000;

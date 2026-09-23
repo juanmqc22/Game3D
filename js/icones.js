@@ -9,51 +9,75 @@ function svg(conteudo, classe = '') {
   return `<svg class="icone ${classe}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${conteudo}</svg>`;
 }
 
-// ATAQUE — três riscos de garra
-export function iconeAtaque() {
-  return svg(
+// Desenho de cada símbolo, sem o <svg> em volta: a mesma forma serve para o
+// ícone solto e para a gravação no peito do bichinho (iconeBichinho).
+const FORMA = {
+  // ATAQUE — três riscos de garra
+  ATAQUE:
     '<g fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round">'
     + '<path d="M10 2.5Q8.6 12 3 20.5"/>'
     + '<path d="M15.5 3Q14.1 12.5 8.5 21.5"/>'
     + '<path d="M21 3.5Q19.6 13 14 21.5"/>'
     + '</g>',
-    'icone-ataque',
-  );
-}
-
-// DEFESA — escudo
-export function iconeDefesa() {
-  return svg(
-    '<path fill="currentColor" d="M12 1.8 20.5 5v6.2c0 5.4-3.5 9.4-8.5 11-5-1.6-8.5-5.6-8.5-11V5z"/>',
-    'icone-defesa',
-  );
-}
-
-// ESPECIAL — estrela de cinco pontas
-export function iconeEspecial() {
-  return svg(
-    '<path fill="currentColor" d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 17.6l-6.4 3.6L7 14l-5.3-5 7.2-.9z"/>',
-    'icone-especial',
-  );
-}
-
-// TROPECO — X
-export function iconeTropeco() {
-  return svg(
-    '<path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" d="M5 5l14 14M19 5 5 19"/>',
-    'icone-tropeco',
-  );
-}
-
-const POR_SIMBOLO = {
-  ATAQUE: iconeAtaque,
-  DEFESA: iconeDefesa,
-  ESPECIAL: iconeEspecial,
-  TROPECO: iconeTropeco,
+  // DEFESA — escudo
+  DEFESA: '<path fill="currentColor" d="M12 1.8 20.5 5v6.2c0 5.4-3.5 9.4-8.5 11-5-1.6-8.5-5.6-8.5-11V5z"/>',
+  // ESPECIAL — estrela de cinco pontas
+  ESPECIAL: '<path fill="currentColor" d="M12 1.5l3.1 6.6 7.2.9-5.3 5 1.4 7.2L12 17.6l-6.4 3.6L7 14l-5.3-5 7.2-.9z"/>',
+  // TROPECO — X
+  TROPECO: '<path fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" d="M5 5l14 14M19 5 5 19"/>',
 };
 
+export function iconeAtaque() { return svg(FORMA.ATAQUE, 'icone-ataque'); }
+export function iconeDefesa() { return svg(FORMA.DEFESA, 'icone-defesa'); }
+export function iconeEspecial() { return svg(FORMA.ESPECIAL, 'icone-especial'); }
+export function iconeTropeco() { return svg(FORMA.TROPECO, 'icone-tropeco'); }
+
 export function iconeSimbolo(simbolo) {
-  return POR_SIMBOLO[simbolo]();
+  return svg(FORMA[simbolo], `icone-${String(simbolo).toLowerCase()}`);
+}
+
+// ---------- o bichinho ----------
+//
+// Mesma silhueta da peça impressa: ponta em cima, antena, olhos grandes, ponta
+// embaixo — e o símbolo que saiu gravado no peito, como na peça de verdade.
+// viewBox 0 0 64 120 (mais alto que largo). Altura e cor vêm do CSS.
+
+// Rosto por espécie. Espécie sem rosto próprio cai no padrão.
+const ROSTOS = {
+  // Tatu: focinho achatado com duas narinas, entre as orelhas redondas.
+  tatu:
+    '<g class="bicho-traco">'
+    + '<ellipse cx="15" cy="66" rx="7" ry="5"/><ellipse cx="49" cy="66" rx="7" ry="5"/>'
+    + '<path d="M25 59h14l4 14H21z"/>'
+    + '</g>'
+    + '<circle class="bicho-furo" cx="29" cy="67" r="1.8"/>'
+    + '<circle class="bicho-furo" cx="35" cy="67" r="1.8"/>',
+  // Sapo: bocão largo de canto a canto.
+  sapo: '<path class="bicho-traco" d="M17 60q15 14 30 0v4q-15 14-30 0z"/>',
+};
+const ROSTO_PADRAO = '<path class="bicho-traco" d="M23 63h18v5H23z"/>';
+
+// Peito: um dos quatro símbolos, a placa vazia esperando o arremesso ('VAZIO'),
+// ou nada (null) quando é só o retrato do bichinho.
+export function iconeBichinho(especie, simbolo = null) {
+  const forma = FORMA[simbolo];
+  let peito = '';
+  if (forma) {
+    peito = `<g class="bicho-simbolo" data-simbolo="${simbolo}">`
+      + '<rect class="bicho-placa" x="17" y="74" width="30" height="30" rx="9"/>'
+      + `<g transform="translate(19.4 76.4) scale(1.05)">${forma}</g>`
+      + '</g>';
+  } else if (simbolo === 'VAZIO') {
+    peito = '<rect class="bicho-placa bicho-placa-vazia" x="17" y="74" width="30" height="30" rx="9"/>';
+  }
+  return '<svg class="icone bichinho" viewBox="0 0 64 120" aria-hidden="true" focusable="false">'
+    + '<path class="bicho-antena" d="M32 4v12" stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none"/>'
+    + '<path class="bicho-casco" fill="currentColor" d="M32 12 56 30v70L32 118 8 100V30z"/>'
+    + '<circle cx="22" cy="46" r="9.5" fill="#fff"/><circle cx="42" cy="46" r="9.5" fill="#fff"/>'
+    + '<circle class="bicho-pupila" cx="23.5" cy="46" r="4.2"/><circle class="bicho-pupila" cx="40.5" cy="46" r="4.2"/>'
+    + (ROSTOS[especie] ?? ROSTO_PADRAO)
+    + peito
+    + '</svg>';
 }
 
 // Escudo ativo (Bola de Ferro): escudo com a bola no meio.
@@ -71,6 +95,15 @@ export function iconeVida() {
   return svg(
     '<path fill="currentColor" d="M12 21s-8.5-5.3-8.5-11.2A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.5 3.2C20.5 15.7 12 21 12 21z"/>',
     'icone-vida',
+  );
+}
+
+// Vida perdida — o mesmo coração de iconeVida, rachado no meio.
+export function iconeVidaPerdida() {
+  return svg(
+    '<path fill="currentColor" d="M12 21s-8.5-5.3-8.5-11.2A4.8 4.8 0 0 1 12 6.6a4.8 4.8 0 0 1 8.5 3.2C20.5 15.7 12 21 12 21z"/>'
+    + '<path fill="none" stroke="#fff" stroke-width="2.2" stroke-linejoin="round" d="M12 6.6 9.8 11h4.4L11.5 16"/>',
+    'icone-vida-perdida',
   );
 }
 
