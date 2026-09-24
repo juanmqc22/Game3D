@@ -5,6 +5,10 @@
   "type": "module",
   "scripts": {
     "test": "node --test",
-    "balanceamento": "node scripts/balanceamento.js"
+    "balanceamento": "node scripts/balanceamento.js",
+    "arte": "node scripts/arte.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.4"
   }
 }

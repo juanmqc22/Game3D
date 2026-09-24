@@ -17,10 +17,10 @@
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=11">
+  <link rel="stylesheet" href="./css/estilo.css?v=12">
   <!-- Desvio NFC para /raposa/ (jogo adulto) só com partida da Raposa ativa. Script
        clássico e síncrono: precisa rodar antes do app ler o ?b=. -->
-  <script src="./js/desvio-raposa.js?v=11"></script>
+  <script src="./js/desvio-raposa.js?v=12"></script>
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -30,7 +30,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=11" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=12" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">

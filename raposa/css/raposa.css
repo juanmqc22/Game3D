@@ -321,6 +321,7 @@ body.derrota .colina-perto { fill: #2a120c; }
 .chip.ativo { border: 3px solid var(--cor-tinta); background: var(--cor-trigo); font-weight: 700; }
 .chip[data-especie='sapo'].ativo { background: #cfe6b5; }
 .chip[data-especie='tatu'].ativo { background: #f0d2a8; }
+.chip-arte { width: 40px; height: 40px; margin: -4px 6px -4px -8px; vertical-align: middle; object-fit: contain; }
 .talento { margin: 0; color: var(--cor-tinta-suave); font-size: .95rem; }
 .modo-aviso { display: flex; gap: 12px; align-items: center; margin-top: 16px; }
 .modo-aviso p { margin: 0; }

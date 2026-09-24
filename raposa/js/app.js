@@ -6,14 +6,15 @@ import {
   declarar, duvidar, podeDuvidar, confessar, podeCumprir, cumprirEncomenda,
   sugerirEntregas, entregar, trocar, temItens, totalItens, cestaVazia,
   sortearNoite, acaoDaRaposa, apurarVotos, raposaExpulsa, fimDoDia, resultado, especieDoCodigo,
-} from './regras.js?v=1';
-import { salvar, carregar, limpar, codigoDaUrl } from './salvar.js?v=1';
+} from './regras.js?v=2';
+import { salvar, carregar, limpar, codigoDaUrl } from './salvar.js?v=2';
 import {
   DES_ITEM, DES_FACE, desEstrela, desCeleiro, desCaminhao, desGalinha, desLua, desSol,
   desRaposa, desOlhos, desColinas, desCadeado,
-} from './desenhos.js?v=1';
-import { iconeSimbolo } from '../../js/icones.js?v=11';
-import { CRIATURAS } from '../../js/criaturas.js?v=11';
+} from './desenhos.js?v=2';
+import { iconeSimbolo } from '../../js/icones.js?v=12';
+import { CRIATURAS } from '../../js/criaturas.js?v=12';
+import { arteDaCriatura } from '../../js/arte.js?v=12';
 
 // ---------- utilidades de DOM ----------
 
@@ -239,6 +240,18 @@ function nomeCriatura(codigo) {
   return c ? `${c.nome} (${codigo})` : codigo;
 }
 
+// Miniatura da arte no chip da montagem (só quem tem arte em js/arte.js).
+// aria-hidden: o texto do chip já diz o nome; o leitor não precisa ouvir duas vezes.
+function miniatura(codigo) {
+  const c = CRIATURAS.find((x) => x.codigo === codigo);
+  const arte = c && arteDaCriatura(codigo);
+  if (!arte) return null;
+  return h('img', {
+    class: 'chip-arte', src: arte.src, srcset: arte.srcset, sizes: '40px',
+    width: '40', height: '40', alt: c.nome, 'aria-hidden': 'true', loading: 'lazy', decoding: 'async',
+  });
+}
+
 function talento(codigo) {
   const esp = especieDoCodigo(codigo);
   if (esp === 'sapo') return 'Sapo: +1 leite ao colher leite';
@@ -259,7 +272,7 @@ TELAS.montagem = () => {
         'aria-pressed': j.codigo === cod ? 'true' : 'false',
         'data-especie': especieDoCodigo(cod) || 'nenhuma',
         onclick: () => { j.codigo = cod; guardar(); desenhar(); },
-      }, cod ? nomeCriatura(cod) : 'Sem peça')));
+      }, cod ? miniatura(cod) : null, cod ? nomeCriatura(cod) : 'Sem peça')));
     lista.append(h('li', { class: 'cartao jogador-montagem' },
       h('div', { class: 'linha-nome' },
         h('label', { for: `nome-${i}`, class: 'so-leitor' }, `Nome do jogador ${i + 1}`),

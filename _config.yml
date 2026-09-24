@@ -1,0 +1,7 @@
+# GitHub Pages (Jekyll): o que NÃO vai para o site.
+# img/originais/ guarda os originais da arte; o site usa só img/criaturas/.
+exclude:
+  - img/originais/
+  - node_modules/
+  - package.json
+  - package-lock.json

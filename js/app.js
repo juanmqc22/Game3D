@@ -3,20 +3,21 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=11';
+import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=12';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
-} from './regras.js?v=11';
+} from './regras.js?v=12';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeVidaPerdida,
-  iconeTrofeu, iconeEmpate, iconeBichinho,
+  iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
   iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
-} from './icones.js?v=11';
-import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=11';
+} from './icones.js?v=12';
+import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=12';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
-} from './colecao.js?v=11';
+} from './colecao.js?v=12';
+import { arteDaCriatura } from './arte.js?v=12';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -145,6 +146,25 @@ function linhaEspecial(criatura) {
 // data-especie), então quem contém o retrato precisa carregar data-especie.
 function retrato(criatura, simbolo = null) {
   return icone(iconeBichinho(criatura.especie, simbolo));
+}
+
+// Arte do bichinho (js/arte.js) como <img>, ou null se ele ainda não tem arte.
+// largura: tamanho exibido em px, para o srcset escolher entre 256 e 512.
+// Fora da primeira tela que aparece, a imagem carrega sob demanda (lazy).
+function imagemArte(criatura, largura, { lazy = true } = {}) {
+  const arte = arteDaCriatura(criatura.codigo);
+  if (!arte) return null;
+  return el('img', {
+    class: 'arte-bicho',
+    src: arte.src,
+    srcset: arte.srcset,
+    sizes: `${largura}px`,
+    width: largura,
+    height: largura,
+    alt: criatura.nome,
+    decoding: 'async',
+    loading: lazy ? 'lazy' : 'eager',
+  });
 }
 
 function seloEscudo() {
@@ -291,7 +311,7 @@ function cartaoDesbloqueio(c) {
     el('span', { class: 'carta-nova-raios', 'aria-hidden': 'true' }),
     el('div', { class: 'carta-nova-chapa' },
       el('span', { class: 'carta-nova-chip' }, icone(iconeQr()), 'Peça registrada'),
-      el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, retrato(c)),
+      arteDesbloqueio(c),
       el('span', { class: 'carta-nova-nome' }, c.nome),
       el('span', { class: 'carta-nova-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
       el('div', { class: 'carta-nova-atributos' },
@@ -302,6 +322,13 @@ function cartaoDesbloqueio(c) {
       el('span', { class: 'carta-nova-brilho', 'aria-hidden': 'true' }),
     ),
   );
+}
+
+// Com arte: a imagem grande entra pulando. Sem arte: o retrato redondo de sempre.
+function arteDesbloqueio(c) {
+  const img = imagemArte(c, 200, { lazy: false });
+  if (!img) return el('span', { class: 'cartao-avatar', 'aria-hidden': 'true' }, retrato(c));
+  return el('span', { class: 'carta-nova-arte' }, img);
 }
 
 // ---------- botões de modo ----------
@@ -508,7 +535,7 @@ function renderBatalha() {
       ));
     painel.replaceChildren(...[
       el('div', { class: 'painel-cabeca' },
-        el('div', { class: 'painel-bicho', 'aria-hidden': 'true' }, retrato(j.criatura, 'VAZIO')),
+        painelBicho(j.criatura),
         el('div', { class: 'painel-id' },
           el('div', { class: 'painel-jogador' }, `Jogador ${i + 1}`),
           el('div', { class: 'painel-nome' }, j.criatura.nome),
@@ -523,6 +550,15 @@ function renderBatalha() {
     ].filter((n) => n !== null));
   });
   atualizarEntradas();
+}
+
+// Retrato do painel. Com arte, o símbolo tocado vai numa placa sobre a imagem
+// (.painel-bicho-placa); sem arte, fica gravado no peito da silhueta.
+function painelBicho(criatura) {
+  const img = imagemArte(criatura, 84);
+  if (!img) return el('div', { class: 'painel-bicho', 'aria-hidden': 'true' }, retrato(criatura, 'VAZIO'));
+  return el('div', { class: 'painel-bicho com-arte', 'aria-hidden': 'true' },
+    img, el('span', { class: 'painel-bicho-placa' }, icone(iconePlaca('VAZIO'))));
 }
 
 // ARENA: a face só é perguntada quando os dois ficaram dentro do círculo.
@@ -544,8 +580,10 @@ function atualizarEntradas() {
   for (let i = 0; i < 2; i++) {
     const painel = $(`painel-${i}`);
     // O bichinho já mostra no peito o símbolo tocado: confirma a escolha sem texto.
-    painel.querySelector('.painel-bicho')
-      .replaceChildren(retrato(estado.jogadores[i].criatura, app.entradas[i].simbolo ?? 'VAZIO'));
+    const simbolo = app.entradas[i].simbolo ?? 'VAZIO';
+    const placa = painel.querySelector('.painel-bicho-placa');
+    if (placa) placa.replaceChildren(icone(iconePlaca(simbolo)));
+    else painel.querySelector('.painel-bicho').replaceChildren(retrato(estado.jogadores[i].criatura, simbolo));
     const grupo = painel.querySelector('.simbolos');
     const mostrarFace = precisaFace();
     grupo.hidden = !mostrarFace;
@@ -1018,7 +1056,7 @@ function cartaoColecao(c, colecao, i = 0) {
   }
   const item = colecao[c.codigo];
   return el('div', { class: 'carta', style: `--cor-base: ${corDaEspecie(c)}; --i: ${i}`, 'data-especie': c.especie },
-    el('span', { class: 'carta-avatar', 'aria-hidden': 'true' }, retrato(c)),
+    cartaAvatar(c),
     el('span', { class: 'carta-nome' }, c.nome),
     el('span', { class: 'carta-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
     el('span', { class: 'carta-status' },
@@ -1028,6 +1066,13 @@ function cartaoColecao(c, colecao, i = 0) {
     el('span', { class: 'carta-especial' }, icone(iconeEspecial()), el('b', {}, c.especial.nome), ` ${c.especial.texto}`),
     el('span', { class: 'carta-placar' }, `${item.vitorias} ${item.vitorias === 1 ? 'vitória' : 'vitórias'} · ${item.partidas} ${item.partidas === 1 ? 'partida' : 'partidas'}`),
   );
+}
+
+// Só chega aqui bichinho descoberto: a arte nunca aparece antes da hora.
+function cartaAvatar(c) {
+  const img = imagemArte(c, 88);
+  if (!img) return el('span', { class: 'carta-avatar', 'aria-hidden': 'true' }, retrato(c));
+  return el('span', { class: 'carta-avatar com-arte', 'aria-hidden': 'true' }, img);
 }
 
 function abrirColecao() {

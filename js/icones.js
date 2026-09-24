@@ -59,17 +59,30 @@ const ROSTO_PADRAO = '<path class="bicho-traco" d="M23 63h18v5H23z"/>';
 
 // Peito: um dos quatro símbolos, a placa vazia esperando o arremesso ('VAZIO'),
 // ou nada (null) quando é só o retrato do bichinho.
-export function iconeBichinho(especie, simbolo = null) {
+// A placa do peito: o símbolo que saiu, ou vazia ('VAZIO') esperando o arremesso.
+function placaDoPeito(simbolo) {
   const forma = FORMA[simbolo];
-  let peito = '';
   if (forma) {
-    peito = `<g class="bicho-simbolo" data-simbolo="${simbolo}">`
+    return `<g class="bicho-simbolo" data-simbolo="${simbolo}">`
       + '<rect class="bicho-placa" x="17" y="74" width="30" height="30" rx="9"/>'
       + `<g transform="translate(19.4 76.4) scale(1.05)">${forma}</g>`
       + '</g>';
-  } else if (simbolo === 'VAZIO') {
-    peito = '<rect class="bicho-placa bicho-placa-vazia" x="17" y="74" width="30" height="30" rx="9"/>';
   }
+  if (simbolo === 'VAZIO') {
+    return '<rect class="bicho-placa bicho-placa-vazia" x="17" y="74" width="30" height="30" rx="9"/>';
+  }
+  return '';
+}
+
+// Só a placa do peito, solta: vai por cima da arte do bichinho (js/arte.js),
+// que não tem onde gravar o símbolo.
+export function iconePlaca(simbolo) {
+  return '<svg class="icone placa" viewBox="15.5 72.5 33 33" aria-hidden="true" focusable="false">'
+    + placaDoPeito(simbolo) + '</svg>';
+}
+
+export function iconeBichinho(especie, simbolo = null) {
+  const peito = placaDoPeito(simbolo);
   return '<svg class="icone bichinho" viewBox="0 0 64 120" aria-hidden="true" focusable="false">'
     + '<path class="bicho-antena" d="M32 4v12" stroke="currentColor" stroke-width="7" stroke-linecap="round" fill="none"/>'
     + '<path class="bicho-casco" fill="currentColor" d="M32 12 56 30v70L32 118 8 100V30z"/>'

@@ -56,12 +56,18 @@ js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global
 js/escaneio.js              loop de escaneio (sessionStorage `bichinhos:aguardando`, 10 min), puro
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), puro
 js/app.js                   UI, navegação, animações, deep link ?b=, modos
+js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta
+img/criaturas/              arte publicada (WebP 256 e 512, gerada por `npm run arte`)
+img/originais/              originais da arte, CODIGO.png|webp — fora do Pages (_config.yml)
+scripts/arte.js             gera img/criaturas/ com sharp (única dependência, só de dev)
+_config.yml                 exclusões do Jekyll/Pages (originais, node_modules, package*.json)
 js/icones.js                SVGs: os 4 símbolos, o bichinho (silhueta da peça) e ícones da UI
 test/regras.test.js         regras do modo Rolar (node:test)
 test/modos.test.js          Arena e Mira
 test/escaneio.test.js       loop de escaneio
 test/colecao.test.js        coleção
 test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
+test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 80 KB
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
 js/desvio-raposa.js         desvio NFC para raposa/ (script clássico; test/raposa-desvio.test.js)
@@ -74,7 +80,8 @@ Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3
 
 **Cache (Pages usa max-age=600):** ao mudar qualquer `.js`, `estilo.css` ou a estrutura do
 `index.html`, aumente o `?v=N` em `index.html` (CSS e app.js), nos imports do topo de
-`js/app.js` **e** nos imports de `js/escaneio.js` e `js/colecao.js`. Sem isso o celular
+`js/app.js` **e** nos imports de `js/escaneio.js` e `js/colecao.js` (e, se mudar
+`js/arte.js`, `criaturas.js` ou `icones.js`, nos imports de `raposa/js/app.js`). Sem isso o celular
 mistura HTML novo com JS antigo e trava. Mudar só `criaturas.js` não exige (no pior caso o
 bichinho novo aparece ~10 min depois).
 
@@ -127,10 +134,15 @@ Regras que não podem regredir:
   bônus do modo, nunca a tabela.
 - Contraste da paleta: `node scripts/contraste.js`
 - Rodar local: `npx serve`
+- Arte de bichinho novo: `img/originais/CODIGO.png` → `npm install` (1ª vez) →
+  `npm run arte` → uma linha em `ARTE` (`js/arte.js`). Aparece no desbloqueio, na
+  coleção (só descobertos), no painel da partida e na montagem da Raposa.
+  Original sem transparência: o script tira o fundo claro ligado à borda — confira.
 
 ## Restrições
 
-- HTML + CSS + JS puro (ES modules). Sem framework, bundler ou dependências.
+- HTML + CSS + JS puro (ES modules). Sem framework, bundler ou dependências de
+  runtime. A única dependência de dev é o `sharp`, só para `npm run arte`.
 - A tabela de `js/criaturas.js` está balanceada e validada: não mexer.
 - Fora de escopo na v1: backend, login, XP, multiplayer em rede, leitor de QR,
   animações elaboradas, PWA, sons, dark mode, i18n, admin. Perguntar antes.
