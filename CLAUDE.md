@@ -11,6 +11,10 @@ depois de carregada. Cada peça tem um código (ex: `TAT01`); o QR da peça abre
 `?b=TAT01`. Escanear duas peças em sequência na mesma aba monta a partida
 (`js/escaneio.js`); cada código escaneado entra na coleção (`js/colecao.js`).
 
+**Segundo jogo (adulto):** Raposa na Fazenda, tudo em `raposa/` — ver `RAPOSA.md`.
+A única ligação com o jogo das crianças é `js/desvio-raposa.js` (carregado antes do
+app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativa.
+
 ## Modos de jogo (fonte da verdade: `js/regras.js`)
 
 - **Rolar** (clássico): as regras abaixo.
@@ -60,6 +64,8 @@ test/colecao.test.js        coleção
 test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
+js/desvio-raposa.js         desvio NFC para raposa/ (script clássico; test/raposa-desvio.test.js)
+raposa/                     Raposa na Fazenda (jogo adulto) — ver RAPOSA.md
 serve.json                  config do `npx serve`: cleanUrls=false (senão perde o ?b=) + raiz -> index.html
 ```
 

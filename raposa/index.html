@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f3dfb8">
+  <title>Raposa na Fazenda</title>
+  <link rel="icon" href="data:,">
+  <!-- Única dependência externa: a fonte. Sem ela, cai numa fonte do sistema. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" media="print" onload="this.media='all'"
+        href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+  <!-- ?v=: ao mudar qualquer arquivo de raposa/, aumente aqui E nos imports do topo de raposa/js/app.js. -->
+  <link rel="stylesheet" href="./css/raposa.css?v=1">
+  <script>
+    window.mostrarFalha = function () {
+      var f = document.getElementById('falha');
+      if (f) f.hidden = false;
+    };
+    window.addEventListener('error', function () { window.mostrarFalha(); });
+    window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
+  </script>
+  <script type="module" src="./js/app.js?v=1" onerror="window.mostrarFalha()"></script>
+</head>
+<body class="dia">
+  <div class="ceu" aria-hidden="true">
+    <div class="ceu-noite"></div>
+    <div class="ceu-estrelas"></div>
+    <div id="ceu-sol" class="ceu-sol"></div>
+    <div id="ceu-lua" class="ceu-lua"></div>
+    <div id="ceu-colinas" class="ceu-colinas"></div>
+  </div>
+
+  <header class="barra">
+    <p id="barra-info" class="barra-info" aria-live="polite"></p>
+    <button id="bt-regras" class="bt-regras" type="button" aria-haspopup="dialog" aria-controls="regras">
+      <span aria-hidden="true">?</span><span class="so-leitor">Regras</span>
+    </button>
+  </header>
+
+  <main id="palco" class="palco" tabindex="-1"></main>
+
+  <p id="aviso" class="aviso" role="status" hidden></p>
+
+  <div id="regras" class="sobreposicao" role="dialog" aria-modal="true" aria-labelledby="regras-titulo" hidden>
+    <div class="cartao regras">
+      <h2 id="regras-titulo">Como se joga</h2>
+      <p><b>Objetivo:</b> a vila precisa entregar a meta de pedidos do caminhão em 7 dias. Se não
+        entregar, <b>todos perdem</b> para a Raposa. Se entregar, vence quem tiver mais pontos
+        (encomendas secretas + 1 por estrela).</p>
+      <h3>Colheita</h3>
+      <ul class="lista-colheita">
+        <li><span class="sim-peca" data-face="ESPECIAL"></span> Especial → <b>1 ovo dourado</b></li>
+        <li><span class="sim-peca" data-face="ATAQUE"></span> Garras → <b>2 milho</b></li>
+        <li><span class="sim-peca" data-face="DEFESA"></span> Escudo → <b>2 leite</b></li>
+        <li><span class="sim-peca" data-face="TROPECO"></span> Tropeço → <b>praga, nada</b></li>
+      </ul>
+      <p><b>Sapo:</b> +1 leite quando colhe leite. <b>Tatu:</b> a Raposa não rouba o celeiro secreto dele.</p>
+      <h3>Um dia</h3>
+      <ol>
+        <li><b>Caminhão</b>: dois pedidos na tela, cada um com prazo.</li>
+        <li><b>Colheita</b>: todos giram o pião e cobrem. Cada um declara o que colheu — vai para o celeiro da vila.</li>
+        <li><b>Duvido!</b> Mentiu: perde a colheita e 1 estrela, que vai para quem duvidou. Falou a verdade: quem duvidou perde 1 estrela. Precisa ter estrela para duvidar.</li>
+        <li><b>Confissão secreta</b>: o celular passa por todos. O que você colheu e não declarou vai para o seu <b>celeiro secreto</b>. Aqui você cumpre encomendas.</li>
+        <li><b>Entrega</b>: o celeiro da vila cumpre pedidos.</li>
+        <li><b>Mercado</b>: trocas livres entre celeiros secretos.</li>
+        <li><b>Noite</b>: a Raposa ataca.</li>
+      </ol>
+      <h3>4 a 6 jogadores</h3>
+      <p>Um de vocês é secretamente a Raposa e escolhe quem roubar à noite. Depois, a
+        <b>assembleia</b> vota para expulsar um suspeito (precisa de mais da metade dos votos).
+        A vila só vence se entregar a meta <b>e</b> expulsar a Raposa.</p>
+      <div class="acoes">
+        <button id="bt-fechar-regras" class="bt bt-principal" type="button">Voltar ao jogo</button>
+        <button id="bt-sair" class="bt bt-discreto" type="button">Encerrar esta partida</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="falha" class="sobreposicao" role="alert" hidden>
+    <div class="cartao">
+      <h2>Algo travou</h2>
+      <p>A partida está guardada neste celular. Recarregue para continuar de onde parou.</p>
+      <button class="bt bt-principal" type="button" onclick="location.reload()">Recarregar</button>
+    </div>
+  </div>
+</body>
+</html>
