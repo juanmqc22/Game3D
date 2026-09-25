@@ -1,4 +1,269 @@
-# Entrega — redesign visual
+# Entrega — polimento para o lançamento (fundadores Couraça e Bocão)
+
+Branch `feat/lancamento`, um commit por fase, levada para a `main`. As quatro
+fases ficaram prontas.
+
+**Testes:** 273 antes, **306 depois** (`node --test`: 306 pass, 0 fail). A
+suíte passou em cada commit. Paleta: `node scripts/contraste.js` → todos >= 4.5:1.
+
+| Commit | Fase |
+|---|---|
+| `Fase 1` | escaneio entre abas (iPhone) e NFC na tela de espera |
+| `Fase 2` | Língua Chicote 4/4 e o Choque |
+| `Fase 3` | rodada sem LUTAR/PRÓXIMA, arte grande, momento do especial |
+| `Fase 4` | selo de Fundador e a coleção por série |
+| `Entrega` | versão de cache 13 → 14 e este arquivo |
+
+## Testar no iPhone (o bug que motivou tudo)
+
+Espere ~10 min depois do push (o Pages guarda cache por 600 s), ou abra numa aba
+anônima. Para começar do zero: Ajustes → Safari → Avançado → Dados de Sites →
+apague `juanmqc22.github.io`.
+
+URLs exatas (as mesmas que vão nas etiquetas):
+
+- Bocão, fundador #1: `https://juanmqc22.github.io/Game3D/?b=SAP02&f=1`
+- Couraça, fundador #3: `https://juanmqc22.github.io/Game3D/?b=TAT01&f=3`
+- Sem selo (forma curta de sempre): `https://juanmqc22.github.io/Game3D/?b=SAP02` e `?b=TAT01`
+
+Roteiro:
+
+1. **Encoste o SAP02.** Abre uma aba nova com a carta **"Novo bichinho!"** do
+   Bocão, com borda dourada e o selo **FUNDADOR #1**. Toque em Continuar →
+   **"Bocão está pronto!"**, agora com a arte grande do sapo.
+2. **Encoste o TAT01.** O iPhone abre outra aba nova. Aparece "Novo bichinho!"
+   do Couraça com **FUNDADOR #3** → Continuar → **"Como vocês vão jogar?"**
+   com *Bocão contra Couraça*. Antes do conserto, esta aba mostrava "Couraça
+   está pronto!" (virava Jogador 1 de novo).
+3. Escolha **Rolar**. Os dois tocam no desenho que ficou para cima. Assim que o
+   segundo toca, o botão do meio vira **DESFAZER** com um anel fechando;
+   1,5 s depois a luta roda sozinha. Toque no símbolo da próxima rodada direto,
+   sem "Próxima".
+4. **Encoste o TAT01 de novo** (terceira leitura): começa um ciclo novo com
+   "Couraça está pronto!", sem a carta de desbloqueio. A partida anterior limpou
+   a espera.
+5. Abra **Minha coleção**: "2 de 2 da Série 1", as duas cartas com selo e
+   quatro cartas **"Série 2 — em breve"**.
+
+Se o passo 2 ainda mostrar "Couraça está pronto!", é cache: confira se o
+arquivo novo chegou abrindo `https://juanmqc22.github.io/Game3D/js/escaneio.js?v=14`
+e procurando `localStorage` no comentário do topo.
+
+No Android com Chrome, a tela de espera mostra também **"Encoste a segunda
+peça"**: toque, encoste a peça atrás do celular, e o fluxo é o mesmo do QR.
+
+## Fase 1 — escaneio no iPhone ✅
+
+- A espera da primeira peça mudou de `sessionStorage` (vale por aba) para
+  `localStorage` (vale para todas as abas). A chave (`bichinhos:aguardando`) e
+  a expiração de 10 min continuam.
+- A partida começada pela segunda leitura limpa a espera; a terceira leitura
+  começa um ciclo novo (já era assim na lógica; agora tem teste para isso).
+- Botão **"Encoste a segunda peça"** só quando existe `NDEFReader` (Chrome
+  Android). Ele lê o registro de URL da etiqueta (aceita também `absolute-url`
+  e registro de texto com o endereço), extrai o `?b=` e o `&f=`, e segue o
+  mesmo caminho da chegada por URL. Mesma peça → "Esse é o mesmo bichinho!".
+  Permissão negada → "O celular não deixou usar o NFC. Escaneie o QR da peça."
+  Qualquer outro erro → mensagem curta equivalente. No iPhone o botão não aparece.
+- Testes novos: duas "abas" com `sessionStorage` próprio e o mesmo
+  `localStorage` (a segunda inicia a partida; com `sessionStorage` reproduz o
+  bug); terceira leitura; mesma peça em aba nova = repetido; extração do
+  código de URL completa, relativa, com `%xx`, `+` e lixo; leitura de registros
+  NFC (`DataView`, como o Chrome entrega).
+
+## Fase 2 — combate ✅
+
+### Língua Chicote 4/4
+
+Dano 4, cura 4, roubo continua ("oponente -4 de vida, você +4 de vida").
+Nenhum teste de regra dependia do 3 (eles usam criaturas de teste próprias);
+acrescentei um teste que fixa o 4/4 do Bocão, com a cura fixa em +4 mesmo
+quando o tropeço leva o dano a 6.
+
+### Choque: **ficou ligado** (`CHOQUE_DANO = 1`)
+
+Mesmo símbolo dos dois lados, exceto TROPEÇO × TROPEÇO: cada um perde 1. O
+escudo anula o choque de quem o tem e é consumido. Nenhum bichinho saiu de
+45–57% e nenhuma mediana saiu de 5–15, em nenhum modo e em nenhuma das duas
+distribuições. Na tela: veredito **CHOQUE!** nas duas metades, "-1 de vida"
+(ou "Escudo segurou") em cada uma, os dois tremem.
+
+O guarda-corpo de golpe máximo não precisou mudar: o choque (1) nunca é o
+maior golpe de uma rodada, e o pior golpe do Bocão com 4/4 é 6 (60% de 14 é 8,4).
+
+### Balanceamento: antes e depois
+
+Simulação: 10.000 partidas por confronto e por ordem (as duas ordens somadas
+para os fundadores), semente 1, limite de 40 rodadas. "Justo" = 25/25/25/25;
+"medido" = `--faces 11,21,31,32`. Arena e Mira com 50% de chance.
+
+**Couraça × Bocão**
+
+| Modo | Faces | Antes | Língua 4/4 | Língua 4/4 + Choque (entregue) | Mediana (entregue) |
+|---|---|---|---|---|---|
+| Rolar | justo | 54,3 × 45,7 | 50,9 × 49,1 | 48,7 × 51,3 | 8 |
+| Rolar | medido | 55,5 × 44,5 | 51,1 × 48,9 | 49,0 × 51,0 | 8 |
+| Batalha | justo | 52,9 × 47,1 | 51,7 × 48,3 | 51,2 × 48,8 | 9 |
+| Batalha | medido | 52,8 × 47,2 | 51,7 × 48,3 | 51,2 × 48,8 | 9 |
+| Mira | justo | 55,8 × 44,2 | 50,5 × 49,5 | 48,4 × 51,6 | 10 |
+| Mira | medido | 56,6 × 43,4 | 50,8 × 49,2 | 48,1 × 51,9 | 10 |
+
+A sua simulação da Língua 4/4 bate com a minha (50,9 × 49,1 no justo). No
+medido a sua deu 56,5 → 50,9 e a minha 55,5 → 51,1 — a diferença é de semente.
+Com o Choque, o Bocão passa um pouco à frente no Rolar e na Mira (51 × 49,
+como você previu, só que com o lado invertido).
+
+**Elenco inteiro — média de cada um contra os outros 5 (alvo 45–57%)**
+
+Rolar:
+
+| Bichinho | Antes (justo / medido) | Entregue (justo / medido) |
+|---|---|---|
+| TAT01 Couraça | 50,7 / 51,5 | 48,7 / 49,0 |
+| SAP02 Bocão | 45,8 / 45,4 | 50,6 / 50,8 |
+| TAT03 Ferrão | 48,8 / 49,1 | 47,9 / 48,3 |
+| SAP04 Salta | 55,3 / 54,9 | 54,0 / 53,6 |
+| TAT05 Casco | 51,2 / 50,6 | 51,0 / 50,2 |
+| SAP06 Trovão | 48,2 / 48,5 | 47,8 / 48,0 |
+
+Batalha (Arena):
+
+| Bichinho | Antes (justo / medido) | Entregue (justo / medido) |
+|---|---|---|
+| TAT01 Couraça | 50,0 / 49,7 | 49,5 / 49,2 |
+| SAP02 Bocão | 45,6 / 45,4 | 47,4 / 47,4 |
+| TAT03 Ferrão | 45,9 / 46,1 | 46,3 / 46,4 |
+| SAP04 Salta | **57,1 / 57,1** | 56,6 / 56,6 |
+| TAT05 Casco | 55,1 / 54,9 | 53,8 / 53,6 |
+| SAP06 Trovão | 46,3 / 46,8 | 46,4 / 46,7 |
+
+Mira:
+
+| Bichinho | Antes (justo / medido) | Entregue (justo / medido) |
+|---|---|---|
+| TAT01 Couraça | 52,2 / 52,6 | 49,4 / 49,5 |
+| SAP02 Bocão | 46,0 / 45,7 | 51,8 / 52,6 |
+| TAT03 Ferrão | 46,3 / 46,5 | 45,5 / 45,6 |
+| SAP04 Salta | 56,0 / 55,5 | 54,4 / 53,9 |
+| TAT05 Casco | 53,4 / 53,4 | 53,4 / 53,0 |
+| SAP06 Trovão | 46,1 / 46,2 | 45,4 / 45,5 |
+
+Medianas por confronto (entregue): Rolar 5–10, Batalha 7–10, Mira 6–12.
+Partidas que bateram no limite de 40 rodadas na Mira medida: 62 antes, 2 depois.
+
+Três observações:
+
+- **O Salta na Batalha já estava fora da faixa antes** (57,1%). Com as duas
+  mudanças ele volta para 56,6%.
+- **Só a Língua 4/4, sem o Choque, deixaria o Trovão em 45,0% na Mira medida**
+  (na borda de baixo). O Choque o empurra para 45,5%.
+- Os mais perto da borda no que foi entregue são Ferrão e Trovão na Mira
+  (45,4–45,6%). Rodei de novo com a semente 2 e deu o mesmo (45,3–45,5%).
+
+## Fase 3 — visual e fluxo da batalha ✅
+
+- **Menos toques.** Não existe mais LUTAR nem PRÓXIMA. Quando os dois
+  responderam, o botão do meio vira **DESFAZER** por 1,5 s, com um anel
+  fechando; tocar nele apaga a última resposta tocada e a rodada volta a
+  esperar. Qualquer toque novo nesses 1,5 s reinicia a contagem. Depois da
+  animação, os botões de símbolo já aceitam a escolha da próxima rodada: o
+  primeiro toque (num símbolo ou no resultado) limpa o resultado e começa a
+  rodada nova, já com aquele símbolo marcado. Batalha e Mira resolvem quando
+  as perguntas delas também foram respondidas. No fim da partida o meio vira
+  **VER FIM** (um toque, para dar tempo de ver o golpe final).
+- **Arte grande.** Com arte, o bichinho ocupa ~52% do painel (antes 42%) e
+  reage: o vencedor pula, o perdedor treme (0,56 s e 0,46 s, começando em
+  440 ms). A tela "X está pronto!" usa a arte sobre o disco da espécie. Sem
+  arte, fica o visual de antes.
+- **O especial tem momento próprio.** O nome entra grande numa faixa amarela
+  sobre o meio da tela, escrito para os dois lados. A Língua Chicote estica até
+  o outro e um coração viaja do painel do perdedor para o do Bocão (só quando o
+  roubo acontece). Na Bola de Ferro, a bola cai do alto no outro (vista de
+  cima, ela encolhe e achata) e o escudo acende em volta do Couraça. Os outros
+  4 especiais usam a estrela genérica. Linha do tempo: o último efeito
+  termina em 1020 ms, e a rodada fecha nos mesmos 1080 ms de antes. Com
+  `prefers-reduced-motion`, o resultado aparece direto.
+- **Saiu o aviso** de vida cheia ("a vida não passa do máximo").
+- **Piões.** Rolar: "Girem os piões. Quando pararem, vejam qual desenho ficou
+  para cima." **Batalha** (continua `ARENA` no código): "Girem os dois na mesma
+  bandeja. Perde quem parar de girar primeiro ou sair da bandeja." A pergunta
+  virou "Quem parou primeiro ou saiu da bandeja?", com as opções **Girando**
+  (o antigo Dentro) e **Parou ou saiu** (o antigo Fora). Mira: "Girem os
+  piões perto de uma tampa ou prato. Quem parar em cima bate mais forte."
+- **aria-label** em todos os botões de símbolo e de pergunta, com o jogador
+  ("Ataque, jogador 1"), inclusive na metade de cabeça para baixo. O DESFAZER
+  tem "Desfazer a última escolha".
+
+## Fase 4 — coleção e lançamento ✅
+
+- **Selo de Fundador.** `?b=TAT01&f=3` grava `fundador: 3` na carta. Só vale
+  inteiro de 1 a 10 escrito sem zero à esquerda ("3" vale; "03", "3.5", "11"
+  e "abc" são ignorados, e a peça entra normalmente). Sem `f`, nada muda (o
+  formato antigo da coleção continua igual). Uma peça já registrada sem selo
+  ganha o selo quando chega com `f`, e aparece a carta **"Selo de Fundador!"**.
+  A carta tem borda dourada dupla e o selo "Fundador #N", na coleção e no
+  desbloqueio. O NFC do Android também lê o `&f=`.
+- **Série.** Campo `serie` em `js/criaturas.js` e `SERIE_ATUAL = 1` (Couraça
+  e Bocão). As 4 cartas travadas de série 2 viram **"Série 2 — em breve"**
+  (a mesma silhueta travada, sem nome nem números). O contador ficou "2 de 2
+  da Série 1", e o botão da tela inicial ficou "Minha coleção · 2 de 2".
+- Cor nova `--ouro: #765a00` (6,50:1 no branco, 5,36:1 no chassi), incluída
+  no `scripts/contraste.js`.
+
+## Decisões que tomei sozinho (a mais simples em cada caso)
+
+- **Plan mode:** você pediu plan mode e também "não me pergunte nada". Aprovar
+  um plano seria uma pergunta, então li os quatro arquivos inteiros, planejei e
+  segui direto.
+- **DESFAZER apaga a última resposta** (não volta ao valor anterior). Assim a
+  rodada nunca se arma de novo sozinha logo depois do desfazer.
+- **O resultado fica na tela até o primeiro toque** da rodada seguinte. Não
+  some por tempo.
+- **Fim de partida:** mantive um toque em VER FIM em vez de ir sozinho para a
+  tela de fim, para dar tempo de ver o golpe que decidiu.
+- **Choque:** vale nos três modos, sem bônus de Mira nem metade por erro. Na
+  Batalha, só vale com os dois ainda girando. ESPECIAL × ESPECIAL é choque puro:
+  nenhum especial ativa. Pode terminar a partida, e os dois zerados = empate
+  (regra 7).
+- **Efeitos antigos** de Espinho, Pulo Duplo, Casca Dura e Estouro
+  (estilhaços, anel duplo, casca) saíram, porque você pediu a estrela genérica
+  para esses 4. O tremor do recuo do Estouro ficou, porque ele mostra a regra.
+- **Mira:** os botões continuam "Acertou/Errou"; só a pergunta virou "Parou em
+  cima do alvo?".
+- **"Rolar"** continua com esse nome (você só pediu para renomear a Arena).
+- **Fundador:** quem já tem selo fica com o primeiro número. Um bichinho de
+  série 2 que alguém já descobriu (digitando o código, por exemplo) aparece
+  normal na coleção, mas não entra no contador da Série 1.
+- **NFC com etiqueta de outro bichinho inválido** fica na tela de espera com
+  "Essa etiqueta não é de um bichinho", em vez de voltar para o início.
+- **Selos da rodada:** saíram do lugar dos botões e foram para baixo do
+  veredito, ao lado do bichinho, porque os botões agora ficam sempre na tela.
+  Atualizei essa regra no CLAUDE.md.
+
+## Cache
+
+`?v=13` → `?v=14` em `index.html` (CSS, desvio da Raposa, app.js), nos imports
+de `js/app.js`, `js/escaneio.js` e `js/colecao.js`, e nos imports de
+`../../js/` em `raposa/js/app.js` (o `criaturas.js` mudou). A entrada da Raposa
+foi de `app.js?v=2` para `?v=3`. A Raposa carrega sem erro.
+
+## Como validei
+
+- `node --test`: 306 pass, 0 fail.
+- Chrome headless, via DevTools Protocol (script fora do repositório), em
+  360×640 e 390×844: duas abas compartilhando o storage (o cenário do iPhone),
+  NFC simulado (mesma peça, outra peça e permissão negada), DESFAZER, rodada
+  automática, Bola de Ferro, Língua Chicote com roubo e bloqueada pelo escudo,
+  estrela, Choque, movimento reduzido, partida inteira na Batalha até a tela
+  de fim, selo de Fundador (novo, tardio e `f` inválido), coleção por série,
+  sem rolagem lateral e sem erro no console.
+- **Não validei em aparelho de verdade**: nem o Safari do iPhone abrindo aba
+  nova a cada leitura, nem o NFC real do Chrome Android. O roteiro acima é o
+  teste que falta.
+
+---
+
+# Entrega anterior — redesign visual
 
 Branch: `feat/redesign-hud`, com os mesmos commits levados para a `main` (você
 pediu para testar direto no GitHub Pages). Nenhuma regra mudou: `js/regras.js` e

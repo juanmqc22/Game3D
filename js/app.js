@@ -3,23 +3,23 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura } from './criaturas.js?v=13';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura } from './criaturas.js?v=14';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
-} from './regras.js?v=13';
+} from './regras.js?v=14';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeVidaPerdida,
   iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
   iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
-} from './icones.js?v=13';
+} from './icones.js?v=14';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
-} from './escaneio.js?v=13';
+} from './escaneio.js?v=14';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, sortearOponente,
-} from './colecao.js?v=13';
-import { arteDaCriatura } from './arte.js?v=13';
+} from './colecao.js?v=14';
+import { arteDaCriatura } from './arte.js?v=14';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',

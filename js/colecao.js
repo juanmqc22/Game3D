@@ -5,7 +5,7 @@
 //   { TAT01: { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 3, vitorias: 2, fundador: 3 }, ... }
 // fundador só existe nas peças da primeira leva (etiqueta com &f=N, N de 1 a 10).
 
-import { CRIATURAS, buscarCriatura } from './criaturas.js?v=13';
+import { CRIATURAS, buscarCriatura } from './criaturas.js?v=14';
 
 export const CHAVE_COLECAO = 'bichinhos:colecao';
 
