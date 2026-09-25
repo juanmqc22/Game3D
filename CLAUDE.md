@@ -8,7 +8,7 @@ o símbolo que saiu. O app guarda a vida, resolve a rodada e diz quem ganhou.
 
 Público: crianças de 6 a 12 anos, 2 jogadores, um único celular, sem internet
 depois de carregada. Cada peça tem um código (ex: `TAT01`); o QR da peça abre
-`?b=TAT01`. Escanear duas peças em sequência na mesma aba monta a partida
+`?b=TAT01`. Escanear duas peças em sequência (mesmo em abas diferentes, como no iPhone) monta a partida
 (`js/escaneio.js`); cada código escaneado entra na coleção (`js/colecao.js`).
 
 **Segundo jogo (adulto):** Raposa na Fazenda, tudo em `raposa/` — ver `RAPOSA.md`.
@@ -53,7 +53,7 @@ index.html                  telas (trocadas com `hidden`)
 css/estilo.css              estilo mobile-first, alvo de toque >= 64px
 js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um
 js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global)
-js/escaneio.js              loop de escaneio (sessionStorage `bichinhos:aguardando`, 10 min), puro
+js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), puro
 js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
 js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta

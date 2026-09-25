@@ -62,7 +62,10 @@
       <p id="espera-aviso" class="erro" role="alert" hidden></p>
       <p id="espera-texto" class="sub"></p>
       <div id="espera-qr" class="espera-qr" aria-hidden="true"></div>
-      <button type="button" class="botao botao-principal" id="btn-espera-sem-peca">Não tenho a segunda peça</button>
+      <!-- Só aparece com Web NFC (Chrome no Android). No iPhone a segunda peça chega pela URL. -->
+      <button type="button" class="botao botao-principal" id="btn-espera-nfc" aria-pressed="false" hidden></button>
+      <p id="espera-nfc-status" class="aviso-leve" role="status" hidden></p>
+      <button type="button" class="botao botao-secundario" id="btn-espera-sem-peca">Não tenho a segunda peça</button>
       <button type="button" class="botao botao-secundario" id="btn-espera-recomecar">Recomeçar</button>
     </section>
 

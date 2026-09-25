@@ -13,7 +13,9 @@ import {
   iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
   iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
 } from './icones.js?v=13';
-import { processarChegada, lerAguardando, limparAguardando } from './escaneio.js?v=13';
+import {
+  processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
+} from './escaneio.js?v=13';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
 } from './colecao.js?v=13';
@@ -49,9 +51,9 @@ const INFO_MODO = {
 };
 
 // Onde o loop de escaneio guarda a peça que está esperando a segunda.
-// sessionStorage vale por aba; se o leitor de QR do celular abrir uma aba nova a
-// cada leitura, troque aqui por window.localStorage (ver js/escaneio.js).
-const armazemEspera = () => window.sessionStorage;
+// localStorage: o iPhone abre uma aba nova a cada leitura de NFC ou QR, e a
+// espera tem que valer entre abas (ver js/escaneio.js).
+const armazemEspera = () => window.localStorage;
 const armazemColecao = () => window.localStorage;
 
 // Linha do tempo da luta (ms). O total não pode passar de 1200 — medindo do
@@ -77,6 +79,7 @@ const app = {
   ultimaRodada: null, // { antes, resultado, placarGravado }
   animacao: null, // { finalizar } enquanto a rodada anima
   depoisDoDesbloqueio: null, // função a chamar ao tocar "Continuar" no card de novo bichinho
+  leituraNfc: null, // AbortController da leitura NFC em andamento (tela de espera)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -109,6 +112,7 @@ function movimentoReduzido() {
 }
 
 function mostrarTela(id) {
+  if (id !== 'tela-espera') pararNfc();
   for (const tela of document.querySelectorAll('.tela')) {
     tela.hidden = tela.id !== id;
   }
@@ -1179,6 +1183,7 @@ function abrirColecao() {
 // ---------- tela: espera da segunda peça ----------
 
 function abrirEspera(criatura, { repetido = false } = {}) {
+  pararNfc();
   app.escolhas = [criatura, null];
   $('espera-selo').replaceChildren(
     el('span', { class: 'cartao-avatar', style: `--cor-base: ${corDaEspecie(criatura)}`, 'data-especie': criatura.especie }, retrato(criatura)),
@@ -1189,10 +1194,98 @@ function abrirEspera(criatura, { repetido = false } = {}) {
   aviso.hidden = !repetido;
   aviso.textContent = 'Esse é o mesmo bichinho! Escaneie outro.';
   $('espera-qr').replaceChildren(el('span', { class: 'mira-leitura' }, icone(iconeQr())));
+  const nfc = $('btn-espera-nfc');
+  nfc.hidden = !temNfc();
+  // com NFC, "Encoste a segunda peça" é o caminho principal
+  $('btn-espera-sem-peca').classList.toggle('botao-principal', nfc.hidden);
+  $('btn-espera-sem-peca').classList.toggle('botao-secundario', !nfc.hidden);
+  nfc.textContent = 'Encoste a segunda peça';
+  nfc.setAttribute('aria-pressed', 'false');
+  $('espera-nfc-status').hidden = true;
   mostrarTela('tela-espera');
 }
 
+// ---------- NFC no próprio app (Android/Chrome) ----------
+//
+// No Chrome do Android a página pode ler a etiqueta sem sair dela (Web NFC).
+// No iPhone não existe: o botão nem aparece e a segunda peça chega pela URL,
+// numa aba nova, com a espera guardada no localStorage.
+
+function temNfc() {
+  return typeof window !== 'undefined' && 'NDEFReader' in window;
+}
+
+function pararNfc() {
+  if (!app.leituraNfc) return;
+  try {
+    app.leituraNfc.abort();
+  } catch {
+    // já parou
+  }
+  app.leituraNfc = null;
+}
+
+function avisoEspera(texto) {
+  const aviso = $('espera-aviso');
+  aviso.textContent = texto;
+  aviso.hidden = false;
+}
+
+async function lerSegundaPecaNfc() {
+  if (app.leituraNfc) return;
+  const botao = $('btn-espera-nfc');
+  const status = $('espera-nfc-status');
+  $('espera-aviso').hidden = true;
+  const controle = new AbortController();
+  app.leituraNfc = controle;
+  const voltarBotao = () => {
+    if (app.leituraNfc === controle) app.leituraNfc = null;
+    botao.textContent = 'Encoste a segunda peça';
+    botao.setAttribute('aria-pressed', 'false');
+    status.hidden = true;
+  };
+  try {
+    const leitor = new window.NDEFReader();
+    leitor.onreadingerror = () => {
+      status.textContent = 'Não deu para ler. Encoste de novo, bem no meio da peça.';
+    };
+    leitor.onreading = (ev) => {
+      const lido = lerRegistrosNfc(ev.message?.records);
+      if (!lido || !buscarCriatura(lido.codigo)) {
+        status.textContent = 'Essa etiqueta não é de um bichinho. Tente outra peça.';
+        return;
+      }
+      pararNfc();
+      voltarBotao();
+      chegarCodigo(lido.codigo, lido.fundador);
+    };
+    await leitor.scan({ signal: controle.signal });
+    botao.textContent = 'Lendo… toque para parar';
+    botao.setAttribute('aria-pressed', 'true');
+    status.textContent = 'Encoste a peça nas costas do celular.';
+    status.hidden = false;
+  } catch (erro) {
+    voltarBotao();
+    if (erro?.name === 'AbortError') return;
+    avisoEspera(erro?.name === 'NotAllowedError'
+      ? 'O celular não deixou usar o NFC. Escaneie o QR da peça.'
+      : 'O NFC não funcionou agora. Escaneie o QR da peça.');
+  }
+}
+
+function tocarNfc() {
+  if (app.leituraNfc) {
+    pararNfc();
+    $('btn-espera-nfc').textContent = 'Encoste a segunda peça';
+    $('btn-espera-nfc').setAttribute('aria-pressed', 'false');
+    $('espera-nfc-status').hidden = true;
+    return;
+  }
+  lerSegundaPecaNfc();
+}
+
 function recomecar() {
+  pararNfc();
   limparAguardando(armazemEspera());
   app.escolhas = [null, null];
   app.escolhaRestrita = false;
@@ -1249,6 +1342,7 @@ function ligarEventos() {
   });
 
   $('btn-espera-sem-peca').addEventListener('click', () => abrirEscolha(1, null, { restrito: true }));
+  $('btn-espera-nfc').addEventListener('click', tocarNfc);
   $('btn-espera-recomecar').addEventListener('click', recomecar);
 
   $('form-codigo').addEventListener('submit', (ev) => {
@@ -1317,6 +1411,12 @@ function iniciar() {
     // sem history API: segue com a URL como está
   }
 
+  chegarCodigo(codigo);
+}
+
+// Uma peça chegou, pela URL (?b=) ou pelo NFC lido na tela de espera: entra na
+// coleção e segue o loop de escaneio.
+function chegarCodigo(codigo) {
   const descoberta = registrarDescoberta(armazemColecao(), codigo);
   const chegada = processarChegada(codigo, armazemEspera());
   if (descoberta.nova) {
