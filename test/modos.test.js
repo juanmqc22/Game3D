@@ -123,10 +123,16 @@ describe('modo MIRA', () => {
     assert.equal(resumo.metade, true);
     assert.equal(resumo.dano, 2);
   });
-  test('empate: nada acontece, mesmo com acerto', () => {
-    const { estado, resumo } = resolverRodadaMira(partida(FORTE, ESPINHO), [true, true], [ATAQUE, ATAQUE]);
+  test('empate: só o choque, sem bônus de acerto nem metade por erro', () => {
+    const { estado, resumo } = resolverRodadaMira(partida(FORTE, ESPINHO), [true, false], [ATAQUE, ATAQUE]);
     assert.equal(resumo.vencedor, null);
     assert.equal(resumo.dano, 0);
+    assert.equal(resumo.bonusAcerto, 0);
+    assert.deepEqual(resumo.danoChoque, [1, 1]);
+    assert.deepEqual(vidas(estado), [19, 19]);
+  });
+  test('empate de TROPECO: nada acontece, mesmo com acerto', () => {
+    const { estado } = resolverRodadaMira(partida(FORTE, ESPINHO), [true, true], [TROPECO, TROPECO]);
     assert.deepEqual(vidas(estado), [20, 20]);
   });
   test('cura, recuo e escudo não mudam com o alvo', () => {
@@ -162,5 +168,21 @@ describe('resolverRodadaModo e danoMaximoDoModo', () => {
     assert.equal(danoMaximoDoModo(ARENA, FORTE), Math.max(8 + BONUS_TROPECO, 4 + BONUS_FORA));
     assert.equal(danoMaximoDoModo(MIRA, FORTE), 8 + Math.max(BONUS_TROPECO, BONUS_ACERTO));
     assert.equal(MODOS.length, 3);
+  });
+});
+
+describe('choque nos modos', () => {
+  test('ARENA com os dois dentro e o mesmo símbolo: choque', () => {
+    const { resumo, estado } = resolverRodadaArena(partida(FORTE, ESPINHO), [true, true], [DEFESA, DEFESA]);
+    assert.equal(resumo.choque, true);
+    assert.deepEqual(vidas(estado), [19, 19]);
+  });
+  test('ARENA com alguém fora: não há choque, mesmo com faces iguais', () => {
+    const nula = resolverRodadaArena(partida(FORTE, ESPINHO), [false, false], [ATAQUE, ATAQUE]);
+    assert.equal(nula.resumo.choque, false);
+    assert.deepEqual(vidas(nula.estado), [20, 20]);
+    const um = resolverRodadaArena(partida(FORTE, ESPINHO), [true, false], [ATAQUE, ATAQUE]);
+    assert.equal(um.resumo.choque, false);
+    assert.equal(um.resumo.vencedor, 0);
   });
 });

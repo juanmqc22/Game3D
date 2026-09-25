@@ -3,7 +3,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  ATAQUE, DEFESA, ESPECIAL, TROPECO, SIMBOLOS,
+  ATAQUE, DEFESA, ESPECIAL, TROPECO, SIMBOLOS, CHOQUE_DANO,
   estadoInicial, vencedorDoConfronto, resolverRodada, verificarFim,
 } from '../js/regras.js';
 
@@ -65,13 +65,16 @@ describe('regra 2 — TROPECO perde para qualquer outro', () => {
   }
 });
 
-describe('regra 3 — símbolos iguais empatam', () => {
+describe('regra 3 — símbolos iguais empatam (com choque)', () => {
   for (const s of SIMBOLOS) {
-    test(`${s} x ${s} é empate e ninguém perde vida`, () => {
+    const choque = s !== TROPECO;
+    test(`${s} x ${s} é empate${choque ? ' e cada um perde o choque' : ' e ninguém perde vida'}`, () => {
       assert.equal(vencedorDoConfronto(s, s), null);
       const { estado, resumo, fim } = resolverRodada(partida(ESPINHO, BOMBA), s, s);
       assert.equal(resumo.vencedor, null);
-      assert.deepEqual(vidas(estado), [12, 11]);
+      assert.equal(resumo.choque, choque);
+      assert.equal(resumo.dano, 0, 'o choque não é dano de vencedor');
+      assert.deepEqual(vidas(estado), choque ? [12 - CHOQUE_DANO, 11 - CHOQUE_DANO] : [12, 11]);
       assert.equal(fim.terminou, false);
     });
   }
@@ -80,8 +83,8 @@ describe('regra 3 — símbolos iguais empatam', () => {
     assert.equal(resumo.bonusTropeco, 0);
     assert.deepEqual(vidas(estado), [12, 11]);
   });
-  test('empate não consome escudo', () => {
-    const { estado } = resolverRodada(partida(ESPINHO, BOMBA, [{ escudo: true }, {}]), ATAQUE, ATAQUE);
+  test('TROPECO x TROPECO não consome escudo', () => {
+    const { estado } = resolverRodada(partida(ESPINHO, BOMBA, [{ escudo: true }, {}]), TROPECO, TROPECO);
     assert.equal(estado.jogadores[0].escudo, true);
   });
   test('símbolo inválido gera erro', () => {
@@ -203,7 +206,7 @@ describe('regra 6 — escudo anula todo o dano e é consumido', () => {
   });
   test('escudo dura até anular algum dano, mesmo após rodadas sem dano', () => {
     let estado = partida(FORTE, ESPINHO, [{}, { escudo: true }]);
-    estado = resolverRodada(estado, ATAQUE, ATAQUE).estado; // empate
+    estado = resolverRodada(estado, TROPECO, TROPECO).estado; // empate sem choque
     estado = resolverRodada(estado, TROPECO, ATAQUE).estado; // o dono do escudo vence
     assert.equal(estado.jogadores[1].escudo, true);
     const r = resolverRodada(estado, ATAQUE, DEFESA);
@@ -297,5 +300,40 @@ describe('pureza', () => {
     const { estado, resumo } = resolverRodada(estadoInicial(FORTE, ESPINHO), ATAQUE, ATAQUE);
     assert.equal(resumo.numero, 1);
     assert.equal(estado.rodada, 1);
+  });
+});
+
+describe('choque — mesmo símbolo dos dois lados', () => {
+  test('CHOQUE_DANO é 1', () => {
+    assert.equal(CHOQUE_DANO, 1);
+  });
+  test('resumo conta quanto cada um perdeu', () => {
+    const { resumo } = resolverRodada(partida(ESPINHO, BOMBA), DEFESA, DEFESA);
+    assert.deepEqual(resumo.danoChoque, [1, 1]);
+    assert.deepEqual(resumo.choqueBloqueado, [false, false]);
+  });
+  test('escudo anula o choque de quem tem e é consumido; o outro perde 1', () => {
+    const { estado, resumo } = resolverRodada(partida(ESCUDEIRO, BOMBA, [{ escudo: true }, {}]), ATAQUE, ATAQUE);
+    assert.deepEqual(resumo.danoChoque, [0, 1]);
+    assert.deepEqual(resumo.choqueBloqueado, [true, false]);
+    assert.deepEqual(vidas(estado), [12, 10]);
+    assert.equal(estado.jogadores[0].escudo, false);
+  });
+  test('os dois com escudo: ninguém perde vida e os dois escudos acabam', () => {
+    const { estado } = resolverRodada(partida(ESCUDEIRO, ESCUDEIRO, [{ escudo: true }, { escudo: true }]), ESPECIAL, ESPECIAL);
+    assert.deepEqual(vidas(estado), [12, 12]);
+    assert.deepEqual(estado.jogadores.map((j) => j.escudo), [false, false]);
+  });
+  test('ESPECIAL x ESPECIAL não ativa especial nenhum (nem cura, nem escudo)', () => {
+    const { estado, resumo } = resolverRodada(partida(CURADOR, ESCUDEIRO, [{ vida: 5 }, {}]), ESPECIAL, ESPECIAL);
+    assert.equal(resumo.cura, 0);
+    assert.equal(resumo.escudoAtivado, false);
+    assert.deepEqual(vidas(estado), [4, 11]);
+  });
+  test('choque pode terminar a partida; os dois zerados = empate (regra 7)', () => {
+    const um = resolverRodada(partida(ESPINHO, BOMBA, [{ vida: 1 }, {}]), ATAQUE, ATAQUE);
+    assert.deepEqual(um.fim, { terminou: true, vencedor: 1 });
+    const dois = resolverRodada(partida(ESPINHO, BOMBA, [{ vida: 1 }, { vida: 1 }]), DEFESA, DEFESA);
+    assert.deepEqual(dois.fim, { terminou: true, vencedor: null });
   });
 });

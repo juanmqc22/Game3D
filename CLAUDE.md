@@ -29,7 +29,9 @@ app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativ
 
 1. Triângulo: ESPECIAL > ATAQUE > DEFESA > ESPECIAL.
 2. TROPECO perde para qualquer outro símbolo.
-3. Símbolos iguais (inclusive TROPECO x TROPECO): empate, ninguém perde vida.
+3. Símbolos iguais: empate. **Choque** (`CHOQUE_DANO` = 1): com o mesmo símbolo
+   dos dois lados, exceto TROPECO x TROPECO, cada um perde 1; o escudo anula o
+   choque e é consumido. TROPECO x TROPECO: ninguém perde vida.
 4. Dano do vencedor: ATAQUE ou DEFESA → `forca`; ESPECIAL → efeito do especial
    (todo especial causa dano).
 5. Perdedor tirou TROPECO → +2 no dano ao perdedor.
@@ -41,8 +43,8 @@ app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativ
 Esclarecimentos (cobertos por teste):
 - **Cura própria** (Casca Dura) sempre acontece, mesmo se o escudo do oponente
   anular o dano.
-- **Roubo** (Língua Chicote) só cura se o dano passar; a cura é fixa (+3), mesmo
-  quando o dano foi 5 por causa do TROPECO.
+- **Roubo** (Língua Chicote) só cura se o dano passar; a cura é fixa (+4), mesmo
+  quando o dano foi 6 por causa do TROPECO.
 - **Recuo** (Estouro) sempre acontece, ignora escudo, e pode zerar o vencedor.
 - Partida espelhada (mesmo código nos dois lados) e empates não entram no placar.
 
@@ -156,6 +158,7 @@ Regras que não podem regredir:
 
 - HTML + CSS + JS puro (ES modules). Sem framework, bundler ou dependências de
   runtime. A única dependência de dev é o `sharp`, só para `npm run arte`.
-- A tabela de `js/criaturas.js` está balanceada e validada: não mexer.
+- A tabela de `js/criaturas.js` está balanceada e validada: não mexer. (Língua
+  Chicote 4/4 e o Choque foram pedidos e medidos — ver ENTREGA.md.)
 - Fora de escopo na v1: backend, login, XP, multiplayer em rede, leitor de QR,
   animações elaboradas, PWA, sons, dark mode, i18n, admin. Perguntar antes.

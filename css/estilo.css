@@ -628,6 +628,8 @@ input:focus-visible {
   transform: rotate(-5deg);
 }
 .veredito-protegido { color: var(--escudo); }
+/* choque: os dois perdem um pouco */
+.veredito-choque { color: var(--perigo); }
 .nota { margin: 0; font-size: 0.82rem; font-weight: 600; line-height: 1.2; color: var(--tinta-media); }
 
 /* cabeça: nome e vida na mesma linha */

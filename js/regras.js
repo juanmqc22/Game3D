@@ -18,6 +18,11 @@ export const ARENA = 'ARENA';
 export const MIRA = 'MIRA';
 export const MODOS = [ROLAR, ARENA, MIRA];
 
+// Choque: mesmo símbolo dos dois lados (exceto TROPECO x TROPECO) → cada um
+// perde este tanto. O escudo anula o choque e é consumido. 0 desliga (volta a
+// ser o empate seco da regra 3). Vale nos três modos, sem bônus de modo.
+export const CHOQUE_DANO = 1;
+
 // Regra 5: dano extra quando o perdedor tirou TROPECO.
 export const BONUS_TROPECO = 2;
 // ARENA: quem ficou fora do círculo leva a força do adversário + este bônus.
@@ -86,6 +91,9 @@ export function verificarFim(estado) {
 //   cura         — vida que o vencedor realmente recuperou
 //   recuo        — dano que o vencedor causou em si mesmo
 //   escudoAtivado — true se o vencedor ganhou escudo nesta rodada
+//   choque       — true se foi empate de símbolos iguais (não TROPECO) com CHOQUE_DANO > 0
+//   danoChoque   — [n, n] vida que cada um perdeu no choque (0 onde o escudo segurou)
+//   choqueBloqueado — [bool, bool] escudo de quem anulou o choque (e acabou)
 // }
 export function resolverRodada(estado, simboloA, simboloB) {
   const simbolos = [simboloA, simboloB];
@@ -205,7 +213,25 @@ function resolver(estado, plano) {
     cura: 0,
     recuo: 0,
     escudoAtivado: false,
+    choque: false,
+    danoChoque: [0, 0],
+    choqueBloqueado: [false, false],
   };
+
+  // Choque: os dois tiraram o mesmo símbolo (menos TROPECO) e cada um perde CHOQUE_DANO.
+  if (vencedor === null && !resumo.nula && CHOQUE_DANO > 0
+      && simbolos[0] !== null && simbolos[0] === simbolos[1] && simbolos[0] !== TROPECO) {
+    resumo.choque = true;
+    jogadores.forEach((j, i) => {
+      if (j.escudo) {
+        resumo.choqueBloqueado[i] = true;
+        j.escudo = false;
+      } else {
+        resumo.danoChoque[i] = CHOQUE_DANO;
+        j.vida = limitarVida(j.vida - CHOQUE_DANO, j.criatura);
+      }
+    });
+  }
 
   if (vencedor !== null) {
     const venc = jogadores[vencedor];

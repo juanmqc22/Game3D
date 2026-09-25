@@ -25,8 +25,8 @@ export const CRIATURAS = [
   {
     codigo: 'SAP02', nome: 'Bocão', especie: 'sapo', vida: 15, forca: 3,
     especial: {
-      nome: 'Língua Chicote', dano: 3, cura: 3, roubo: true, escudo: false, recuo: 0,
-      texto: 'oponente -3 de vida, você +3 de vida',
+      nome: 'Língua Chicote', dano: 4, cura: 4, roubo: true, escudo: false, recuo: 0,
+      texto: 'oponente -4 de vida, você +4 de vida',
     },
   },
   {

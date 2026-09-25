@@ -5,7 +5,7 @@
 // ?v= igual ao de index.html (ver comentário lá).
 import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=13';
 import {
-  DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS,
+  DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
 } from './regras.js?v=13';
 import {
@@ -753,6 +753,24 @@ function descreverRodada(estado, resumo) {
     };
   }
 
+  if (resumo.choque) {
+    // mesmo símbolo: os dois se chocam e cada um perde CHOQUE_DANO (o escudo segura)
+    const perdeu = (i) => resumo.danoChoque[i];
+    const etiquetas = [0, 1].map((i) => (resumo.choqueBloqueado[i]
+      ? { quem: i, tipo: 'escudo', svg: iconeEscudoAtivo(), texto: 'Escudo segurou' }
+      : { quem: i, tipo: 'dano', svg: iconeVidaPerdida(), texto: `-${perdeu(i)} de vida` }));
+    const partes = [0, 1].map((i) => (resumo.choqueBloqueado[i]
+      ? `o escudo do ${nome(i)} segurou o choque e acabou`
+      : `${nome(i)} perdeu ${perdeu(i)} de vida`));
+    const zerados = estado.jogadores.every((j) => j.vida === 0);
+    return {
+      veredito: ['Choque!', 'Choque!'],
+      etiquetas,
+      nota: zerados ? { quem: null, texto: 'Os dois ficaram sem vida!' } : null,
+      leitura: `${confronto} Choque: os dois tiraram ${rotulo(sa)}; ${partes.join(' e ')}.${zerados ? ' Os dois ficaram sem vida!' : ''}`,
+    };
+  }
+
   if (resumo.vencedor === null) {
     return {
       veredito: ['Empate!', 'Empate!'],
@@ -831,6 +849,12 @@ function etiqueta(e) {
 // que sobem do bichinho.
 function papelNaLuta(resumo, i) {
   if (resumo.nula) return { papel: 'nula', flutuantes: [] };
+  if (resumo.choque) {
+    const flutuantes = resumo.choqueBloqueado[i]
+      ? [{ tipo: 'bloqueado', valor: CHOQUE_DANO }]
+      : [{ tipo: 'dano', texto: `-${resumo.danoChoque[i]}` }];
+    return { papel: 'choque', flutuantes };
+  }
   if (resumo.vencedor === null) return { papel: 'empate', flutuantes: [] };
   if (i !== resumo.vencedor) {
     const fora = resumo.bonusFora > 0;
@@ -865,7 +889,7 @@ function configurarEfeitos(tela, estado, resumo) {
   // o especial só "acontece" quando a face especial venceu de verdade
   const usouEspecial = houveGolpe && resumo.simboloVencedor === ESPECIAL && resumo.bonusFora === 0;
   tela.dataset.efeito = usouEspecial ? estado.jogadores[v].criatura.codigo : '';
-  tela.dataset.golpe = houveGolpe ? (resumo.bloqueado ? 'bloqueado' : 'dano') : 'nenhum';
+  tela.dataset.golpe = houveGolpe ? (resumo.bloqueado ? 'bloqueado' : 'dano') : (resumo.choque ? 'dano' : 'nenhum');
   tela.dataset.tropeco = resumo.bonusTropeco > 0 ? 'sim' : 'nao';
 }
 
@@ -934,6 +958,7 @@ const POSE = {
   perdeu: 'translate3d(0, 10px, 0) scale(0.88) rotate(-9deg)',
   tombou: 'translate3d(0, 16px, 0) scale(0.86) rotate(-84deg)',
   protegido: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
+  choque: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
   empate: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
   nula: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
 };
@@ -1048,6 +1073,7 @@ function animarLuta(luta) {
       if (!l.escudoDepois) l.escudo.classList.add('desligado');
       // quem levou dano treme; no Estouro (e no recuo) o vencedor treme junto
       const treme = ['perdeu', 'tombou'].includes(l.papel.papel)
+        || (l.papel.papel === 'choque' && l.vidaDepois < l.vidaAntes)
         || (l.papel.papel === 'venceu' && l.papel.recuo)
         || tela.dataset.efeito === 'SAP06';
       if (treme) {

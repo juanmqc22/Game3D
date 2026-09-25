@@ -3,7 +3,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CRIATURAS, ESPECIES, buscarCriatura } from '../js/criaturas.js';
-import { MODOS, ROLAR, BONUS_TROPECO, danoMaximoDoModo } from '../js/regras.js';
+import {
+  MODOS, ROLAR, BONUS_TROPECO, ESPECIAL, ATAQUE, TROPECO, danoMaximoDoModo, estadoInicial, resolverRodada,
+} from '../js/regras.js';
 
 test('códigos são únicos', () => {
   const codigos = CRIATURAS.map((c) => c.codigo);
@@ -65,4 +67,23 @@ test('buscarCriatura retorna null para código inválido', () => {
   assert.equal(buscarCriatura('XYZ99'), null);
   assert.equal(buscarCriatura(''), null);
   assert.equal(buscarCriatura(undefined), null);
+});
+
+// Balanceamento dos fundadores (ENTREGA.md): a Língua Chicote passou de 3/3 para 4/4.
+test('SAP02 Língua Chicote: 4 de dano e rouba 4 (fixo, mesmo com o tropeço)', () => {
+  const bocao = buscarCriatura('SAP02');
+  const couraca = buscarCriatura('TAT01');
+  assert.equal(bocao.especial.dano, 4);
+  assert.equal(bocao.especial.cura, 4);
+  assert.equal(bocao.especial.roubo, true);
+  assert.match(bocao.especial.texto, /-4 .*\+4/);
+  const inicio = estadoInicial(bocao, couraca);
+  inicio.jogadores[0].vida = 8;
+  const normal = resolverRodada(inicio, ESPECIAL, ATAQUE);
+  assert.equal(normal.resumo.dano, 4);
+  assert.equal(normal.resumo.cura, 4);
+  assert.deepEqual(normal.estado.jogadores.map((j) => j.vida), [12, 12]);
+  const tropeco = resolverRodada(inicio, ESPECIAL, TROPECO);
+  assert.equal(tropeco.resumo.dano, 6);
+  assert.equal(tropeco.resumo.cura, 4);
 });
