@@ -55,7 +55,7 @@ js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ a
 js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global)
 js/escaneio.js              loop de escaneio (sessionStorage `bichinhos:aguardando`, 10 min), puro
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), puro
-js/app.js                   UI, navegação, animações, deep link ?b=, modos
+js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
 js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta
 img/criaturas/              arte publicada (WebP 256 e 512, gerada por `npm run arte`)
 img/originais/              originais da arte, CODIGO.png|webp — fora do Pages (_config.yml)
@@ -113,11 +113,24 @@ Regras que não podem regredir:
   rodada gravado no peito. O corpo usa `--cor-corpo` da espécie (tom claro do
   plástico): espécie nova precisa de `--cor-corpo` junto de `--cor-tema`, e quem
   contém o retrato tem que carregar `data-especie`.
-- **A rodada é contada por desenho, não por parágrafo:** a arena mostra quem
-  bateu em quem e os detalhes viram selos (`.etiqueta`) de duas ou três
-  palavras; no máximo uma `.nota`, só para o que a tela esconderia. O texto
-  completo continua em `#resultado-leitura` (`.so-leitor`), para leitor de
-  tela — ao mexer no resultado, mantenha essa linha em dia.
+- **Batalha em tela dividida** (`#tela-batalha`): o celular fica no chão entre
+  os dois. Jogador 1 na metade de cima, girada 180° pelo CSS; Jogador 2 embaixo.
+  As duas metades têm o mesmo desenho: bichinho perto do meio, botões perto da
+  borda. A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
+  resultado separada. Nunca ponha `transform` na `.metade` (é o giro): anime
+  `.metade-corpo` ou `.bicho-luta`. No JS, deslocamento medido na tela vira
+  deslocamento da metade por `naMetade()`.
+- **A luta é animada em JS** (Web Animations, `animarLuta` em `js/app.js`): o
+  bote é medido na tela de verdade para os dois se chocarem de frente no meio.
+  A pose final de cada papel está em `POSE` (JS) e em `.fase-final
+  [data-papel]` (CSS) — mantenha os dois iguais. Sem `Element.animate`, pula
+  direto para o fim.
+- **A rodada é contada por desenho, não por parágrafo:** cada metade mostra o
+  veredito do seu jogador (VENCEU!, PERDEU, Tropeçou!...) e os selos
+  (`.etiqueta`) do que aconteceu com ele, no lugar dos botões de símbolo; no
+  máximo uma `.nota`, só para o que a tela esconderia. O texto completo continua
+  em `#resultado-leitura` (`.so-leitor`), para leitor de tela — ao mexer no
+  resultado, mantenha essa linha em dia.
 - Efeitos por especial são mapeados por código da criatura em `css/estilo.css`;
   código desconhecido cai no efeito genérico.
 
@@ -136,7 +149,7 @@ Regras que não podem regredir:
 - Rodar local: `npx serve`
 - Arte de bichinho novo: `img/originais/CODIGO.png` → `npm install` (1ª vez) →
   `npm run arte` → uma linha em `ARTE` (`js/arte.js`). Aparece no desbloqueio, na
-  coleção (só descobertos), no painel da partida e na montagem da Raposa.
+  coleção (só descobertos), na luta, no fim da partida e na montagem da Raposa.
   Original sem transparência: o script tira o fundo claro ligado à borda — confira.
 
 ## Restrições

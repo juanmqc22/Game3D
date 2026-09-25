@@ -17,10 +17,10 @@
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=12">
+  <link rel="stylesheet" href="./css/estilo.css?v=13">
   <!-- Desvio NFC para /raposa/ (jogo adulto) só com partida da Raposa ativa. Script
        clássico e síncrono: precisa rodar antes do app ler o ?b=. -->
-  <script src="./js/desvio-raposa.js?v=12"></script>
+  <script src="./js/desvio-raposa.js?v=13"></script>
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -30,7 +30,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=12" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=13" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -97,58 +97,36 @@
       <button type="button" class="botao botao-secundario" id="btn-modo-voltar">Recomeçar</button>
     </section>
 
-    <!-- 6. Batalha -->
-    <section id="tela-batalha" class="tela" hidden>
-      <div class="topo-batalha">
-        <h2 id="batalha-rodada">Rodada 1</h2>
-        <span id="batalha-modo" class="chip-modo"></span>
-        <button type="button" class="botao-link" id="btn-sair">Sair</button>
-      </div>
-      <p id="batalha-instrucao" class="instrucao"></p>
-      <div id="arena-pergunta" class="pergunta" hidden>
-        <p class="pergunta-titulo">Quem ficou dentro do círculo?</p>
-        <div id="arena-opcoes" class="opcoes-dentro" role="group" aria-label="Quem ficou dentro do círculo"></div>
-      </div>
-      <div id="painel-0" class="painel"></div>
-      <div id="painel-1" class="painel"></div>
-      <div class="rodape-fixo">
-        <button type="button" class="botao botao-principal" id="btn-resolver" disabled>Resolver rodada</button>
-      </div>
-    </section>
+    <!-- 6. Batalha em tela dividida: o celular fica no chão entre os dois.
+         Jogador 1 na metade de cima (girada 180°, virada para ele), Jogador 2
+         embaixo. A luta acontece aqui mesmo, sem trocar de tela. -->
+    <section id="tela-batalha" class="tela dividida" hidden>
+      <div class="metade metade-0" id="metade-0"></div>
 
-    <!-- 7. Resultado da rodada -->
-    <section id="tela-resultado" class="tela" hidden>
-      <h2 id="resultado-rodada">Rodada 1</h2>
-      <div class="palco">
-        <div id="res-painel-0" class="painel-res"></div>
-        <div class="arena" id="arena-palco" aria-hidden="true">
-          <!-- camada de efeitos: quais aparecem é decidido por data-efeito
-               em #tela-resultado (um por especial). Ver css/estilo.css. -->
-          <div class="efeitos" id="efeitos">
-            <span class="onda"></span>
-            <span class="onda onda-2"></span>
-            <span class="estilhacos"></span>
-            <span class="lingua"></span>
-            <span class="domo"></span>
-          </div>
-          <div id="ficha-0" class="ficha"></div>
-          <div class="clarao"></div>
-          <div id="ficha-1" class="ficha"></div>
-          <span class="estampa" id="estampa"></span>
+      <div class="faixa-centro">
+        <button type="button" class="botao-link botao-sair" id="btn-sair">Sair</button>
+        <span class="chip-rodada chip-rodada-cima" id="rodada-cima"></span>
+        <!-- O texto do botão vem escrito nos dois sentidos, um para cada jogador. -->
+        <button type="button" class="botao-lutar" id="btn-lutar" disabled>
+          <span class="lutar-texto lutar-cima" aria-hidden="true"></span>
+          <span class="lutar-texto lutar-baixo"></span>
+        </button>
+        <span class="chip-rodada" id="rodada-baixo"></span>
+        <!-- camada do choque, no meio da tela: quais efeitos aparecem é decidido
+             por data-efeito em #tela-batalha (um por especial). Ver css/estilo.css. -->
+        <div class="choque" aria-hidden="true">
+          <span class="onda"></span>
+          <span class="onda onda-2"></span>
+          <span class="estilhacos"></span>
+          <span class="clarao"></span>
         </div>
-        <div id="res-painel-1" class="painel-res"></div>
       </div>
-      <div class="resultado-texto">
-        <p id="resultado-frase" class="frase"></p>
-        <div id="resultado-etiquetas" class="etiquetas"></div>
-        <p id="resultado-nota" class="nota" hidden></p>
-        <!-- A tela conta a rodada por desenho; esta linha conta por extenso
-             para quem usa leitor de tela. -->
-        <p id="resultado-leitura" class="so-leitor" aria-live="polite"></p>
-      </div>
-      <div class="rodape-fixo">
-        <button type="button" class="botao botao-principal" id="btn-proxima">Próxima rodada</button>
-      </div>
+
+      <div class="metade metade-1" id="metade-1"></div>
+
+      <!-- A tela conta a rodada por desenho; esta linha conta por extenso
+           para quem usa leitor de tela. -->
+      <p id="resultado-leitura" class="so-leitor" aria-live="polite"></p>
     </section>
 
     <!-- 8. Fim -->

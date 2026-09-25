@@ -435,52 +435,131 @@ input:focus-visible {
 /* oponente surpresa (fallback da espera) */
 .cartao-surpresa { --cor: var(--especial); background-image: linear-gradient(170deg, #fffdf2 0%, #fff4cd 100%); }
 
-/* ---------- Batalha ---------- */
+/* ---------- Batalha em tela dividida ----------
+   O celular fica no chão entre os dois. Metade de cima = Jogador 1, girada
+   180° para ficar de frente para ele; metade de baixo = Jogador 2. As duas
+   metades têm o mesmo desenho: bichinho perto do meio (onde a luta acontece),
+   botões perto da borda (onde a mão alcança). */
 
-.topo-batalha { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.topo-batalha h2 { margin: 0; font-size: 1.25rem; }
-.instrucao {
-  margin: 0;
-  padding: 9px 12px;
-  border-left: 5px solid var(--sistema);
-  background: rgba(255, 255, 255, 0.72);
-  font-size: 0.98rem;
-  font-weight: 600;
-  color: var(--tinta-media);
+.tela.dividida {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 560px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0;
+  overflow: hidden;
 }
 
-.painel {
+.metade {
   --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
   position: relative;
-  padding: 12px 12px 13px;
+  z-index: 2;
+  display: flex;
+  min-height: 0;
+  padding: 6px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+/* de frente para o jogador do outro lado; a borda de baixo dele é o topo da tela */
+.metade-0 {
+  transform: rotate(180deg);
+  padding-bottom: calc(env(safe-area-inset-top, 0px) + 8px);
+}
+/* quem ataca passa por cima da outra metade (língua, bote) */
+.metade.atacante { z-index: 3; }
+
+.metade-corpo {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  min-height: 0;
+  padding: 12px 10px 10px;
   border: var(--borda) solid var(--tinta);
   border-radius: var(--raio);
   background-color: var(--superficie);
   background-image: linear-gradient(170deg, var(--superficie) 0%, var(--superficie-2) 100%);
 }
-/* faixa de identificação da espécie no topo */
-.painel::before {
+/* faixa da espécie, do lado do meio da tela */
+.metade-corpo::before {
   content: "";
   position: absolute;
   left: -3px;
   right: -3px;
   top: -3px;
-  height: 10px;
+  height: 8px;
   background-color: var(--cor);
   background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 45%);
   border-radius: 3px 16px 0 0;
 }
-.painel > * { position: relative; }
-.painel-cabeca { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
-.painel-bicho { display: flex; font-size: 84px; }
+
+/* escudo ativo: moldura azul + anel que pulsa só com transform/opacity */
+.metade.com-escudo .metade-corpo { border-color: var(--escudo); }
+.metade.com-escudo .metade-corpo::after {
+  content: "";
+  position: absolute;
+  inset: -3px;
+  border: 3px solid var(--escudo);
+  border-radius: var(--raio);
+  pointer-events: none;
+  animation: pulso-escudo 1.5s ease-in-out infinite alternate;
+}
+@keyframes pulso-escudo {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0.25; transform: scale(1.012); }
+}
+
+/* palco: o bichinho e, ao lado, a pergunta do modo ou o resultado */
+.palco-luta {
+  position: relative;
+  flex: 1 1 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 42%) minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+}
+.bicho-lugar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+.bicho-luta {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-height: 200px;
+  transform-origin: 50% 70%;
+}
+.bicho-luta .bichinho { height: 100%; max-height: 190px; }
+.bicho-luta .painel-bicho-placa { right: 2%; bottom: 0; font-size: 38px; }
 /* Trocou de símbolo, o retrato é redesenhado: a entrada confirma o toque. */
-.painel-bicho .bichinho { animation: bicho-troca 220ms ease-out; }
-.painel-id { flex: 1; min-width: 0; }
+.bicho-luta .bichinho, .painel-bicho-placa .placa { animation: bicho-troca 220ms ease-out; }
+.bicho-lugar .selo-escudo {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  padding: 2px 8px 2px 5px;
+  font-size: 0.7rem;
+  transition: opacity 200ms, transform 200ms;
+}
+.bicho-lugar .selo-escudo .icone { font-size: 1.1rem; }
+.selo-escudo.desligado { opacity: 0; transform: scale(0.5); }
 
 /* ---------- arte dos bichinhos (js/arte.js) ---------- */
 .arte-bicho { display: block; width: 100%; height: 100%; object-fit: contain; }
-/* painel com arte: o símbolo tocado vai numa placa no canto da imagem */
-.painel-bicho.com-arte { position: relative; flex: none; width: 84px; height: 84px; }
+/* com arte: o símbolo tocado vai numa placa no canto da imagem */
 .painel-bicho-placa {
   position: absolute;
   right: -4px;
@@ -488,61 +567,152 @@ input:focus-visible {
   display: flex;
   font-size: 34px;
 }
-.painel-bicho-placa .placa { animation: bicho-troca 220ms ease-out; }
 
 @keyframes bicho-troca {
   0% { transform: scale(0.82); }
   60% { transform: scale(1.06); }
   100% { transform: scale(1); }
 }
-.painel-jogador {
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--tinta-media);
-  text-transform: uppercase;
-  letter-spacing: 0.14em;
-}
-.painel-nome { font-size: 1.5rem; font-weight: 700; line-height: 1.05; }
-.painel-especial { margin: 8px 0 12px; font-size: 0.95rem; font-weight: 600; color: var(--tinta-media); }
 
-.selo-escudo {
-  display: inline-flex;
+/* o lado: pergunta do modo (antes) e resultado (depois), na mesma célula */
+.lado {
+  display: grid;
   align-items: center;
-  gap: 6px;
-  padding: 4px 11px 4px 7px;
-  border: 2px solid var(--escudo);
-  border-radius: var(--raio-p);
-  background: var(--escudo-fundo);
-  color: var(--escudo);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
+  min-width: 0;
+  min-height: 0;
 }
-.selo-escudo .icone { font-size: 1.4rem; }
+.lado > * { grid-area: 1 / 1; }
+.lado-info { display: grid; gap: 6px; align-content: center; }
+.dica { margin: 0; font-size: 1.05rem; font-weight: 700; line-height: 1.15; }
+.dica.pronto { color: var(--cura); }
+.dica.pronto::before { content: "✓ "; }
+.painel-especial { margin: 0; font-size: 0.8rem; font-weight: 600; line-height: 1.25; color: var(--tinta-media); }
+/* Tela baixa: o texto do especial sai (a criança já leu no cartão) para o
+   bichinho e as perguntas caberem. Mira e Arena têm uma pergunta a mais. */
+@media (max-height: 600px) {
+  .painel-especial { display: none; }
+}
+@media (max-height: 780px) {
+  [data-modo="MIRA"] .painel-especial, [data-modo="ARENA"] .painel-especial { display: none; }
+}
+.linha-especial b { color: var(--tinta); }
 
-.simbolos { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.lado-resultado {
+  display: grid;
+  gap: 4px;
+  align-content: center;
+  visibility: hidden;
+  opacity: 0;
+  transform: translate3d(0, 8px, 0);
+  transition: opacity 160ms ease-out, transform 160ms ease-out;
+}
+.veredito {
+  margin: 0;
+  font-size: 1.7rem;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.veredito-venceu { color: var(--cura); }
+.veredito-perdeu { color: var(--perigo); }
+/* tropeçou: o veredito é o próprio carimbo */
+.veredito-tombou {
+  justify-self: start;
+  padding: 4px 10px;
+  border: 3px solid var(--tinta);
+  border-radius: var(--raio-p);
+  background: var(--tropeco);
+  color: #fff;
+  font-size: 1.35rem;
+  transform: rotate(-5deg);
+}
+.veredito-protegido { color: var(--escudo); }
+.nota { margin: 0; font-size: 0.82rem; font-weight: 600; line-height: 1.2; color: var(--tinta-media); }
+
+/* cabeça: nome e vida na mesma linha */
+.metade-cabeca {
+  display: grid;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.metade-nome {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+.metade-jogador {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 6px;
+  border-radius: var(--raio-p);
+  background: var(--cor);
+  color: #fff;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  vertical-align: 0.1em;
+}
+.metade-cabeca .vida { margin-top: 0; padding: 5px 8px; gap: 8px; }
+.metade-cabeca .vida-trilho { height: 18px; }
+.metade-cabeca .vida-numero { font-size: 1.15rem; min-width: 4.2ch; }
+
+/* base: botões de símbolo e, no resultado, os selos no mesmo lugar */
+.base { display: grid; }
+/* Arena com alguém fora: o símbolo não conta, e a base diz isso */
+.base-aviso {
+  align-self: center;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--tinta-media);
+}
+.fase-texto .base-aviso { visibility: hidden; }
+.base > * { grid-area: 1 / 1; }
+.selos-rodada {
+  align-content: center;
+  justify-content: center;
+  min-height: var(--toque);
+  visibility: hidden;
+  opacity: 0;
+  transition: opacity 160ms ease-out;
+}
+.selos-rodada .etiqueta { font-size: 0.9rem; padding: 3px 9px 3px 6px; }
+.selos-rodada .etiqueta .icone { font-size: 1.2rem; }
+.fase-texto .base .simbolos { visibility: hidden; }
+.fase-texto .selos-rodada { visibility: visible; opacity: 1; }
+.fase-texto .lado-info { visibility: hidden; }
+.fase-texto .lado-resultado { visibility: visible; opacity: 1; transform: none; }
+
+.simbolos { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .simbolo {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 2px;
+  min-width: 0;
   min-height: var(--toque);
-  padding: 8px;
+  padding: 6px 2px;
   border: var(--borda) solid var(--tinta);
   border-radius: var(--raio-p);
   background-color: var(--cor-simbolo);
   background-image: linear-gradient(160deg, rgba(255, 255, 255, 0.26) 0%, rgba(0, 0, 0, 0.14) 100%);
   color: var(--cor-simbolo-texto);
   font: inherit;
-  font-size: 1.05rem;
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   cursor: pointer;
   touch-action: manipulation;
   transition: transform 120ms ease-out;
 }
-.simbolo .icone { font-size: 1.8rem; }
+.simbolo .icone { font-size: 1.75rem; }
 /* não escolhido: vira contorno legível em vez de desbotar (sol forte) */
 .simbolos.tem-escolha .simbolo[aria-pressed="false"] {
   background-color: var(--superficie);
@@ -553,7 +723,7 @@ input:focus-visible {
 .simbolos.tem-escolha .simbolo[aria-pressed="false"] .icone { color: var(--cor-simbolo); }
 .simbolo[aria-pressed="true"] {
   transform: translate3d(0, -4px, 0);
-  box-shadow: 0 6px 0 var(--tinta);
+  box-shadow: 0 5px 0 var(--tinta);
 }
 /* marca de canto: leitura de "selecionado" sem depender de cor */
 .simbolo[aria-pressed="true"]::after {
@@ -562,8 +732,101 @@ input:focus-visible {
   right: 0;
   top: 0;
   border-style: solid;
-  border-width: 0 16px 16px 0;
+  border-width: 0 14px 14px 0;
   border-color: transparent var(--tinta) transparent transparent;
+}
+.simbolo:disabled { cursor: default; }
+
+/* ---------- faixa do meio: rodada, LUTAR e sair ---------- */
+
+.faixa-centro {
+  position: relative; /* sem z-index: o choque passa por cima das metades */
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 4px var(--gutter);
+  background: var(--leitura);
+  border-top: 3px solid var(--tinta);
+  border-bottom: 3px solid var(--tinta);
+  color: #fff;
+}
+.chip-rodada {
+  display: inline-grid;
+  justify-items: center;
+  justify-self: start;
+  line-height: 1;
+  white-space: nowrap;
+}
+.chip-rodada-nome {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.chip-rodada b {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 3px;
+  font-size: 1.5rem;
+  font-variant-numeric: tabular-nums;
+}
+/* a do jogador de cima vem de cabeça para baixo, do lado esquerdo */
+.chip-rodada-cima { grid-column: 1; justify-self: end; transform: rotate(180deg); }
+#btn-lutar { grid-column: 2; }
+#rodada-baixo { grid-column: 3; }
+.botao-sair {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  min-height: 44px;
+  min-width: 52px;
+  margin-top: -22px;
+  padding: 4px 8px;
+  border-color: #8a96ab;
+  background: var(--leitura);
+  color: #fff;
+  font-size: 0.78rem;
+}
+.botao-sair:focus-visible { outline: 4px solid var(--sistema-neon); outline-offset: 2px; }
+
+.botao-lutar {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 1px;
+  width: 80px;
+  height: 80px;
+  padding: 0;
+  border: 4px solid var(--tinta);
+  border-radius: 50%;
+  background-color: var(--especial);
+  background-image: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 55%);
+  box-shadow: 0 0 0 3px var(--especial);
+  color: var(--especial-texto);
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 110ms ease-out;
+}
+.botao-lutar:active { transform: scale(0.94); }
+.botao-lutar:focus-visible { outline: 4px solid var(--sistema-neon); outline-offset: 4px; }
+/* sem opacidade: desligado fica cinza sólido e legível */
+.botao-lutar:disabled, .botao-lutar[aria-disabled="true"] {
+  background: var(--chassi-alt);
+  box-shadow: none;
+  color: var(--tinta-media);
+  cursor: default;
+  transform: none;
+}
+.lutar-texto { display: block; font-size: 0.95rem; font-weight: 700; line-height: 1.05; letter-spacing: 0.04em; }
+.lutar-cima { transform: rotate(180deg); }
+/* os dois prontos: o botão chama (loop só aqui, é sinal de estado) */
+.botao-lutar:not(:disabled):not([aria-disabled="true"]) { animation: chama 900ms ease-in-out infinite alternate; }
+@keyframes chama {
+  from { transform: scale(1); }
+  to { transform: scale(1.07); }
 }
 
 /* ---------- Visor de vida (LED) ---------- */
@@ -641,94 +904,48 @@ input:focus-visible {
   to { opacity: 0.15; }
 }
 
-/* ---------- Perguntas de modo (Arena / Mira) ---------- */
+/* ---------- Perguntas de modo (Arena / Mira), na metade de cada jogador ---------- */
 
-.pergunta {
-  padding: 12px;
-  border: var(--borda) solid var(--sistema);
-  border-radius: var(--raio);
-  background-color: #e7f4f8;
-  background-image: repeating-linear-gradient(135deg, rgba(11, 95, 122, 0.07) 0 8px, rgba(11, 95, 122, 0) 8px 16px);
-}
-.pergunta-titulo { margin: 0 0 10px; font-size: 1.15rem; font-weight: 700; }
-.opcoes-dentro { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.opcoes-dentro, .opcoes-alvo { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .opcao-dentro, .opcao-alvo {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-height: var(--toque);
-  padding: 8px 10px;
+  gap: 4px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 4px;
   border: var(--borda) solid var(--tinta);
   border-radius: var(--raio-p);
   background-color: var(--superficie);
   background-image: linear-gradient(180deg, var(--superficie) 0%, var(--superficie-2) 100%);
   color: var(--tinta);
   font: inherit;
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-weight: 700;
-  line-height: 1.12;
+  line-height: 1.1;
   cursor: pointer;
   touch-action: manipulation;
   transition: transform 120ms ease-out;
 }
-.opcao-dentro .icone, .opcao-alvo .icone { font-size: 1.6rem; flex: none; }
+.opcao-dentro .icone, .opcao-alvo .icone { font-size: 1.2rem; flex: none; }
 .opcao-dentro[aria-pressed="true"], .opcao-alvo[aria-pressed="true"] {
   background-image: linear-gradient(180deg, #fffdf2 0%, #fff4cd 100%);
-  transform: translate3d(0, -4px, 0);
-  box-shadow: 0 6px 0 var(--tinta);
+  transform: translate3d(0, -3px, 0);
+  box-shadow: 0 4px 0 var(--tinta);
 }
 /* não escolhido: contorno, nunca opacidade */
-.opcoes-alvo.tem-escolha .opcao-alvo[aria-pressed="false"] {
+.opcoes-alvo.tem-escolha .opcao-alvo[aria-pressed="false"],
+.opcoes-dentro.tem-escolha .opcao-dentro[aria-pressed="false"] {
   background-image: none;
   background-color: var(--chassi-alt);
   color: var(--tinta-media);
   border-color: var(--tinta-media);
 }
-
-.painel-situacao {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  padding: 10px 12px;
-  border-left: 5px solid currentColor;
-  font-weight: 700;
-  font-size: 1rem;
-}
-.painel-situacao .icone { font-size: 1.5rem; }
-.painel-situacao.dentro { background: #e1f5e6; color: var(--ataque); }
-.painel-situacao.fora { background: var(--perigo-fundo); color: var(--perigo); }
-
-.pergunta-alvo { margin: 0 0 10px; }
-.pergunta-alvo-titulo {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--tinta-media);
-}
-.opcoes-alvo { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .opcao-alvo[data-acertou="sim"] .icone { color: #b3005c; }
-.opcao-alvo[data-acertou="nao"] .icone { color: var(--tinta-media); }
+.opcao-alvo[data-acertou="nao"] .icone, .opcao-dentro[data-dentro="nao"] .icone { color: var(--tinta-media); }
+.opcao-dentro[data-dentro="sim"] .icone { color: var(--ataque); }
 
-/* escudo ativo: moldura azul + anel que pulsa só com transform/opacity */
-.painel.com-escudo { border-color: var(--escudo); box-shadow: 0 0 0 4px var(--escudo-fundo); }
-.painel.com-escudo::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border: 3px solid var(--escudo);
-  border-radius: var(--raio);
-  pointer-events: none;
-  animation: pulso-escudo 1.5s ease-in-out infinite alternate;
-}
-@keyframes pulso-escudo {
-  from { opacity: 1; transform: scale(1); }
-  to { opacity: 0.25; transform: scale(1.012); }
-}
 
 /* ---------- Modos de jogo ---------- */
 
@@ -790,61 +1007,40 @@ input:focus-visible {
 .botao-espera .icone { font-size: 1.5rem; color: var(--escudo); }
 .dupla { margin: 0; font-size: 1.3rem; text-align: center; font-weight: 600; }
 
-.chip-modo {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  border: 2px solid var(--tinta);
-  border-radius: var(--raio-p);
-  background: var(--superficie);
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-}
-.chip-modo .icone { font-size: 1.2rem; }
 
-/* ---------- Resultado da rodada ---------- */
+/* ---------- A luta ----------
+   O movimento dos bichinhos (bote, choque, voo para trás) é do JS, com Web
+   Animations medindo a tela (js/app.js, animarLuta). Aqui ficam as fases
+   (classes em #tela-batalha), os efeitos e a pose final de cada papel. */
 
-.palco { display: grid; gap: 6px; }
-
-.painel-res {
-  --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
-  position: relative;
-  padding: 8px 12px 10px;
-  border: var(--borda) solid var(--tinta);
-  border-left: 10px solid var(--cor);
-  border-radius: var(--raio-p);
-  background-color: var(--superficie);
-  background-image: linear-gradient(170deg, var(--superficie) 0%, var(--superficie-2) 100%);
-}
-.painel-res-cabeca { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 30px; }
-.painel-res-nome { font-weight: 700; font-size: 1.1rem; }
-.painel-res .selo-escudo { transition: opacity 200ms, transform 200ms; }
-.painel-res .selo-escudo.desligado { opacity: 0; transform: scale(0.5); }
+/* Pose final (a mesma do último quadro do JS, em POSE): vale depois que a
+   animação acaba ou é pulada, e é o que o movimento reduzido mostra. */
+.fase-final .metade[data-papel="venceu"] .bicho-luta { transform: translate3d(0, 0, 0) scale(1.06) rotate(0deg); }
+.fase-final .metade[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, 10px, 0) scale(0.88) rotate(-9deg); }
+.fase-final .metade[data-papel="tombou"] .bicho-luta { transform: translate3d(0, 16px, 0) scale(0.86) rotate(-84deg); }
 
 .halo {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 180px;
-  height: 180px;
-  margin: -90px 0 0 -90px;
-  border: 10px solid var(--escudo);
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
+  border: 9px solid var(--escudo);
   border-radius: 50%;
   background: rgba(23, 70, 200, 0.15);
   opacity: 0;
   pointer-events: none;
 }
+.fase-impacto .metade[data-papel="protegido"] .halo { animation: halo 520ms ease-out; }
 
 .flutuantes {
   position: absolute;
-  right: 92px;
-  top: 6px;
+  right: -4px;
+  top: 0;
   z-index: 5; /* o número do dano nunca fica atrás de um efeito */
   display: flex;
-  gap: 8px;
+  gap: 6px;
   pointer-events: none;
 }
 .flutua {
@@ -860,77 +1056,11 @@ input:focus-visible {
 .flutua.cura { color: var(--cura); }
 .flutua.bloqueado { color: var(--escudo); font-size: 2.5rem; }
 .flutua.bloqueado s { text-decoration-thickness: 4px; }
-
-.arena {
-  position: relative;
-  z-index: 2; /* efeitos e fichas passam por cima dos painéis */
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  height: 138px;
-  padding: 0 4px 2px;
-}
-.arena.tem-alvo { height: 162px; }
-.ficha {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  opacity: 0.25;
-  transform: translate3d(var(--de), 0, 0) scale(0.6) rotate(var(--giro, 0deg));
-  transform-origin: bottom center;
-  transition: transform 300ms cubic-bezier(0.3, 0.8, 0.4, 1), opacity 260ms ease-out;
-}
-.ficha .bichinho { height: 92px; transition: transform 300ms cubic-bezier(0.3, 1.4, 0.5, 1); }
-/* placa do símbolo que saiu, embaixo do bichinho */
-.ficha-selo {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 9px;
-  border: 2px solid var(--tinta);
-  border-radius: var(--raio-p);
-  background-color: var(--cor-simbolo, var(--chassi-alt));
-  color: var(--cor-simbolo-texto, var(--tinta));
-  font-size: 0.62rem;
-  white-space: nowrap;
-}
-.ficha-selo .icone { font-size: 0.95rem; }
-.ficha-selo-fora { border-style: dashed; }
-#ficha-0 { --de: -30px; --para: 46px; --giro: -8deg; }
-#ficha-1 { --de: 30px; --para: -46px; --giro: 8deg; }
-
-.clarao {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 96px;
-  height: 96px;
-  margin: -48px 0 0 -48px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff 0 34%, rgba(246, 197, 11, 0.95) 35% 58%, rgba(246, 197, 11, 0) 62%);
-  opacity: 0;
-  pointer-events: none;
-}
-
-.resultado-texto {
-  display: grid;
-  gap: 9px;
-  opacity: 0;
-  transform: translate3d(0, 10px, 0);
-  transition: opacity 160ms ease-out, transform 160ms ease-out;
-}
-.frase { margin: 0; font-size: 1.35rem; font-weight: 700; line-height: 1.22; }
-.nota { margin: 0; font-size: 0.98rem; font-weight: 600; color: var(--tinta-media); }
+/* golpe forte: o número de dano vem maior */
+.flutua.forte { font-size: 3rem; }
 
 /* Os detalhes da rodada viram selos: ícone + duas ou três palavras. */
-.etiquetas { display: flex; flex-wrap: wrap; gap: 7px; }
-.etiquetas:empty { display: none; }
+.etiquetas { display: flex; flex-wrap: wrap; gap: 6px; }
 .etiqueta {
   display: inline-flex;
   align-items: center;
@@ -952,7 +1082,7 @@ input:focus-visible {
 .etiqueta-dano, .etiqueta-recuo { --cor-etiqueta: var(--perigo); --fundo-etiqueta: var(--perigo-fundo); }
 .etiqueta-cura { --cor-etiqueta: var(--cura); --fundo-etiqueta: #e2f5e6; }
 .etiqueta-alvo { --cor-etiqueta: #b3005c; --fundo-etiqueta: #ffe6f1; }
-.etiqueta-fora, .etiqueta-errou { --cor-etiqueta: var(--tinta-media); --fundo-etiqueta: var(--chassi-alt); }
+.etiqueta-fora, .etiqueta-errou, .etiqueta-empate { --cor-etiqueta: var(--tinta-media); --fundo-etiqueta: var(--chassi-alt); }
 
 /* Só para leitor de tela: a rodada por extenso. */
 .so-leitor {
@@ -966,38 +1096,6 @@ input:focus-visible {
   white-space: nowrap;
 }
 
-/* fichas de Arena e Mira */
-.ficha.dentro { --cor-simbolo: var(--ataque); --cor-simbolo-texto: #fff; }
-.ficha.fora { --cor-simbolo: var(--chassi-alt); --cor-simbolo-texto: var(--tinta); }
-.ficha-alvo {
-  display: inline-flex;
-  margin-top: 3px;
-  align-items: center;
-  gap: 3px;
-  padding: 2px 7px;
-  border: 2px solid var(--tinta);
-  border-radius: 999px;
-  background: #fff;
-  color: var(--tinta);
-  font-size: 0.68rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-.ficha-alvo .icone { font-size: 1rem; }
-.ficha-alvo.acertou { color: #b3005c; }
-.ficha-alvo.errou { color: var(--tinta-media); }
-
-/* Fases da sequência (classes na #tela-resultado) */
-.fase-choque .ficha { opacity: 1; transform: translate3d(var(--para), 0, 0) scale(1.1) rotate(0deg); }
-.fase-impacto .ficha.venceu { transform: translate3d(var(--para), 0, 0) scale(1.14) rotate(0deg); }
-/* perdedor encolhe e torce — nunca desbota: texto lavado some no sol */
-.fase-impacto .ficha.perdeu { opacity: 1; transform: translate3d(var(--para), 0, 0) scale(0.86) rotate(var(--giro, 0deg)); }
-.fase-impacto .clarao { animation: clarao 220ms ease-out; }
-.fase-impacto .painel-res.levou-dano { animation: tremer 220ms linear; }
-.fase-impacto .painel-res.venceu { animation: pulinho 220ms ease-out; }
-.fase-impacto .painel-res.protegido .halo { animation: halo 520ms ease-out; }
-.fase-texto .resultado-texto { opacity: 1; transform: none; }
-
 /* Pular / estado final: nada anima */
 .sem-transicao *, .sem-transicao *::before, .sem-transicao *::after {
   transition: none !important;
@@ -1005,22 +1103,6 @@ input:focus-visible {
 }
 .sem-transicao .flutuantes { display: none; }
 
-@keyframes clarao {
-  0% { opacity: 0; transform: scale(0.4); }
-  30% { opacity: 1; transform: scale(1.1); }
-  100% { opacity: 0; transform: scale(1.45); }
-}
-@keyframes tremer {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  20% { transform: translate3d(-5px, 0, 0); }
-  40% { transform: translate3d(5px, 0, 0); }
-  60% { transform: translate3d(-4px, 0, 0); }
-  80% { transform: translate3d(3px, 0, 0); }
-}
-@keyframes pulinho {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.045); }
-}
 @keyframes halo {
   0% { opacity: 0.95; transform: scale(0.2); }
   100% { opacity: 0; transform: scale(1.7); }
@@ -1034,61 +1116,85 @@ input:focus-visible {
 
 
 /* ---------- Efeitos do confronto ----------
-   Uma camada de peças genéricas (anel, estilhaços, língua, domo, carimbo) que
-   o data-efeito de #tela-resultado liga ou desliga. Cada um dos 6 especiais
-   acende uma combinação diferente; código desconhecido cai no anel genérico.
+   Peças genéricas (clarão, anel, estilhaços no meio da tela; língua e domo
+   no bichinho que venceu; carimbo em quem tropeçou) que o data-efeito de
+   #tela-batalha liga ou desliga. Cada um dos 6 especiais acende uma
+   combinação diferente; código desconhecido cai no anel genérico.
    Tudo em transform/opacity, tudo termina antes dos 1,2s da rodada. */
 
-.efeitos { position: absolute; inset: 0; z-index: 1; pointer-events: none; }
-.efeitos > * {
+/* o ponto de encontro: centro exato da faixa do meio */
+.choque {
   position: absolute;
   left: 50%;
   top: 50%;
+  z-index: 5;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.choque > *, .bicho-lugar .domo, .bicho-lugar .lingua {
+  position: absolute;
   display: none;
   opacity: 0;
+  pointer-events: none;
 }
-.ficha, .clarao { z-index: 2; }
+.choque .clarao { display: block; }
 
 /* cor de cada especial */
-#tela-resultado { --cor-efeito: var(--especial); }
-#tela-resultado[data-efeito="TAT01"] { --cor-efeito: var(--escudo); }   /* Bola de Ferro */
-#tela-resultado[data-efeito="SAP02"] { --cor-efeito: #d1006b; }         /* Língua Chicote */
-#tela-resultado[data-efeito="TAT03"] { --cor-efeito: var(--tatu); }     /* Espinho */
-#tela-resultado[data-efeito="SAP04"] { --cor-efeito: var(--sapo); }     /* Pulo Duplo */
-#tela-resultado[data-efeito="TAT05"] { --cor-efeito: var(--cura); }     /* Casca Dura */
-#tela-resultado[data-efeito="SAP06"] { --cor-efeito: #e35205; }         /* Estouro */
+#tela-batalha { --cor-efeito: var(--especial); }
+#tela-batalha[data-efeito="TAT01"] { --cor-efeito: var(--escudo); }   /* Bola de Ferro */
+#tela-batalha[data-efeito="SAP02"] { --cor-efeito: #d1006b; }         /* Língua Chicote */
+#tela-batalha[data-efeito="TAT03"] { --cor-efeito: var(--tatu); }     /* Espinho */
+#tela-batalha[data-efeito="SAP04"] { --cor-efeito: var(--sapo); }     /* Pulo Duplo */
+#tela-batalha[data-efeito="TAT05"] { --cor-efeito: var(--cura); }     /* Casca Dura */
+#tela-batalha[data-efeito="SAP06"] { --cor-efeito: #e35205; }         /* Estouro */
 
-.clarao { background: radial-gradient(circle, #fff 0 32%, var(--cor-efeito) 33% 56%, rgba(255, 255, 255, 0) 60%); }
+.clarao {
+  left: -60px;
+  top: -60px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fff 0 32%, var(--cor-efeito) 33% 56%, rgba(255, 255, 255, 0) 60%);
+}
+.fase-impacto .clarao { animation: clarao 240ms ease-out; }
+@keyframes clarao {
+  0% { opacity: 0; transform: scale(0.4); }
+  30% { opacity: 1; transform: scale(1.1); }
+  100% { opacity: 0; transform: scale(1.6); }
+}
 
 /* quem aparece em cada especial */
-[data-golpe="dano"] .onda, [data-golpe="bloqueado"] .onda { display: block; }
+[data-golpe="dano"] .choque .onda, [data-golpe="bloqueado"] .choque .onda { display: block; }
 /* o segundo anel é só do Pulo Duplo (mesma especificidade: vale a ordem) */
-[data-golpe] .onda-2 { display: none; }
-[data-efeito="SAP04"] .onda-2 { display: block; }
-[data-efeito="TAT03"] .estilhacos, [data-efeito="SAP06"] .estilhacos { display: block; }
-[data-efeito="SAP02"] .lingua { display: block; }
-[data-efeito="TAT01"] .domo, [data-efeito="TAT05"] .domo { display: block; }
+[data-golpe] .choque .onda-2 { display: none; }
+[data-efeito="SAP04"] .choque .onda-2 { display: block; }
+[data-efeito="TAT03"] .choque .estilhacos, [data-efeito="SAP06"] .choque .estilhacos { display: block; }
+[data-efeito="SAP02"] .metade.atacante .lingua { display: block; }
+[data-efeito="TAT01"] .metade.atacante .domo, [data-efeito="TAT05"] .metade.atacante .domo { display: block; }
 
 /* anel de choque, no ponto de encontro */
 .onda {
-  width: 44px;
-  height: 44px;
-  margin: -22px 0 0 -22px;
-  border: 6px solid var(--cor-efeito);
+  left: -26px;
+  top: -26px;
+  width: 52px;
+  height: 52px;
+  border: 7px solid var(--cor-efeito);
   border-radius: 50%;
 }
-.fase-impacto .onda { animation: onda 420ms cubic-bezier(0.1, 0.7, 0.3, 1) both; }
-.fase-impacto .onda-2 { animation: onda 420ms cubic-bezier(0.1, 0.7, 0.3, 1) 140ms both; }
+.fase-impacto .onda { animation: onda 440ms cubic-bezier(0.1, 0.7, 0.3, 1) both; }
+.fase-impacto .onda-2 { animation: onda 440ms cubic-bezier(0.1, 0.7, 0.3, 1) 140ms both; }
 @keyframes onda {
   0% { opacity: 0.95; transform: scale(0.2); }
-  100% { opacity: 0; transform: scale(3.6); }
+  100% { opacity: 0; transform: scale(4.2); }
 }
 
 /* espinhos / estouro: raios saindo do centro */
 .estilhacos {
-  width: 170px;
-  height: 170px;
-  margin: -85px 0 0 -85px;
+  left: -100px;
+  top: -100px;
+  width: 200px;
+  height: 200px;
   background: repeating-conic-gradient(from 0deg,
     var(--cor-efeito) 0deg 3.5deg, rgba(255, 255, 255, 0) 3.5deg 24deg);
   -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 16%, #000 30%, #000 44%, rgba(0, 0, 0, 0) 56%);
@@ -1097,34 +1203,40 @@ input:focus-visible {
 .fase-impacto .estilhacos { animation: estilhacos 480ms cubic-bezier(0.1, 0.75, 0.3, 1) both; }
 @keyframes estilhacos {
   0% { opacity: 1; transform: scale(0.25) rotate(-10deg); }
-  100% { opacity: 0; transform: scale(1.5) rotate(10deg); }
+  100% { opacity: 0; transform: scale(1.6) rotate(10deg); }
 }
 
-/* Língua Chicote: dispara do vencedor até o oponente e recolhe */
+/* Língua Chicote: sai do vencedor, atravessa o meio e alcança o outro.
+   --alcance e --giro-lingua (distância e direção até o outro bichinho, no
+   sistema da metade) são medidos pelo JS. */
 .lingua {
-  width: 168px;
-  height: 14px;
-  margin: -7px 0 0 -84px;
+  left: 50%;
+  bottom: 50%;
+  z-index: 1;
+  width: 16px;
+  height: var(--alcance, 200px);
+  margin-left: -8px;
   border: 3px solid var(--tinta);
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--cor-efeito) 0%, #ff8ab4 100%);
-  transform-origin: var(--origem, left) center;
+  background: linear-gradient(0deg, var(--cor-efeito) 0%, #ff8ab4 100%);
+  transform-origin: center bottom;
 }
 .fase-impacto .lingua { animation: chicote 460ms cubic-bezier(0.3, 0.9, 0.3, 1) both; }
 @keyframes chicote {
-  0% { opacity: 0; transform: scaleX(0.06); }
-  28% { opacity: 1; transform: scaleX(1.12); }
-  62% { opacity: 1; transform: scaleX(1); }
-  100% { opacity: 0; transform: scaleX(0.06); }
+  0% { opacity: 0; transform: rotate(var(--giro-lingua, 0rad)) scaleY(0.06); }
+  28% { opacity: 1; transform: rotate(var(--giro-lingua, 0rad)) scaleY(1.04); }
+  62% { opacity: 1; transform: rotate(var(--giro-lingua, 0rad)) scaleY(1); }
+  100% { opacity: 0; transform: rotate(var(--giro-lingua, 0rad)) scaleY(0.06); }
 }
 
 /* domo: escudo (Bola de Ferro) ou casca (Casca Dura), em volta do vencedor */
-/* domo fica em volta do VENCEDOR, por isso usa --posv e não o centro */
 .domo {
-  left: var(--posv, 50%);
-  width: 132px;
-  height: 132px;
-  margin: -66px 0 0 -66px;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  width: 150px;
+  height: 150px;
+  margin: -75px 0 0 -75px;
   border: 8px solid var(--cor-efeito);
   border-radius: 50%;
   background: radial-gradient(circle, rgba(255, 255, 255, 0) 52%, rgba(255, 255, 255, 0.45) 100%);
@@ -1137,46 +1249,38 @@ input:focus-visible {
   100% { opacity: 0; transform: scale(1.18); }
 }
 
-/* Estouro sacode os dois painéis, não só quem levou */
-.fase-impacto[data-efeito="SAP06"] .painel-res { animation: tremer 260ms linear; }
-
-/* Tropeço: a peça tomba e o carimbo bate */
-.ficha.tombou { transition-timing-function: cubic-bezier(0.3, 1.5, 0.5, 1); }
-[data-tropeco="sim"] .arena { height: 176px; padding-bottom: 36px; }
-[data-tropeco="sim"] .arena.tem-alvo { height: 200px; }
-.fase-impacto .ficha.tombou {
-  transform: translate3d(calc(var(--para) + 4px), 6px, 0) scale(0.84) rotate(0deg);
-}
-.fase-impacto .ficha.tombou .bichinho { transform: translateY(20px) rotate(74deg); }
+/* Tropeço: o bichinho tomba (JS) e o carimbo bate na metade de quem tropeçou */
 .estampa {
   position: absolute;
-  left: 50%;
-  bottom: 2px;
-  z-index: 3;
+  left: 22%;
+  top: 50%;
+  z-index: 4;
   display: block;
-  padding: 5px 15px;
+  padding: 5px 13px;
   border: 3px solid var(--tinta);
   border-radius: var(--raio-p);
   background: var(--tropeco);
   color: #fff;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   letter-spacing: 0.06em;
   white-space: nowrap;
   opacity: 0;
-  transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1);
+  transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(1);
   pointer-events: none;
 }
-.fase-impacto[data-tropeco="sim"] .estampa { animation: carimbo 560ms cubic-bezier(0.2, 1.5, 0.4, 1) 70ms both; }
+.estampa:empty { display: none; }
+.fase-impacto .metade[data-papel="tombou"] .estampa { animation: carimbo 560ms cubic-bezier(0.2, 1.5, 0.4, 1) 70ms both; }
+/* o carimbo sai quando entra o veredito "Tropeçou!", que fica no lugar dele */
+.fase-texto .estampa { visibility: hidden; }
 @keyframes carimbo {
-  0% { opacity: 0; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(2.4); }
-  50% { opacity: 1; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(0.9); }
-  68% { opacity: 1; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1.08); }
-  100% { opacity: 1; transform: translate3d(-50%, 0, 0) rotate(-7deg) scale(1); }
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(2.4); }
+  50% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(0.9); }
+  68% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(1.08); }
+  100% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(1); }
 }
 
-/* golpe forte: o número de dano vem maior */
-.flutua.forte { font-size: 3rem; }
+
 
 /* ---------- Fim ---------- */
 
@@ -1191,6 +1295,7 @@ input:focus-visible {
   color: #a87400;
 }
 .fim-icone .bichinho { height: 150px; }
+.fim-icone .arte-bicho { width: 150px; height: 150px; }
 .fim-icone.empate { color: var(--tinta-media); }
 .fim-titulo { font-size: 2.1rem; text-align: center; text-transform: uppercase; letter-spacing: 0.02em; }
 .fim-titulo::before { content: none; }
@@ -1592,10 +1697,10 @@ input:focus-visible {
   body { font-size: 19px; }
   :root { --gutter: 12px; }
   .logo { font-size: 2.45rem; }
-  .simbolo { font-size: 0.95rem; gap: 5px; }
+  .simbolo { font-size: 0.72rem; }
+  /* Acertou/Errou e Dentro/Fora ao lado do bichinho: só o texto cabe */
+  .lado .opcao-dentro .icone, .lado .opcao-alvo .icone { display: none; }
   .simbolo .icone { font-size: 1.6rem; }
-  .ficha { width: 92px; }
-  .flutuantes { right: 76px; }
   .opcao-dentro, .opcao-alvo { font-size: 0.92rem; gap: 5px; }
   .carta-especial { font-size: 0.75rem; }
   .vida-numero { font-size: 1.2rem; }
