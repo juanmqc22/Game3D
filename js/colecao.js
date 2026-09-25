@@ -2,11 +2,25 @@
 // "storage" (localStorage), sem DOM.
 //
 // localStorage, chave CHAVE_COLECAO:
-//   { TAT01: { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 3, vitorias: 2 }, ... }
+//   { TAT01: { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 3, vitorias: 2, fundador: 3 }, ... }
+// fundador só existe nas peças da primeira leva (etiqueta com &f=N, N de 1 a 10).
 
 import { CRIATURAS, buscarCriatura } from './criaturas.js?v=13';
 
 export const CHAVE_COLECAO = 'bichinhos:colecao';
+
+// Numeração das peças fundadoras: ?b=TAT01&f=3 → "Fundador #3".
+export const FUNDADOR_MIN = 1;
+export const FUNDADOR_MAX = 10;
+
+// Número do fundador (1 a 10) a partir do texto da URL, ou null se não for
+// um inteiro nessa faixa ("3" vale; "03", "3.5", "11", "abc" e vazio não).
+export function lerFundador(valor) {
+  if (typeof valor === 'number') return Number.isInteger(valor) && valor >= FUNDADOR_MIN && valor <= FUNDADOR_MAX ? valor : null;
+  if (typeof valor !== 'string' || !/^[1-9]\d*$/.test(valor.trim())) return null;
+  const n = Number(valor.trim());
+  return n >= FUNDADOR_MIN && n <= FUNDADOR_MAX ? n : null;
+}
 
 // Devolve o objeto da coleção, {} se vazio, ou null se o storage não funciona.
 export function lerColecao(storage) {
@@ -23,6 +37,8 @@ export function lerColecao(storage) {
         partidas: Number.isInteger(item.partidas) && item.partidas >= 0 ? item.partidas : 0,
         vitorias: Number.isInteger(item.vitorias) && item.vitorias >= 0 ? item.vitorias : 0,
       };
+      const fundador = lerFundador(item.fundador);
+      if (fundador !== null) limpa[codigo].fundador = fundador;
     }
     return limpa;
   } catch {
@@ -39,18 +55,27 @@ function gravarColecao(storage, colecao) {
   }
 }
 
-// Registra a criatura (só se o código existir). Devolve { nova, criatura, colecao }:
+// Registra a criatura (só se o código existir). Devolve { nova, criatura, colecao, ganhouSelo }:
 // nova = true na primeira vez. Código inválido: { nova: false, criatura: null }.
-export function registrarDescoberta(storage, codigoBruto, agora = new Date()) {
+// fundadorBruto: o &f= da etiqueta. Válido (1 a 10), a carta guarda o número;
+// inválido é ignorado. Quem já estava na coleção sem selo ganha o selo agora
+// (ganhouSelo = true); quem já tem selo fica com o primeiro número.
+export function registrarDescoberta(storage, codigoBruto, agora = new Date(), fundadorBruto = null) {
   const criatura = buscarCriatura(String(codigoBruto ?? ''));
-  if (!criatura) return { nova: false, criatura: null, colecao: lerColecao(storage) };
+  if (!criatura) return { nova: false, criatura: null, colecao: lerColecao(storage), ganhouSelo: false };
   const colecao = lerColecao(storage) ?? {};
+  const fundador = lerFundador(fundadorBruto);
   const nova = !colecao[criatura.codigo];
+  let ganhouSelo = false;
   if (nova) {
     colecao[criatura.codigo] = { descobertoEm: new Date(agora).toISOString(), partidas: 0, vitorias: 0 };
-    gravarColecao(storage, colecao);
   }
-  return { nova, criatura, colecao };
+  if (fundador !== null && colecao[criatura.codigo].fundador === undefined) {
+    colecao[criatura.codigo].fundador = fundador;
+    ganhouSelo = true;
+  }
+  if (nova || ganhouSelo) gravarColecao(storage, colecao);
+  return { nova, criatura, colecao, ganhouSelo };
 }
 
 export function estaDescoberta(colecao, codigo) {
@@ -59,6 +84,15 @@ export function estaDescoberta(colecao, codigo) {
 
 export function contarDescobertos(colecao) {
   return colecao ? Object.keys(colecao).length : 0;
+}
+
+// Contador da série disponível: { descobertos, total } só dos bichinhos da série.
+export function contarDaSerie(colecao, serie, criaturas = CRIATURAS) {
+  const daSerie = criaturas.filter((c) => c.serie === serie);
+  return {
+    descobertos: daSerie.filter((c) => estaDescoberta(colecao, c.codigo)).length,
+    total: daSerie.length,
+  };
 }
 
 // Contabiliza uma partida terminada para quem está na coleção.

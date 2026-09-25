@@ -54,10 +54,10 @@ Esclarecimentos (cobertos por teste):
 ```
 index.html                  telas (trocadas com `hidden`)
 css/estilo.css              estilo mobile-first, alvo de toque >= 64px
-js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um
+js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um; `serie` + `SERIE_ATUAL`
 js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global)
 js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
-js/colecao.js               coleção (localStorage `bichinhos:colecao`), puro
+js/colecao.js               coleção (localStorage `bichinhos:colecao`), selo de Fundador (&f=1..10), contador por série, puro
 js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
 js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta
 img/criaturas/              arte publicada (WebP 256 e 512, gerada por `npm run arte`)
@@ -79,6 +79,9 @@ serve.json                  config do `npx serve`: cleanUrls=false (senão perde
 ```
 
 Deep link do QR (forma curta, preferida): `https://juanmqc22.github.io/Game3D/?b=TAT01`.
+Peça fundadora: `?b=TAT01&f=3` → a carta guarda "Fundador #3" (f inteiro de 1 a 10;
+inválido é ignorado). Na coleção, bichinho de série futura ainda não descoberto
+aparece como "Série N — em breve", e o contador só conta a `SERIE_ATUAL`.
 Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3D/.
 
 **Cache (Pages usa max-age=600):** ao mudar qualquer `.js`, `estilo.css` ou a estrutura do

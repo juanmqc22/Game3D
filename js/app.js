@@ -3,7 +3,7 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, buscarCriatura } from './criaturas.js?v=13';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura } from './criaturas.js?v=13';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
@@ -17,7 +17,7 @@ import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
 } from './escaneio.js?v=13';
 import {
-  lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
+  lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, sortearOponente,
 } from './colecao.js?v=13';
 import { arteDaCriatura } from './arte.js?v=13';
 
@@ -284,9 +284,14 @@ function textoEstatisticas(colecao, codigo) {
   );
 }
 
+// O contador só olha a série à venda (SERIE_ATUAL): "2 de 2".
 function atualizarBotaoColecao() {
-  const total = contarDescobertos(colecaoAtual());
-  $('btn-colecao-texto').textContent = `Minha coleção · ${total} de ${CRIATURAS.length}`;
+  const { descobertos, total } = contarDaSerie(colecaoAtual(), SERIE_ATUAL);
+  $('btn-colecao-texto').textContent = `Minha coleção · ${descobertos} de ${total}`;
+}
+
+function seloFundador(numero) {
+  return el('span', { class: 'selo-fundador' }, icone(iconeEspecial()), `Fundador #${numero}`);
 }
 
 // ---------- cartão de criatura ----------
@@ -320,13 +325,14 @@ function cartaoCriatura(c, { tocavel, colecao }) {
 // Carta grande do bichinho recém-descoberto (tela de desbloqueio).
 // Primeiro contato depois de escanear a peça física: é a tela que tem que dar
 // um sorriso, então ganha raios, varredura holográfica e atributos em placa.
-function cartaoDesbloqueio(c) {
+function cartaoDesbloqueio(c, fundador = null) {
   const atributo = (valor, nome, extra) => el('span', { class: `atributo ${extra}` },
     el('b', {}, String(valor)), el('span', {}, nome));
-  return el('div', { class: 'carta-nova', style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
+  return el('div', { class: `carta-nova${fundador ? ' carta-fundador' : ''}`, style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie },
     el('span', { class: 'carta-nova-raios', 'aria-hidden': 'true' }),
     el('div', { class: 'carta-nova-chapa' },
       el('span', { class: 'carta-nova-chip' }, icone(iconeQr()), 'Peça registrada'),
+      fundador ? seloFundador(fundador) : null,
       arteDesbloqueio(c),
       el('span', { class: 'carta-nova-nome' }, c.nome),
       el('span', { class: 'carta-nova-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
@@ -1314,6 +1320,14 @@ function renderFim() {
 // ---------- tela: minha coleção ----------
 
 function cartaoColecao(c, colecao, i = 0) {
+  // Série futura ainda não descoberta: só a silhueta e o aviso, sem nome nem números.
+  if (!estaDescoberta(colecao, c.codigo) && c.serie > SERIE_ATUAL) {
+    return el('div', { class: 'carta carta-misterio carta-em-breve', style: `--i: ${i}`, 'aria-label': `Série ${c.serie}, em breve` },
+      el('span', { class: 'carta-avatar' }, icone(iconeMisterio())),
+      el('span', { class: 'carta-nome' }, `Série ${c.serie}`),
+      el('span', { class: 'carta-dica' }, 'Em breve'),
+    );
+  }
   if (!estaDescoberta(colecao, c.codigo)) {
     return el('div', { class: 'carta carta-misterio', style: `--i: ${i}`, 'aria-label': 'Bichinho ainda não descoberto' },
       el('span', { class: 'carta-avatar' }, icone(iconeMisterio())),
@@ -1322,7 +1336,9 @@ function cartaoColecao(c, colecao, i = 0) {
     );
   }
   const item = colecao[c.codigo];
-  return el('div', { class: 'carta', style: `--cor-base: ${corDaEspecie(c)}; --i: ${i}`, 'data-especie': c.especie },
+  const fundador = item.fundador ?? null;
+  return el('div', { class: `carta${fundador ? ' carta-fundador' : ''}`, style: `--cor-base: ${corDaEspecie(c)}; --i: ${i}`, 'data-especie': c.especie },
+    fundador ? seloFundador(fundador) : null,
     cartaAvatar(c),
     el('span', { class: 'carta-nome' }, c.nome),
     el('span', { class: 'carta-especie' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
@@ -1345,8 +1361,8 @@ function cartaAvatar(c) {
 function abrirColecao() {
   const colecao = colecaoAtual();
   $('colecao-indisponivel').hidden = colecao !== null;
-  const total = contarDescobertos(colecao);
-  $('colecao-contador').textContent = `${total} de ${CRIATURAS.length} bichinhos`;
+  const { descobertos, total } = contarDaSerie(colecao, SERIE_ATUAL);
+  $('colecao-contador').textContent = `${descobertos} de ${total} da Série ${SERIE_ATUAL}`;
   $('lista-colecao').replaceChildren(...CRIATURAS.map((c, i) => cartaoColecao(c, colecao ?? {}, i)));
   mostrarTela('tela-colecao');
 }
@@ -1578,7 +1594,10 @@ function iniciar() {
   ligarEventos();
 
   // Deep link do QR da peça: index.html?b=TAT01 (ou só ?b=TAT01 na raiz)
-  const codigo = new URLSearchParams(window.location.search).get('b');
+  const parametros = new URLSearchParams(window.location.search);
+  const codigo = parametros.get('b');
+  // &f=N: número da peça fundadora (1 a 10), validado em js/colecao.js
+  const fundador = parametros.get('f');
   if (codigo === null) {
     irParaInicio();
     return;
@@ -1590,16 +1609,19 @@ function iniciar() {
     // sem history API: segue com a URL como está
   }
 
-  chegarCodigo(codigo);
+  chegarCodigo(codigo, fundador);
 }
 
 // Uma peça chegou, pela URL (?b=) ou pelo NFC lido na tela de espera: entra na
-// coleção e segue o loop de escaneio.
-function chegarCodigo(codigo) {
-  const descoberta = registrarDescoberta(armazemColecao(), codigo);
+// coleção e segue o loop de escaneio. Bichinho novo ou selo de Fundador novo
+// ganham a carta grande antes de seguir.
+function chegarCodigo(codigo, fundador = null) {
+  const descoberta = registrarDescoberta(armazemColecao(), codigo, new Date(), fundador);
   const chegada = processarChegada(codigo, armazemEspera());
-  if (descoberta.nova) {
-    $('desbloqueio-cartao').replaceChildren(cartaoDesbloqueio(descoberta.criatura));
+  if (descoberta.nova || descoberta.ganhouSelo) {
+    const numero = descoberta.colecao?.[descoberta.criatura.codigo]?.fundador ?? null;
+    $('desbloqueio-chamada').textContent = descoberta.nova ? 'Novo bichinho!' : 'Selo de Fundador!';
+    $('desbloqueio-cartao').replaceChildren(cartaoDesbloqueio(descoberta.criatura, numero));
     app.depoisDoDesbloqueio = () => tratarChegada(chegada);
     mostrarTela('tela-desbloqueio');
   } else {

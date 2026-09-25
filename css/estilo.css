@@ -52,6 +52,7 @@
   --escudo: #1746c8;
   --escudo-fundo: #dde6ff;
   --cura: #127a33;
+  --ouro: #765a00;           /* borda do selo de Fundador — 6.50:1 no branco, 5.36:1 no chassi */
 
   /* ---- espécies (o valor de js/criaturas.js entra como --cor-base) ---- */
   --tatu: #95470b;
@@ -1749,6 +1750,38 @@ input:focus-visible {
   from { opacity: 0.75; transform: scale(1); }
   to { opacity: 1; transform: scale(1.06); }
 }
+
+/* Série futura: a mesma carta travada, com o aviso no lugar do nome */
+.carta-em-breve .carta-nome { font-size: 1.25rem; letter-spacing: 0.12em; }
+.carta-em-breve .carta-dica { font-size: 0.85rem; letter-spacing: 0.14em; }
+
+/* ---------- Selo de Fundador (etiqueta com &f=N) ----------
+   Borda dourada dupla (estática) e o selo "Fundador #N" no topo da carta. */
+.carta.carta-fundador, .carta-fundador .carta-nova-chapa {
+  border-color: var(--ouro);
+  box-shadow: 0 0 0 3px var(--especial), 0 0 0 6px var(--ouro);
+}
+.carta.carta-fundador { margin: 6px; }
+.carta-fundador .carta-nova-chapa { box-shadow: 0 0 0 3px var(--especial), 0 0 0 6px var(--ouro), 0 10px 0 var(--chassi-alt); }
+.selo-fundador {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 5px;
+  padding: 2px 10px 2px 7px;
+  border: 2px solid var(--tinta);
+  border-radius: 999px;
+  background: var(--especial);
+  color: var(--especial-texto);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.selo-fundador .icone { font-size: 1.05rem; color: #fff; stroke: var(--tinta); stroke-width: 1.4px; paint-order: stroke; }
+.carta-nova .selo-fundador { font-size: 0.9rem; }
+.carta .selo-fundador { padding: 1px 8px 1px 5px; font-size: 0.7rem; letter-spacing: 0.03em; }
 
 /* ---------- Aviso de erro ---------- */
 

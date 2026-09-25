@@ -19,7 +19,7 @@ const P = {
   tinta: '#0a1120', tintaMedia: '#404c60', leitura: '#0b1322', leituraTexto: '#ffffff',
   sistema: '#0b5f7a', sistemaNeon: '#3ae1ff',
   ataque: '#127a33', defesa: '#1746c8', especial: '#f6c50b', especialTinta: '#1a1400', tropeco: '#8a2bc4',
-  perigo: '#c41f1f', escudo: '#1746c8', cura: '#127a33',
+  perigo: '#c41f1f', escudo: '#1746c8', cura: '#127a33', ouro: '#765a00',
   tatu: '#95470b', sapo: '#0b6b62',
   vidaAlta: '#2ecc5a', vidaMedia: '#f6c50b', vidaBaixa: '#ff4d4d',
 };
@@ -31,6 +31,7 @@ const pares = [
   ['sistema / chassi', P.sistema, P.chassi], ['sistema / superficie', P.sistema, P.superficie],
   ['perigo / superficie', P.perigo, P.superficie], ['perigo / chassi', P.perigo, P.chassi],
   ['escudo / superficie', P.escudo, P.superficie],
+  ['ouro / superficie', P.ouro, P.superficie], ['ouro / chassi', P.ouro, P.chassi],
   ['branco / ataque', '#fff', P.ataque], ['branco / defesa', '#fff', P.defesa],
   ['branco / tropeco', '#fff', P.tropeco], ['branco / perigo', '#fff', P.perigo],
   ['branco / tatu', '#fff', P.tatu], ['branco / sapo', '#fff', P.sapo],

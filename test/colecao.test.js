@@ -1,9 +1,10 @@
 // Coleção (Fase 2), sem DOM: storage falso em memória.
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CRIATURAS } from '../js/criaturas.js';
+import { CRIATURAS, SERIE_ATUAL } from '../js/criaturas.js';
 import {
   CHAVE_COLECAO, lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
+  lerFundador, contarDaSerie,
 } from '../js/colecao.js';
 
 function storageFalso() {
@@ -118,5 +119,79 @@ describe('sortearOponente', () => {
     assert.equal(sortearOponente(() => 0.999999).codigo, CRIATURAS.at(-1).codigo);
     assert.equal(sortearOponente(() => 1).codigo, CRIATURAS.at(-1).codigo);
     assert.equal(sortearOponente(() => 0).codigo, CRIATURAS[0].codigo);
+  });
+});
+
+describe('selo de Fundador (?b=TAT01&f=3)', () => {
+  test('lerFundador: só inteiro de 1 a 10', () => {
+    for (const [entrada, esperado] of [['1', 1], ['3', 3], ['10', 10], [' 7 ', 7], [5, 5]]) {
+      assert.equal(lerFundador(entrada), esperado, String(entrada));
+    }
+    for (const lixo of ['0', '11', '-1', '3.5', '03', 'abc', '', ' ', null, undefined, 3.5, 0, 11, '1e1', '0x3']) {
+      assert.equal(lerFundador(lixo), null, String(lixo));
+    }
+  });
+  test('primeira leitura com f válido: a carta guarda o número', () => {
+    const s = storageFalso();
+    const r = registrarDescoberta(s, 'TAT01', AGORA, '3');
+    assert.equal(r.nova, true);
+    assert.equal(r.ganhouSelo, true);
+    assert.deepEqual(JSON.parse(s.bruto(CHAVE_COLECAO)).TAT01,
+      { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 0, vitorias: 0, fundador: 3 });
+    assert.equal(lerColecao(s).TAT01.fundador, 3);
+  });
+  test('f inválido é ignorado: registra normal, sem selo', () => {
+    for (const f of ['0', '11', 'x', '2.5']) {
+      const s = storageFalso();
+      const r = registrarDescoberta(s, 'SAP02', AGORA, f);
+      assert.equal(r.nova, true);
+      assert.equal(r.ganhouSelo, false);
+      assert.equal('fundador' in lerColecao(s).SAP02, false, f);
+    }
+  });
+  test('sem f nada muda (formato antigo intacto)', () => {
+    const s = storageFalso();
+    registrarDescoberta(s, 'TAT01', AGORA);
+    assert.deepEqual(lerColecao(s).TAT01, { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 0, vitorias: 0 });
+  });
+  test('já registrado sem f ganha o selo quando chega com f, e guarda partidas e data', () => {
+    const s = storageFalso();
+    registrarDescoberta(s, 'TAT01', AGORA);
+    registrarDescoberta(s, 'SAP02', AGORA);
+    registrarPartida(s, ['TAT01', 'SAP02'], 0);
+    const r = registrarDescoberta(s, 'tat01', new Date('2026-10-01T00:00:00.000Z'), '7');
+    assert.equal(r.nova, false);
+    assert.equal(r.ganhouSelo, true);
+    assert.deepEqual(lerColecao(s).TAT01, { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 1, vitorias: 1, fundador: 7 });
+  });
+  test('quem já tem selo fica com o primeiro número', () => {
+    const s = storageFalso();
+    registrarDescoberta(s, 'TAT01', AGORA, '3');
+    const r = registrarDescoberta(s, 'TAT01', AGORA, '9');
+    assert.equal(r.ganhouSelo, false);
+    assert.equal(lerColecao(s).TAT01.fundador, 3);
+  });
+  test('fundador inválido gravado no storage é descartado na leitura', () => {
+    const s = storageFalso();
+    s.setItem(CHAVE_COLECAO, JSON.stringify({ TAT01: { descobertoEm: 'x', partidas: 0, vitorias: 0, fundador: 42 } }));
+    assert.deepEqual(lerColecao(s), { TAT01: { descobertoEm: 'x', partidas: 0, vitorias: 0 } });
+  });
+});
+
+describe('série disponível', () => {
+  test('a Série 1 são os fundadores Couraça e Bocão', () => {
+    assert.equal(SERIE_ATUAL, 1);
+    assert.deepEqual(CRIATURAS.filter((c) => c.serie === SERIE_ATUAL).map((c) => c.codigo), ['TAT01', 'SAP02']);
+  });
+  test('contador conta só a série pedida', () => {
+    const s = storageFalso();
+    assert.deepEqual(contarDaSerie(lerColecao(s), 1), { descobertos: 0, total: 2 });
+    registrarDescoberta(s, 'TAT01', AGORA);
+    registrarDescoberta(s, 'SAP04', AGORA); // série 2 não entra na conta da série 1
+    assert.deepEqual(contarDaSerie(lerColecao(s), 1), { descobertos: 1, total: 2 });
+    registrarDescoberta(s, 'SAP02', AGORA);
+    assert.deepEqual(contarDaSerie(lerColecao(s), 1), { descobertos: 2, total: 2 });
+    assert.deepEqual(contarDaSerie(lerColecao(s), 2), { descobertos: 1, total: 4 });
+    assert.deepEqual(contarDaSerie(null, 1), { descobertos: 0, total: 2 });
   });
 });

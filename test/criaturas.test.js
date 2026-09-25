@@ -19,6 +19,7 @@ for (const c of CRIATURAS) {
     assert.ok(ESPECIES[c.especie], `espécie "${c.especie}" não está em ESPECIES`);
     assert.ok(Number.isInteger(c.vida) && c.vida > 0);
     assert.ok(Number.isInteger(c.forca) && c.forca > 0);
+    assert.ok(Number.isInteger(c.serie) && c.serie >= 1, 'série é um inteiro >= 1');
     const e = c.especial;
     assert.ok(e.nome);
     assert.ok(Number.isInteger(e.dano) && e.dano > 0, 'todo especial causa dano');
