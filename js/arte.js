@@ -9,6 +9,7 @@
 const ARTE = {
   TAT01: 'tatu marrom de casco listrado, punhos erguidos',
   SAP02: 'sapo verde sorridente, punhos erguidos',
+  RAT00: 'rato cinza de pião, punhos erguidos e curativo na bochecha',
 };
 
 // Resolvido a partir deste arquivo: vale tanto na raiz quanto em raposa/.

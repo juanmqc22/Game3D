@@ -63,6 +63,10 @@
   --sapo-corpo: #79c9bd;
   --sapo-holo-1: rgba(16, 185, 168, 0.28);
   --sapo-holo-2: rgba(11, 107, 98, 0.16);
+  --rato: #44536a;            /* ardósia: rival de treino — branco sobre ela e ela sobre branco: 7.80:1 */
+  --rato-corpo: #a7b3c2;
+  --rato-holo-1: rgba(100, 116, 139, 0.28);
+  --rato-holo-2: rgba(68, 83, 106, 0.16);
 
   /* ---- barra de vida (sobre visor escuro) ---- */
   --vida-alta: #2ecc5a;
@@ -284,6 +288,7 @@ input:focus-visible {
 /* espécie: --cor-tema vem daqui, --cor-base vem de js/criaturas.js (espécie nova) */
 [data-especie="tatu"] { --cor-tema: var(--tatu); --cor-corpo: var(--tatu-corpo); --holo-1: var(--tatu-holo-1); --holo-2: var(--tatu-holo-2); }
 [data-especie="sapo"] { --cor-tema: var(--sapo); --cor-corpo: var(--sapo-corpo); --holo-1: var(--sapo-holo-1); --holo-2: var(--sapo-holo-2); }
+[data-especie="rato"] { --cor-tema: var(--rato); --cor-corpo: var(--rato-corpo); --holo-1: var(--rato-holo-1); --holo-2: var(--rato-holo-2); }
 
 /* ---------- O bichinho (mesma silhueta da peça impressa) ---------- */
 
@@ -433,8 +438,38 @@ input:focus-visible {
   margin-right: 2px;
 }
 
-/* oponente surpresa (fallback da espera) */
-.cartao-surpresa { --cor: var(--especial); background-image: linear-gradient(170deg, #fffdf2 0%, #fff4cd 100%); }
+/* com arte: a imagem no lugar da silhueta, sobre um disco da cor da espécie */
+.cartao-bicho.com-arte {
+  width: 76px;
+  height: 76px;
+  flex: none;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--cor) 0 46%, rgba(255, 255, 255, 0) 47%);
+}
+/* Rato do Mato: rival de treino, sempre o último da lista */
+.cartao-rival { background-image: linear-gradient(170deg, var(--superficie) 0%, #e9edf3 100%); }
+.cartao-rival-selo {
+  justify-self: start;
+  padding: 1px 8px;
+  border-radius: var(--raio-p);
+  background: var(--rato);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* série futura: travada, sem nome nem números (mesmo visor da coleção) */
+.cartao-em-breve {
+  --cor: var(--sistema-neon);
+  align-items: center;
+  background: var(--leitura);
+  color: #fff;
+  cursor: default;
+}
+.cartao-em-breve .cartao-bicho { font-size: 44px; color: var(--sistema-neon); }
+.cartao-em-breve .cartao-nome { letter-spacing: 0.12em; color: var(--sistema-neon); }
+.cartao-em-breve .cartao-codigo { color: #fff; }
 
 /* ---------- Batalha em tela dividida ----------
    O celular fica no chão entre os dois. Metade de cima = Jogador 1, girada
@@ -469,6 +504,16 @@ input:focus-visible {
   transform: rotate(180deg);
   padding-bottom: calc(env(safe-area-inset-top, 0px) + 8px);
 }
+/* Contra o Rato a criança joga sozinha, de um lado: a metade dele (sempre a
+   de cima) não gira. A ordem de dentro inverte para o bichinho continuar
+   perto do meio e os botões perto da borda. */
+.metade-0.metade-rival {
+  transform: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--gutter) 6px;
+}
+.metade-rival .metade-corpo { flex-direction: column-reverse; }
+.metade-rival .metade-corpo::before { top: auto; bottom: -3px; border-radius: 0 0 16px 3px; }
+.contra-rival .chip-rodada-cima, .contra-rival .lutar-cima, .contra-rival .fe-cima { transform: none; }
 /* quem ataca passa por cima da outra metade (língua, bote) */
 .metade.atacante { z-index: 3; }
 
@@ -1035,6 +1080,9 @@ input:focus-visible {
 .fase-final .metade[data-papel="venceu"] .bicho-luta { transform: translate3d(0, 0, 0) scale(1.06) rotate(0deg); }
 .fase-final .metade[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, 10px, 0) scale(0.88) rotate(-9deg); }
 .fase-final .metade[data-papel="tombou"] .bicho-luta { transform: translate3d(0, 16px, 0) scale(0.86) rotate(-84deg); }
+/* na metade do Rato (sem giro) "para longe do meio" é para cima: quadro() no JS */
+.fase-final .metade-rival[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, -10px, 0) scale(0.88) rotate(9deg); }
+.fase-final .metade-rival[data-papel="tombou"] .bicho-luta { transform: translate3d(0, -16px, 0) scale(0.86) rotate(84deg); }
 
 .halo {
   position: absolute;

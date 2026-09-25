@@ -20,7 +20,7 @@ const P = {
   sistema: '#0b5f7a', sistemaNeon: '#3ae1ff',
   ataque: '#127a33', defesa: '#1746c8', especial: '#f6c50b', especialTinta: '#1a1400', tropeco: '#8a2bc4',
   perigo: '#c41f1f', escudo: '#1746c8', cura: '#127a33', ouro: '#765a00',
-  tatu: '#95470b', sapo: '#0b6b62',
+  tatu: '#95470b', sapo: '#0b6b62', rato: '#44536a',
   vidaAlta: '#2ecc5a', vidaMedia: '#f6c50b', vidaBaixa: '#ff4d4d',
 };
 const pares = [
@@ -34,12 +34,14 @@ const pares = [
   ['ouro / superficie', P.ouro, P.superficie], ['ouro / chassi', P.ouro, P.chassi],
   ['branco / ataque', '#fff', P.ataque], ['branco / defesa', '#fff', P.defesa],
   ['branco / tropeco', '#fff', P.tropeco], ['branco / perigo', '#fff', P.perigo],
-  ['branco / tatu', '#fff', P.tatu], ['branco / sapo', '#fff', P.sapo],
+  ['branco / tatu', '#fff', P.tatu], ['branco / sapo', '#fff', P.sapo], ['branco / rato', '#fff', P.rato],
   ['especialTinta / especial', P.especialTinta, P.especial],
   ['leituraTexto / leitura', P.leituraTexto, P.leitura],
   ['sistemaNeon / leitura', P.sistemaNeon, P.leitura],
   ['vidaAlta / leitura', P.vidaAlta, P.leitura], ['vidaBaixa / leitura', P.vidaBaixa, P.leitura],
   ['tatu / superficie', P.tatu, P.superficie], ['sapo / superficie', P.sapo, P.superficie],
+  ['rato / superficie', P.rato, P.superficie], ['rato / chassi', P.rato, P.chassi],
+  ['sistemaNeon / leitura (cartão travado)', P.sistemaNeon, P.leitura],
 ];
 let ruins = 0;
 for (const [nome, a, b] of pares) {

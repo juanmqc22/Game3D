@@ -135,4 +135,5 @@ Observações:
 O QR de cada peça abre `?b=CODIGO`. O primeiro scan mostra o bichinho e fica
 esperando; o segundo, na mesma aba, monta a partida e pede o modo. Quem só tem
 uma peça toca em "Não tenho a segunda peça" e escolhe um oponente da coleção ou
-um "Oponente surpresa". A espera dura 10 minutos.
+o **Rato do Mato**, o rival de treino (a criança gira o próprio pião duas vezes:
+uma por ela, uma pelo Rato). A espera dura 10 minutos.

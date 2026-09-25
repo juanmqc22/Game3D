@@ -13,19 +13,24 @@
 //          (não precisa somar 100; padrão 25,25,25,25 = peça justa).
 // --ajuste: testa números sem editar js/criaturas.js. CODIGO.campo=valor,
 //           separados por vírgula. Campos: vida, forca, dano, cura, recuo.
-//           Ex.: --ajuste SAP06.vida=15,SAP06.recuo=1
+//           Ex.: --ajuste SAP06.vida=15,SAP06.recuo=1  (vale também RAT00)
+// --rival: em vez do elenco inteiro, cada fundador (série atual) contra o
+//          Rato do Mato, nas duas ordens somadas. Alvo: RIVAL_MIN a RIVAL_MAX.
 //
 // Alvos: taxa de vitória entre 30% e 70%, mediana de rodadas entre 5 e 15,
 // nenhuma partida chegando ao limite de rodadas, e média de cada bichinho
 // contra o resto do elenco entre MEDIA_ELENCO_MIN e MEDIA_ELENCO_MAX.
 
 import { pathToFileURL } from 'node:url';
-import { CRIATURAS } from '../js/criaturas.js';
+import { CRIATURAS, RIVAL, SERIE_ATUAL } from '../js/criaturas.js';
 import { SIMBOLOS, MODOS, ROLAR, ARENA, MIRA, estadoInicial, resolverRodadaModo } from '../js/regras.js';
 
 // Faixa da taxa média de vitória de cada bichinho contra o resto do elenco.
 export const MEDIA_ELENCO_MIN = 0.45;
 export const MEDIA_ELENCO_MAX = 0.57;
+// Taxa de vitória de cada fundador contra o Rato do Mato (rival de treino).
+export const RIVAL_MIN = 0.65;
+export const RIVAL_MAX = 0.75;
 
 export const FACES_UNIFORMES = [25, 25, 25, 25];
 export const LIMITE_RODADAS = 40;
@@ -167,6 +172,24 @@ function problemas(r) {
   return lista;
 }
 
+// Cada fundador contra o Rato, nas duas ordens (quem é o jogador 1 não pesa).
+// Devolve [{ criatura, taxa, mediana, noLimite, maiorDano }] — taxa do fundador.
+export function simularContraRival(fundadores, rival, opcoes = {}) {
+  return fundadores.map((c) => {
+    const ida = simularConfronto(c, rival, opcoes);
+    const volta = simularConfronto(rival, c, opcoes);
+    const vitorias = ida.vitoriasA + volta.vitoriasB;
+    const derrotas = ida.vitoriasB + volta.vitoriasA;
+    return {
+      criatura: c,
+      taxa: vitorias / (vitorias + derrotas),
+      mediana: Math.max(ida.mediana, volta.mediana),
+      noLimite: ida.noLimite + volta.noLimite,
+      maiorDano: Math.max(ida.maiorDano, volta.maiorDano),
+    };
+  });
+}
+
 const pct = (x) => `${(x * 100).toFixed(1)}%`;
 const nome = (c) => `${c.codigo} ${c.nome}`;
 
@@ -205,6 +228,17 @@ function imprimirResumo(resumo) {
   console.log(`Bichinhos fora da faixa: ${fora} de ${resumo.length}`);
 }
 
+function imprimirRival(linhas, rival, { modo, faces, partidas, ajuste }) {
+  console.log(`Fundadores contra ${nome(rival)} (vida ${rival.vida}, força ${rival.forca}, ${rival.especial.nome} ${rival.especial.dano})`);
+  console.log(`Modo ${modo}  |  faces ${faces.join('/')}  |  ${partidas} partidas por ordem${ajuste ? `  |  ajustes: ${ajuste}` : ''}`);
+  console.log(`Alvo: ${pct(RIVAL_MIN)} a ${pct(RIVAL_MAX)} de vitórias do fundador.
+`);
+  for (const l of linhas) {
+    const fora = l.taxa < RIVAL_MIN ? '  <- abaixo' : l.taxa > RIVAL_MAX ? '  <- acima' : '';
+    console.log(`  ${nome(l.criatura).padEnd(15)} ${pct(l.taxa).padStart(6)}  mediana ${l.mediana}  maior dano ${l.maiorDano}  no limite ${l.noLimite}${fora}`);
+  }
+}
+
 function lerArgumentos(argv) {
   const opcoes = { partidas: 2000, faces: FACES_UNIFORMES, semente: 1, limite: LIMITE_RODADAS, modo: ROLAR, chance: 50 };
   for (let i = 0; i < argv.length; i++) {
@@ -215,6 +249,7 @@ function lerArgumentos(argv) {
       case '--semente': opcoes.semente = Number(valor); i++; break;
       case '--limite': opcoes.limite = Number(valor); i++; break;
       case '--ajuste': opcoes.ajuste = valor; i++; break;
+      case '--rival': opcoes.rival = true; break;
       case '--modo':
         opcoes.modo = String(valor).toUpperCase();
         if (!MODOS.includes(opcoes.modo)) throw new Error(`Modo desconhecido: ${valor} (use ${MODOS.join(', ')})`);
@@ -233,7 +268,13 @@ function lerArgumentos(argv) {
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
   const opcoes = lerArgumentos(process.argv.slice(2));
-  const criaturas = aplicarAjustes(CRIATURAS, opcoes.ajuste);
+  const todas = aplicarAjustes([...CRIATURAS, RIVAL], opcoes.ajuste);
+  const rival = todas.pop();
+  const criaturas = todas;
+  if (opcoes.rival) {
+    imprimirRival(simularContraRival(criaturas.filter((c) => c.serie === SERIE_ATUAL), rival, opcoes), rival, opcoes);
+    process.exit(0);
+  }
   const resultados = simularTodos(criaturas, opcoes);
   imprimirTabela(resultados, opcoes);
   imprimirResumo(resumoPorCriatura(resultados, criaturas));

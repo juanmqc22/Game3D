@@ -11,6 +11,14 @@ depois de carregada. Cada peça tem um código (ex: `TAT01`); o QR da peça abre
 `?b=TAT01`. Escanear duas peças em sequência (mesmo em abas diferentes, como no iPhone) monta a partida
 (`js/escaneio.js`); cada código escaneado entra na coleção (`js/colecao.js`).
 
+**Rato do Mato (`RIVAL`, RAT00):** rival de treino de quem só tem uma peça — a criança
+gira o próprio pião duas vezes, uma por ela e uma pelo Rato. Não tem peça: fica fora
+de `CRIATURAS` (escaneio, coleção, contador, Raposa e média do elenco não o veem);
+`buscarCriaturaOuRival` acha os dois. Na batalha o Rato fica sempre em cima e a metade
+dele **não gira** (`.metade-rival`; `sentidoDoMeio`/`quadro()` no JS). Alvo: cada
+fundador vence o Rato 65–75% (`node scripts/balanceamento.js --rival`). A lista manual
+(`listaDeEscolha`) mostra só os escaneados, o Rato e a Série 2 travada; não há sorteio.
+
 **Segundo jogo (adulto):** Raposa na Fazenda, tudo em `raposa/` — ver `RAPOSA.md`.
 A única ligação com o jogo das crianças é `js/desvio-raposa.js` (carregado antes do
 app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativa.
@@ -54,7 +62,7 @@ Esclarecimentos (cobertos por teste):
 ```
 index.html                  telas (trocadas com `hidden`)
 css/estilo.css              estilo mobile-first, alvo de toque >= 64px
-js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um; `serie` + `SERIE_ATUAL`
+js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um; `serie` + `SERIE_ATUAL`; `RIVAL` (Rato)
 js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global)
 js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), selo de Fundador (&f=1..10), contador por série, puro
@@ -71,6 +79,7 @@ test/escaneio.test.js       loop de escaneio
 test/colecao.test.js        coleção
 test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 80 KB
+test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
 js/desvio-raposa.js         desvio NFC para raposa/ (script clássico; test/raposa-desvio.test.js)

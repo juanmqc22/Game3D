@@ -3,7 +3,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CRIATURAS, SERIE_ATUAL } from '../js/criaturas.js';
 import {
-  CHAVE_COLECAO, lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta, sortearOponente,
+  CHAVE_COLECAO, lerColecao, registrarDescoberta, registrarPartida, contarDescobertos, estaDescoberta,
   lerFundador, contarDaSerie,
 } from '../js/colecao.js';
 
@@ -108,17 +108,6 @@ describe('registrarPartida', () => {
     assert.equal(registrarPartida(s, ['TAT01', 'SAP04'], null), false);
     assert.equal(registrarPartida(s, ['TAT01', 'TAT01'], 0), false);
     assert.equal(lerColecao(s).TAT01.partidas, 0);
-  });
-});
-
-describe('sortearOponente', () => {
-  test('cobre todas as criaturas e nunca sai da lista', () => {
-    const vistos = new Set();
-    for (let i = 0; i < CRIATURAS.length; i++) vistos.add(sortearOponente(() => i / CRIATURAS.length).codigo);
-    assert.equal(vistos.size, CRIATURAS.length);
-    assert.equal(sortearOponente(() => 0.999999).codigo, CRIATURAS.at(-1).codigo);
-    assert.equal(sortearOponente(() => 1).codigo, CRIATURAS.at(-1).codigo);
-    assert.equal(sortearOponente(() => 0).codigo, CRIATURAS[0].codigo);
   });
 });
 

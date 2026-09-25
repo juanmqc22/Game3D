@@ -3,7 +3,7 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura } from './criaturas.js?v=14';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=14';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
@@ -17,7 +17,7 @@ import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
 } from './escaneio.js?v=14';
 import {
-  lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, sortearOponente,
+  lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, listaDeEscolha,
 } from './colecao.js?v=14';
 import { arteDaCriatura } from './arte.js?v=14';
 
@@ -78,7 +78,7 @@ const app = {
   modo: ROLAR,
   escolhas: [null, null], // criaturas escolhidas pelos jogadores 1 e 2
   jogadorEscolhendo: 0,
-  escolhaRestrita: false, // fallback da espera: só a coleção + oponente surpresa
+  escolhaRestrita: false, // fallback da espera: a coleção + o Rato do Mato
   selecionada: null, // criatura marcada na tela de escolha
   partida: null, // estado de js/regras.js
   entradas: [], // rodada atual, por jogador: { simbolo, acertou (MIRA), dentro (ARENA) }
@@ -93,6 +93,10 @@ const app = {
 };
 
 const $ = (id) => document.getElementById(id);
+
+function contraRival() {
+  return Boolean(app.partida?.jogadores.some((j) => j.criatura.rival));
+}
 
 // ---------- utilidades de DOM ----------
 
@@ -297,20 +301,24 @@ function seloFundador(numero) {
 // ---------- cartão de criatura ----------
 
 // tocavel: botão na tela de escolha; senão, cartão só informativo.
+// Com arte, a imagem no lugar da silhueta. O Rato leva o selo de rival.
 function cartaoCriatura(c, { tocavel, colecao }) {
   const comum = { style: `--cor-base: ${corDaEspecie(c)}`, 'data-especie': c.especie };
+  const classe = `cartao${c.rival ? ' cartao-rival' : ''}`;
   const props = tocavel
-    ? { ...comum, type: 'button', class: 'cartao', 'data-codigo': c.codigo, 'aria-pressed': 'false' }
-    : { ...comum, class: 'cartao cartao-info' };
+    ? { ...comum, type: 'button', class: classe, 'data-codigo': c.codigo, 'aria-pressed': 'false' }
+    : { ...comum, class: `${classe} cartao-info` };
+  const img = imagemArte(c, 76);
   return el(tocavel ? 'button' : 'div', props,
-    el('span', { class: 'cartao-bicho', 'aria-hidden': 'true' }, retrato(c)),
+    el('span', { class: `cartao-bicho${img ? ' com-arte' : ''}`, 'aria-hidden': 'true' }, img ?? retrato(c)),
     el('span', { class: 'cartao-dados' },
+    c.rival ? el('span', { class: 'cartao-rival-selo' }, 'Rival de treino') : null,
     el('span', { class: 'cartao-topo' },
       el('span', {},
         el('span', { class: 'cartao-nome' }, c.nome),
         tocavel ? el('span', { class: 'cartao-marca' }, 'ESCOLHIDO') : null,
       ),
-      el('span', { class: 'cartao-codigo' }, `${nomeDaEspecie(c)} · ${c.codigo}`),
+      el('span', { class: 'cartao-codigo' }, c.rival ? 'Sem peça: gire o seu pião por ele' : `${nomeDaEspecie(c)} · ${c.codigo}`),
     ),
     el('span', { class: 'cartao-status' },
       el('span', {}, icone(iconeVida()), ` ${c.vida} de vida`),
@@ -376,49 +384,49 @@ function montarBotoesModo(container, aoEscolher) {
 }
 
 // ---------- tela: escolher bichinho ----------
+//
+// A lista manual mostra só o que já foi escaneado (js/colecao.js,
+// listaDeEscolha), as séries futuras travadas e o Rato do Mato, o rival de
+// treino de quem só tem uma peça. Nada é sorteado.
 
 function montarListaEscolha() {
   $('lista-criaturas').addEventListener('click', (ev) => {
-    const surpresa = ev.target.closest('.cartao-surpresa');
-    if (surpresa) {
-      esconderErro();
-      selecionar(sortearOponente());
-      return;
-    }
-    const cartao = ev.target.closest('.cartao');
+    const cartao = ev.target.closest('.cartao[data-codigo]');
     if (!cartao) return;
     esconderErro();
-    selecionar(buscarCriatura(cartao.dataset.codigo));
+    selecionar(buscarCriaturaOuRival(cartao.dataset.codigo));
   });
 }
 
-function cartaoSurpresa() {
-  return el('button', { type: 'button', class: 'cartao cartao-surpresa', 'aria-pressed': 'false' },
-    el('span', { class: 'cartao-topo' },
-      el('span', { class: 'cartao-nome' }, 'Oponente surpresa'),
-    ),
-    el('span', { class: 'cartao-especial' }, 'Sorteia um dos 6 bichinhos para ser seu adversário.'),
+// Série futura ainda não escaneada: travada, sem nome nem números.
+function cartaoEmBreve(serie) {
+  return el('div', { class: 'cartao cartao-em-breve', 'aria-label': `Série ${serie}, em breve` },
+    el('span', { class: 'cartao-bicho', 'aria-hidden': 'true' }, icone(iconeMisterio())),
+    el('span', { class: 'cartao-dados' },
+      el('span', { class: 'cartao-nome' }, `Série ${serie}`),
+      el('span', { class: 'cartao-codigo' }, 'Em breve')),
   );
 }
 
-// restrito: fallback da espera — só bichinhos da coleção + oponente surpresa.
+// restrito: fallback da espera ("Não tenho a segunda peça") — a coleção e o Rato.
 function abrirEscolha(jogador, codigoInicial = null, { restrito = false } = {}) {
   app.jogadorEscolhendo = jogador;
   app.escolhaRestrita = restrito;
   app.selecionada = null;
   const colecao = colecaoAtual();
-  const lista = restrito ? CRIATURAS.filter((c) => estaDescoberta(colecao, c.codigo)) : CRIATURAS;
-  $('lista-criaturas').replaceChildren(
-    ...lista.map((c) => cartaoCriatura(c, { tocavel: true, colecao })),
-    ...(restrito ? [cartaoSurpresa()] : []),
-  );
+  // não existe Rato contra Rato
+  const comRival = !(jogador === 1 && app.escolhas[0]?.rival);
+  const { itens, temPeca } = listaDeEscolha(colecao, { comRival });
+  $('lista-criaturas').replaceChildren(...itens.map((item) => (item.tipo === 'em-breve'
+    ? cartaoEmBreve(item.serie)
+    : cartaoCriatura(item.criatura, { tocavel: true, colecao }))));
   $('escolha-titulo').textContent = restrito
     ? 'Escolha o oponente'
     : `Jogador ${jogador + 1}: escolha seu bichinho`;
   $('escolha-ou').textContent = restrito ? 'ou escolha da sua coleção:' : 'ou toque no seu bichinho:';
   const vazia = $('escolha-vazia');
-  vazia.hidden = !(restrito && lista.length === 0);
-  vazia.textContent = 'Sua coleção só tem este bichinho por enquanto. Toque em "Oponente surpresa".';
+  vazia.hidden = temPeca;
+  vazia.textContent = 'Escaneie a sua peça para jogar com o seu bichinho.';
   const anterior = $('escolha-anterior');
   anterior.hidden = jogador === 0;
   if (jogador === 1) anterior.textContent = `Jogador 1: ${app.escolhas[0].nome}. Modo ${INFO_MODO[app.modo].nome}.`;
@@ -427,7 +435,7 @@ function abrirEscolha(jogador, codigoInicial = null, { restrito = false } = {}) 
   esconderErro();
   if (codigoInicial !== null) {
     tentarCodigo(codigoInicial);
-  } else if (app.escolhas[jogador]) {
+  } else if (app.escolhas[jogador] && (comRival || !app.escolhas[jogador].rival)) {
     selecionar(app.escolhas[jogador]);
   }
   atualizarSelecao();
@@ -513,7 +521,10 @@ function abrirModo() {
 // resolve sozinha. Depois da animação os botões de símbolo já aceitam a
 // próxima escolha: o primeiro toque limpa o resultado e começa a rodada nova.
 
+// Contra o Rato do Mato a criança joga sozinha, sentada de um lado: o Rato
+// fica sempre na metade de cima, e essa metade não gira (ver .metade-rival).
 function iniciarPartida() {
+  if (app.escolhas[1]?.rival) app.escolhas = [app.escolhas[1], app.escolhas[0]];
   app.partida = estadoInicial(app.escolhas[0], app.escolhas[1]);
   app.ultimaRodada = null;
   novaRodadaLimpa();
@@ -567,6 +578,7 @@ function renderBatalha() {
   const tela = $('tela-batalha');
   tela.classList.remove('fase-luta', 'fase-impacto', 'fase-texto', 'fase-final', 'sem-transicao');
   tela.dataset.modo = modo;
+  tela.classList.toggle('contra-rival', contraRival());
 
   for (const chip of [$('rodada-cima'), $('rodada-baixo')]) {
     chip.replaceChildren(
@@ -578,7 +590,7 @@ function renderBatalha() {
 
   app.cena = estado.jogadores.map((j, i) => {
     const metade = $(`metade-${i}`);
-    metade.className = `metade metade-${i}`;
+    metade.className = `metade metade-${i}${j.criatura.rival ? ' metade-rival' : ''}`;
     metade.style.setProperty('--cor-base', corDaEspecie(j.criatura));
     metade.dataset.especie = j.criatura.especie;
     metade.classList.toggle('com-escudo', j.escudo);
@@ -628,7 +640,7 @@ function renderBatalha() {
       ),
       el('div', { class: 'metade-cabeca' },
         el('span', { class: 'metade-nome' },
-          el('span', { class: 'metade-jogador' }, `J${i + 1}`), nomeJogador(estado, i)),
+          el('span', { class: 'metade-jogador' }, j.criatura.rival ? 'RIVAL' : `J${i + 1}`), nomeJogador(estado, i)),
         barra,
       ),
       el('div', { class: 'base' },
@@ -655,7 +667,11 @@ function entradaPronta(e) {
   return !precisaFace() || e.simbolo !== null;
 }
 
-function textoDica(e) {
+// Contra o Rato ninguém joga do outro lado: a criança gira o próprio pião de
+// novo, pelo Rato, e toca o resultado na metade dele.
+function textoDica(e, criatura) {
+  const nada = e.simbolo === null && e.acertou === null && e.dentro === null;
+  if (criatura.rival && nada) return 'Gire o pião pelo Rato';
   if (app.modo === ARENA && e.dentro === null) return 'Quem parou primeiro ou saiu da bandeja?';
   if (app.modo === MIRA && e.acertou === null) return 'Parou em cima do alvo?';
   if (precisaFace() && e.simbolo === null) return 'Qual desenho ficou para cima?';
@@ -689,7 +705,7 @@ function atualizarEntradas() {
     marcarGrupo(c.corpo.querySelector('.opcoes-dentro'), 'dentro', e.dentro);
 
     const pronto = entradaPronta(e);
-    c.dica.textContent = textoDica(e);
+    c.dica.textContent = textoDica(e, c.criatura);
     c.dica.classList.toggle('pronto', pronto);
     c.metade.classList.toggle('pronta', pronto);
   });
@@ -1054,16 +1070,24 @@ function prepararLuta() {
 
 // Pose em que cada papel termina — igual às regras .fase-final [data-papel] do CSS, para o
 // último quadro da animação e o estado final baterem sem salto.
+// [y, escala, giro]: y positivo = para longe do meio da tela (ver quadro()).
 const POSE = {
-  venceu: 'translate3d(0, 0, 0) scale(1.06) rotate(0deg)',
-  perdeu: 'translate3d(0, 10px, 0) scale(0.88) rotate(-9deg)',
-  tombou: 'translate3d(0, 16px, 0) scale(0.86) rotate(-84deg)',
-  protegido: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
-  choque: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
-  empate: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
-  nula: 'translate3d(0, 0, 0) scale(1) rotate(0deg)',
+  venceu: [0, 1.06, 0],
+  perdeu: [10, 0.88, -9],
+  tombou: [16, 0.86, -84],
+  protegido: [0, 1, 0],
+  choque: [0, 1, 0],
+  empate: [0, 1, 0],
+  nula: [0, 1, 0],
 };
 const NEUTRO = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
+
+// Transform do bichinho da metade i. Na metade do Rato (em cima, sem giro)
+// "longe do meio" é para cima, então y e o giro trocam de sinal.
+function quadro(i, [y, escala, giro]) {
+  const s = -sentidoDoMeio(i);
+  return `translate3d(0, ${y * s}px, 0) scale(${escala}) rotate(${giro * s}deg)`;
+}
 
 // Centro do bichinho na tela (getBoundingClientRect já considera o giro).
 function centroNaTela(lado) {
@@ -1072,10 +1096,16 @@ function centroNaTela(lado) {
 }
 
 // Converte um deslocamento na tela para o sistema da metade: a de cima está
-// girada 180°, então lá x e y trocam de sinal.
+// girada 180°, então lá x e y trocam de sinal. Contra o Rato a de cima não gira.
 function naMetade(i, dx, dy) {
-  const giro = i === 0 ? -1 : 1;
+  const giro = i === 0 && !contraRival() ? -1 : 1;
   return { x: giro * dx, y: giro * dy };
+}
+
+// "Para o meio da tela" no sistema da metade: -1 (para cima) nas metades de
+// sempre; +1 na do Rato, que fica em cima sem girar.
+function sentidoDoMeio(i) {
+  return i === 0 && contraRival() ? 1 : -1;
 }
 
 // Até onde cada bichinho anda para encostar no outro de frente, no meio da
@@ -1153,7 +1183,7 @@ function animarLuta(luta) {
     if (!l.avanca) return;
     animar(l.bicho, [
       { transform: NEUTRO },
-      { transform: 'translate3d(0, 9px, 0) scale(0.94) rotate(0deg)', offset: 0.35, easing: 'cubic-bezier(0.55, 0, 0.9, 0.45)' },
+      { transform: quadro(i, [9, 0.94, 0]), offset: 0.35, easing: 'cubic-bezier(0.55, 0, 0.9, 0.45)' },
       { transform: noChoque(i) },
     ], { duration: TEMPO.impacto });
   });
@@ -1163,18 +1193,18 @@ function animarLuta(luta) {
     tela.classList.add('fase-impacto');
     lados.forEach((l, i) => {
       const de = l.avanca ? noChoque(i) : NEUTRO;
-      const pose = POSE[l.papel.papel];
+      const pose = quadro(i, POSE[l.papel.papel]);
       let meio;
-      if (l.papel.papel === 'perdeu') meio = 'translate3d(0, 30px, 0) scale(0.84) rotate(-16deg)';
-      else if (l.papel.papel === 'tombou') meio = 'translate3d(0, 26px, 0) scale(0.9) rotate(-40deg)';
-      else if (l.papel.papel === 'nula') meio = 'translate3d(0, 0, 0) scale(1) rotate(-7deg)';
+      if (l.papel.papel === 'perdeu') meio = [30, 0.84, -16];
+      else if (l.papel.papel === 'tombou') meio = [26, 0.9, -40];
+      else if (l.papel.papel === 'nula') meio = [0, 1, -7];
       else if (l.papel.papel === 'venceu' && lados[1 - i].papel.papel === 'protegido') {
         // o escudo do outro devolve o golpe: o atacante quica para trás
-        meio = 'translate3d(0, 24px, 0) scale(0.96) rotate(5deg)';
-      } else meio = 'translate3d(0, 12px, 0) scale(1.1) rotate(0deg)';
+        meio = [24, 0.96, 5];
+      } else meio = [12, 1.1, 0];
       animar(l.bicho, [
         { transform: de },
-        { transform: meio, offset: 0.4 },
+        { transform: quadro(i, meio), offset: 0.4 },
         { transform: pose },
       ], { duration: 420, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' });
 
