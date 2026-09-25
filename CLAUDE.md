@@ -26,10 +26,11 @@ app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativ
 ## Modos de jogo (fonte da verdade: `js/regras.js`)
 
 - **Rolar** (clássico): as regras abaixo.
-- **Arena** (na tela: **Batalha**; as peças são piões numa bandeja): os dois
-  ainda girando (`dentro`) → igual ao Rolar. Só um girando → ele vence, a face
-  não importa, o outro (parou primeiro ou saiu da bandeja) leva
-  `forca + BONUS_FORA` (1). Os dois pararam/saíram → rodada nula. Escudo continua valendo.
+- **Arena** (na tela: **Batalha**; as peças são piões numa bandeja): sem face.
+  Uma sobreposição ("QUEM GANHOU?") resolve num toque: **Girou mais** → o
+  vencedor causa `forca + BONUS_GIROU` (1); **Jogou pra fora** → `forca +
+  BONUS_FORA` (2); **Empate** → Choque. Nenhum especial ativa. Escudo continua
+  valendo (inclusive no choque). Simulador: `--modo ARENA --girou 45 --fora 35 --empate 20`.
 - **Mira**: igual ao Rolar; vencedor acertou o alvo → `+BONUS_ACERTO` (2), que
   **não soma** com o +2 do tropeço (extra máximo da rodada é +2); errou → dano
   pela metade, arredondado para baixo. Cura, recuo e escudo não mudam.

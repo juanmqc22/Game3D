@@ -3,7 +3,7 @@ import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ATAQUE, DEFESA, ESPECIAL, TROPECO, ROLAR, ARENA, MIRA, MODOS,
-  BONUS_FORA, BONUS_ACERTO, BONUS_TROPECO,
+  BONUS_FORA, BONUS_GIROU, BONUS_ACERTO, BONUS_TROPECO, CHOQUE_DANO, GIROU, FORA,
   estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira, resolverRodadaModo, danoMaximoDoModo,
 } from '../js/regras.js';
 
@@ -26,68 +26,75 @@ function partida(a, b, ajustes = [{}, {}]) {
 }
 const vidas = (e) => e.jogadores.map((j) => j.vida);
 
-describe('modo ARENA', () => {
-  test('os dois dentro: igual ao modo ROLAR', () => {
-    const classico = resolverRodada(partida(FORTE, ESPINHO), ESPECIAL, TROPECO);
-    const arena = resolverRodadaArena(partida(FORTE, ESPINHO), [true, true], [ESPECIAL, TROPECO]);
-    assert.deepEqual(vidas(arena.estado), vidas(classico.estado));
-    assert.equal(arena.resumo.dano, 8 + BONUS_TROPECO);
-    assert.equal(arena.resumo.modo, ARENA);
-    assert.deepEqual(arena.resumo.dentro, [true, true]);
+describe('modo ARENA (Batalha: quem ganhou e como)', () => {
+  test('as constantes pedidas: girou +1, fora +2', () => {
+    assert.equal(BONUS_GIROU, 1);
+    assert.equal(BONUS_FORA, 2);
   });
-  test('os dois dentro: especial funciona (cura, recuo, escudo)', () => {
-    const { resumo } = resolverRodadaArena(partida(BOMBA, ESPINHO), [true, true], [ESPECIAL, ATAQUE]);
-    assert.equal(resumo.dano, 6);
-    assert.equal(resumo.recuo, 2);
-  });
-  test('só o jogador 1 dentro: ele vence e o outro leva forca + 2', () => {
-    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE), [true, false], [TROPECO, ESPECIAL]);
+  test('girou mais: o vencedor causa força + BONUS_GIROU', () => {
+    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE), 0, GIROU);
+    assert.equal(resumo.modo, ARENA);
     assert.equal(resumo.vencedor, 0);
+    assert.equal(resumo.jeito, GIROU);
     assert.equal(resumo.danoBase, 3);
-    assert.equal(resumo.bonusFora, BONUS_FORA);
-    assert.equal(resumo.dano, 3 + BONUS_FORA);
-    assert.deepEqual(vidas(estado), [20, 20 - 3 - BONUS_FORA]);
+    assert.equal(resumo.bonusGirou, BONUS_GIROU);
+    assert.equal(resumo.bonusFora, 0);
+    assert.equal(resumo.dano, 3 + BONUS_GIROU);
+    assert.deepEqual(vidas(estado), [20, 20 - 3 - BONUS_GIROU]);
   });
-  test('só o jogador 2 dentro: a face dele não importa (ESPECIAL não dispara efeito)', () => {
-    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, BOMBA), [false, true], [ATAQUE, ESPECIAL]);
+  test('jogou pra fora: o vencedor causa força + BONUS_FORA', () => {
+    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE), 1, FORA);
     assert.equal(resumo.vencedor, 1);
-    assert.equal(resumo.dano, 3 + BONUS_FORA);
-    assert.equal(resumo.recuo, 0, 'especial de quem ficou dentro sozinho não conta');
-    assert.equal(resumo.bonusTropeco, 0);
-    assert.deepEqual(vidas(estado), [20 - 3 - BONUS_FORA, 20]);
+    assert.equal(resumo.bonusFora, BONUS_FORA);
+    assert.equal(resumo.dano, 4 + BONUS_FORA);
+    assert.deepEqual(vidas(estado), [20 - 4 - BONUS_FORA, 20]);
   });
-  test('só um dentro: a face de quem ficou dentro pode ser omitida', () => {
-    const { resumo } = resolverRodadaArena(partida(ESPINHO, FORTE), [true, false]);
-    assert.equal(resumo.dano, 3 + BONUS_FORA);
+  test('especial nunca ativa e não há face nem tropeço', () => {
+    const { resumo } = resolverRodadaArena(partida(BOMBA, LADRAO), 0, FORA);
     assert.deepEqual(resumo.simbolos, [null, null]);
+    assert.equal(resumo.simboloVencedor, null);
+    assert.equal(resumo.recuo, 0);
+    assert.equal(resumo.cura, 0);
+    assert.equal(resumo.escudoAtivado, false);
+    assert.equal(resumo.bonusTropeco, 0);
   });
-  test('só um dentro: quem ficou fora com TROPECO não leva o +2 do tropeço', () => {
-    const { resumo } = resolverRodadaArena(partida(ESPINHO, FORTE), [true, false], [ATAQUE, TROPECO]);
-    assert.equal(resumo.dano, 3 + BONUS_FORA);
+  test('empate: Choque, cada um perde CHOQUE_DANO', () => {
+    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE), null);
+    assert.equal(resumo.choque, true);
+    assert.equal(resumo.vencedor, null);
+    assert.deepEqual(resumo.danoChoque, [CHOQUE_DANO, CHOQUE_DANO]);
+    assert.deepEqual(vidas(estado), [20 - CHOQUE_DANO, 20 - CHOQUE_DANO]);
+    assert.equal(estado.rodada, 1);
   });
-  test('só um dentro: escudo de quem ficou fora anula o dano e é consumido', () => {
-    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE, [{}, { escudo: true }]), [true, false]);
+  test('escudo anula o golpe e é consumido', () => {
+    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE, [{}, { escudo: true }]), 0, FORA);
     assert.equal(resumo.bloqueado, true);
     assert.equal(resumo.danoPrevisto, 3 + BONUS_FORA);
     assert.deepEqual(vidas(estado), [20, 20]);
     assert.equal(estado.jogadores[1].escudo, false);
   });
-  test('nenhum dentro: rodada nula, ninguém perde vida, rodada conta', () => {
-    const { estado, resumo, fim } = resolverRodadaArena(partida(ESPINHO, FORTE, [{}, { escudo: true }]), [false, false]);
-    assert.equal(resumo.nula, true);
-    assert.equal(resumo.vencedor, null);
-    assert.deepEqual(vidas(estado), [20, 20]);
-    assert.equal(estado.jogadores[1].escudo, true, 'rodada nula não consome escudo');
-    assert.equal(estado.rodada, 1);
-    assert.equal(fim.terminou, false);
+  test('escudo anula o choque do empate e é consumido', () => {
+    const { estado, resumo } = resolverRodadaArena(partida(ESPINHO, FORTE, [{ escudo: true }, {}]), null);
+    assert.deepEqual(resumo.choqueBloqueado, [true, false]);
+    assert.deepEqual(vidas(estado), [20, 20 - CHOQUE_DANO]);
+    assert.equal(estado.jogadores[0].escudo, false);
   });
-  test('quem fica fora pode ser zerado e a partida termina', () => {
-    const { fim } = resolverRodadaArena(partida(ESPINHO, FORTE, [{}, { vida: 3 + BONUS_FORA }]), [true, false]);
-    assert.deepEqual(fim, { terminou: true, vencedor: 0 });
+  test('o golpe pode zerar e terminar a partida; choque zerando os dois = empate', () => {
+    const golpe = resolverRodadaArena(partida(ESPINHO, FORTE, [{}, { vida: 3 + BONUS_GIROU }]), 0, GIROU);
+    assert.deepEqual(golpe.fim, { terminou: true, vencedor: 0 });
+    const choque = resolverRodadaArena(partida(ESPINHO, FORTE, [{ vida: 1 }, { vida: 1 }]), null);
+    assert.deepEqual(choque.fim, { terminou: true, vencedor: null });
   });
-  test('dentro inválido gera erro', () => {
-    assert.throws(() => resolverRodadaArena(partida(ESPINHO, FORTE), [true], [ATAQUE, ATAQUE]));
-    assert.throws(() => resolverRodadaArena(partida(ESPINHO, FORTE), [true, true], [ATAQUE, 'PEDRA']));
+  test('entrada inválida gera erro', () => {
+    assert.throws(() => resolverRodadaArena(partida(ESPINHO, FORTE), 2, GIROU));
+    assert.throws(() => resolverRodadaArena(partida(ESPINHO, FORTE), 0, 'DENTRO'));
+    assert.throws(() => resolverRodadaArena(partida(ESPINHO, FORTE), 0));
+  });
+  test('porta única: ganhou em um jogador; nenhum = empate; dois = erro', () => {
+    const a = resolverRodadaModo(ARENA, partida(ESPINHO, FORTE), [{}, { ganhou: GIROU }]);
+    assert.deepEqual(a, resolverRodadaArena(partida(ESPINHO, FORTE), 1, GIROU));
+    assert.equal(resolverRodadaModo(ARENA, partida(ESPINHO, FORTE), [{}, {}]).resumo.choque, true);
+    assert.throws(() => resolverRodadaModo(ARENA, partida(ESPINHO, FORTE), [{ ganhou: FORA }, { ganhou: GIROU }]));
   });
 });
 
@@ -165,24 +172,16 @@ describe('resolverRodadaModo e danoMaximoDoModo', () => {
   });
   test('dano máximo por modo bate com as constantes', () => {
     assert.equal(danoMaximoDoModo(ROLAR, FORTE), 8 + BONUS_TROPECO);
-    assert.equal(danoMaximoDoModo(ARENA, FORTE), Math.max(8 + BONUS_TROPECO, 4 + BONUS_FORA));
+    assert.equal(danoMaximoDoModo(ARENA, FORTE), 4 + Math.max(BONUS_GIROU, BONUS_FORA), 'na Batalha o especial não ativa');
     assert.equal(danoMaximoDoModo(MIRA, FORTE), 8 + Math.max(BONUS_TROPECO, BONUS_ACERTO));
     assert.equal(MODOS.length, 3);
   });
 });
 
 describe('choque nos modos', () => {
-  test('ARENA com os dois dentro e o mesmo símbolo: choque', () => {
-    const { resumo, estado } = resolverRodadaArena(partida(FORTE, ESPINHO), [true, true], [DEFESA, DEFESA]);
-    assert.equal(resumo.choque, true);
-    assert.deepEqual(vidas(estado), [19, 19]);
-  });
-  test('ARENA com alguém fora: não há choque, mesmo com faces iguais', () => {
-    const nula = resolverRodadaArena(partida(FORTE, ESPINHO), [false, false], [ATAQUE, ATAQUE]);
-    assert.equal(nula.resumo.choque, false);
-    assert.deepEqual(vidas(nula.estado), [20, 20]);
-    const um = resolverRodadaArena(partida(FORTE, ESPINHO), [true, false], [ATAQUE, ATAQUE]);
+  test('ARENA com vencedor: não há choque', () => {
+    const um = resolverRodadaArena(partida(FORTE, ESPINHO), 0, GIROU);
     assert.equal(um.resumo.choque, false);
-    assert.equal(um.resumo.vencedor, 0);
+    assert.deepEqual(um.resumo.danoChoque, [0, 0]);
   });
 });

@@ -6,12 +6,12 @@
 import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=14';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
-  estadoInicial, resolverRodada, resolverRodadaArena, resolverRodadaMira,
+  GIROU, FORA, estadoInicial, resolverRodadaModo,
 } from './regras.js?v=14';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida, iconeVidaPerdida,
   iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
-  iconeRolar, iconeArena, iconeAlvo, iconeDentro, iconeFora, iconeErrou, iconeMisterio, iconeQr,
+  iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr,
 } from './icones.js?v=14';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
@@ -39,7 +39,7 @@ const INFO_MODO = {
   [ARENA]: {
     nome: 'Batalha',
     icone: iconeArena,
-    explicacao: 'Girem os dois na mesma bandeja. Perde quem parar de girar primeiro ou sair da bandeja.',
+    explicacao: 'Girem os dois na mesma bandeja. Ganha quem girar mais ou jogar o outro pra fora.',
   },
   [MIRA]: {
     nome: 'Mira',
@@ -81,7 +81,7 @@ const app = {
   escolhaRestrita: false, // fallback da espera: a coleção + o Rato do Mato
   selecionada: null, // criatura marcada na tela de escolha
   partida: null, // estado de js/regras.js
-  entradas: [], // rodada atual, por jogador: { simbolo, acertou (MIRA), dentro (ARENA) }
+  entradas: [], // rodada atual, por jogador: { simbolo, acertou (MIRA), ganhou (ARENA: GIROU | FORA) }
   fase: 'escolha', // batalha: 'escolha' | 'luta' (animando) | 'resultado'
   cena: [], // elementos de cada metade da tela dividida (renderBatalha)
   ultimaRodada: null, // { antes, resultado, placarGravado }
@@ -534,7 +534,7 @@ function iniciarPartida() {
 
 function novaRodadaLimpa() {
   cancelarContagem();
-  app.entradas = [0, 1].map(() => ({ simbolo: null, acertou: null, dentro: null }));
+  app.entradas = [0, 1].map(() => ({ simbolo: null, acertou: null, ganhou: null }));
   app.ultimoToque = null;
   app.fase = 'escolha';
 }
@@ -553,9 +553,8 @@ function botaoOpcao(classe, dados, svg, texto, nomeAcessivel) {
     icone(svg), el('span', {}, texto));
 }
 
-// Pergunta extra do modo, na metade do jogador: Mira (parou em cima do alvo?)
-// e Batalha/ARENA (o pião parou primeiro ou saiu da bandeja?). No Rolar não tem.
-// Na Batalha, "Girando" é o antigo "Dentro" e "Parou ou saiu" o antigo "Fora".
+// Pergunta extra da Mira, na metade do jogador: parou em cima do alvo?
+// (A Batalha pergunta tudo de uma vez na sobreposição "Quem ganhou?".)
 function linhaDoModo(modo, i) {
   const j = String(i);
   const quem = `jogador ${i + 1}`;
@@ -564,12 +563,27 @@ function linhaDoModo(modo, i) {
       botaoOpcao('opcao-alvo', { 'data-jogador': j, 'data-acertou': 'sim' }, iconeAlvo(), 'Acertou', `Acertou o alvo, ${quem}`),
       botaoOpcao('opcao-alvo', { 'data-jogador': j, 'data-acertou': 'nao' }, iconeErrou(), 'Errou', `Errou o alvo, ${quem}`));
   }
-  if (modo === ARENA) {
-    return el('div', { class: 'linha-modo opcoes-dentro', role: 'group', 'aria-label': `Bandeja do ${quem}` },
-      botaoOpcao('opcao-dentro', { 'data-jogador': j, 'data-dentro': 'sim' }, iconeDentro(), 'Girando', `Ainda girando na bandeja, ${quem}`),
-      botaoOpcao('opcao-dentro', { 'data-jogador': j, 'data-dentro': 'nao' }, iconeFora(), 'Parou ou saiu', `Parou primeiro ou saiu da bandeja, ${quem}`));
-  }
   return null;
+}
+
+// Batalha: a sobreposição "Quem ganhou?". Uma coluna por jogador (foto, nome
+// e os dois jeitos de ganhar) e o Empate no meio. Um toque resolve a rodada.
+function montarQuemGanhou(estado) {
+  estado.jogadores.forEach((j, i) => {
+    const c = j.criatura;
+    const nome = nomeJogador(estado, i);
+    const opcao = (jeito, texto) => el('button', {
+      type: 'button', class: 'qg-opcao', 'data-jogador': String(i), 'data-ganhou': jeito,
+      'aria-label': `${texto}: ${nome} ganhou`,
+    }, texto);
+    $(`qg-lado-${i}`).replaceChildren(
+      el('span', { class: 'qg-foto', 'data-especie': c.especie, style: `--cor-base: ${corDaEspecie(c)}`, 'aria-hidden': 'true' },
+        imagemArte(c, 120, { lazy: false }) ?? retrato(c)),
+      el('span', { class: 'qg-nome' }, nome),
+      opcao(GIROU, 'Girou mais'),
+      opcao(FORA, 'Jogou pra fora'),
+    );
+  });
 }
 
 function renderBatalha() {
@@ -645,36 +659,32 @@ function renderBatalha() {
       ),
       el('div', { class: 'base' },
         el('div', { class: 'simbolos', role: 'group', 'aria-label': `Símbolo do jogador ${i + 1}` }, ...botoes),
-        el('p', { class: 'base-aviso', hidden: true }, 'Alguém parou ou saiu: o desenho não conta.'),
+        // Batalha: sem símbolos; depois do resultado, este botão chama a próxima rodada.
+        el('button', { type: 'button', class: 'botao botao-principal botao-proxima', hidden: true }, 'Girar de novo'),
       ),
     );
     metade.replaceChildren(corpo);
     return { metade, corpo, bicho, barra, escudo, flutuantes, estampa, dica, resultado, criatura: j.criatura };
   });
+  if (modo === ARENA) montarQuemGanhou(estado);
   atualizarEntradas();
 }
 
-// ARENA: a face só importa quando os dois ficaram dentro do círculo. Quem
-// marcou "Fora" (ou está contra quem marcou) não precisa dizer o símbolo.
-function precisaFace() {
-  if (app.modo !== ARENA) return true;
-  return app.entradas.every((e) => e.dentro !== false);
-}
-
+// Rolar e Mira: a rodada resolve quando os dois responderam. (A Batalha
+// resolve no toque da sobreposição.)
 function entradaPronta(e) {
   if (app.modo === MIRA && e.acertou === null) return false;
-  if (app.modo === ARENA && e.dentro === null) return false;
-  return !precisaFace() || e.simbolo !== null;
+  return e.simbolo !== null;
 }
 
 // Contra o Rato ninguém joga do outro lado: a criança gira o próprio pião de
 // novo, pelo Rato, e toca o resultado na metade dele.
 function textoDica(e, criatura) {
-  const nada = e.simbolo === null && e.acertou === null && e.dentro === null;
-  if (criatura.rival && nada) return 'Gire o pião pelo Rato';
-  if (app.modo === ARENA && e.dentro === null) return 'Quem parou primeiro ou saiu da bandeja?';
+  const nada = e.simbolo === null && e.acertou === null;
+  if (criatura.rival && nada && app.modo !== ARENA) return 'Gire o pião pelo Rato';
+  if (app.modo === ARENA) return criatura.rival ? 'Gire um pião pelo Rato na bandeja' : 'Girem os piões na bandeja!';
   if (app.modo === MIRA && e.acertou === null) return 'Parou em cima do alvo?';
-  if (precisaFace() && e.simbolo === null) return 'Qual desenho ficou para cima?';
+  if (e.simbolo === null) return 'Qual desenho ficou para cima?';
   return 'Pronto!';
 }
 
@@ -687,30 +697,33 @@ function marcarGrupo(grupo, atributo, valor) {
 }
 
 function atualizarEntradas() {
-  const mostrarFace = precisaFace();
+  const batalha = app.modo === ARENA;
   app.cena.forEach((c, i) => {
     const e = app.entradas[i];
     // O bichinho já mostra o símbolo tocado: confirma a escolha sem texto.
-    const simbolo = (mostrarFace && e.simbolo) || 'VAZIO';
+    // Na Batalha não há símbolo: só o bichinho.
+    const simbolo = batalha ? null : (e.simbolo || 'VAZIO');
     const placa = c.bicho.querySelector('.painel-bicho-placa');
-    if (placa) placa.replaceChildren(icone(iconePlaca(simbolo)));
+    if (placa) placa.replaceChildren(...(simbolo ? [icone(iconePlaca(simbolo))] : []));
     else c.bicho.replaceChildren(retrato(c.criatura, simbolo));
 
     const grupo = c.corpo.querySelector('.simbolos');
-    grupo.hidden = !mostrarFace;
-    c.corpo.querySelector('.base-aviso').hidden = mostrarFace;
+    grupo.hidden = batalha;
     grupo.classList.toggle('tem-escolha', e.simbolo !== null);
     for (const b of grupo.children) b.setAttribute('aria-pressed', String(b.dataset.simbolo === e.simbolo));
     marcarGrupo(c.corpo.querySelector('.opcoes-alvo'), 'acertou', e.acertou);
-    marcarGrupo(c.corpo.querySelector('.opcoes-dentro'), 'dentro', e.dentro);
+    const proxima = c.corpo.querySelector('.botao-proxima');
+    proxima.hidden = !batalha;
+    proxima.disabled = app.fase !== 'resultado' || Boolean(app.ultimaRodada?.resultado.fim.terminou);
 
-    const pronto = entradaPronta(e);
+    const pronto = !batalha && entradaPronta(e);
     c.dica.textContent = textoDica(e, c.criatura);
     c.dica.classList.toggle('pronto', pronto);
     c.metade.classList.toggle('pronta', pronto);
   });
+  $('quem-ganhou').hidden = !(batalha && app.fase === 'escolha');
   // tudo respondido: arma a resolução automática (cada toque novo reinicia)
-  if (app.entradas.every(entradaPronta)) armarContagem();
+  if (!batalha && app.entradas.every(entradaPronta)) armarContagem();
   else cancelarContagem();
   atualizarCentro();
 }
@@ -777,8 +790,7 @@ function desfazer() {
 function lerToque(botao) {
   const jogador = Number(botao.dataset.jogador);
   if (botao.classList.contains('simbolo')) return { jogador, campo: 'simbolo', valor: botao.dataset.simbolo };
-  if (botao.classList.contains('opcao-alvo')) return { jogador, campo: 'acertou', valor: botao.dataset.acertou === 'sim' };
-  return { jogador, campo: 'dentro', valor: botao.dataset.dentro === 'sim' };
+  return { jogador, campo: 'acertou', valor: botao.dataset.acertou === 'sim' };
 }
 
 function aplicarToque(t) {
@@ -791,12 +803,22 @@ function aplicarToque(t) {
 
 function tocarBatalha(ev) {
   if (app.animacao) return;
-  const botao = ev.target.closest('.simbolo, .opcao-alvo, .opcao-dentro');
+  if (ev.target.closest('.qg-sair')) {
+    $('btn-sair').click();
+    return;
+  }
+  const resposta = ev.target.closest('.qg-opcao');
+  if (resposta) {
+    if (app.fase === 'escolha') responderBatalha(resposta);
+    return;
+  }
+  const botao = ev.target.closest('.simbolo, .opcao-alvo');
   if (app.fase === 'resultado') {
     // Depois da luta: tocar num símbolo (ou no resultado) já começa a rodada
-    // seguinte, sem botão de "próxima".
+    // seguinte, sem botão de "próxima". Na Batalha, "Girar de novo" abre a
+    // pergunta da rodada seguinte.
     if (app.ultimaRodada?.resultado.fim.terminou) return;
-    if (!botao && !ev.target.closest('.palco-luta')) return;
+    if (!botao && !ev.target.closest('.palco-luta, .botao-proxima')) return;
     const toque = botao && !botao.disabled ? lerToque(botao) : null;
     proximaRodada();
     if (toque) aplicarToque(toque);
@@ -815,18 +837,18 @@ function tocarLutar() {
   }
 }
 
+// Batalha: um toque na sobreposição diz quem ganhou e como (ou Empate) e já resolve.
+function responderBatalha(botao) {
+  app.entradas = [0, 1].map(() => ({ simbolo: null, acertou: null, ganhou: null }));
+  if (botao.dataset.ganhou !== 'EMPATE') app.entradas[Number(botao.dataset.jogador)].ganhou = botao.dataset.ganhou;
+  resolver();
+}
+
 function resolver() {
-  if (app.fase !== 'escolha' || !app.entradas.every(entradaPronta)) return;
+  const batalha = app.modo === ARENA;
+  if (app.fase !== 'escolha' || (!batalha && !app.entradas.every(entradaPronta))) return;
   const antes = app.partida;
-  const simbolos = precisaFace() ? app.entradas.map((e) => e.simbolo) : [null, null];
-  let resultado;
-  if (app.modo === ARENA) {
-    resultado = resolverRodadaArena(antes, app.entradas.map((e) => e.dentro), simbolos);
-  } else if (app.modo === MIRA) {
-    resultado = resolverRodadaMira(antes, app.entradas.map((e) => e.acertou), simbolos);
-  } else {
-    resultado = resolverRodada(antes, simbolos[0], simbolos[1]);
-  }
+  const resultado = resolverRodadaModo(app.modo, antes, app.entradas);
   app.partida = resultado.estado;
   app.ultimaRodada = { antes, resultado, placarGravado: false };
   if (resultado.fim.terminou) {
@@ -835,6 +857,7 @@ function resolver() {
   }
   app.fase = 'luta';
   app.ultimoToque = null;
+  $('quem-ganhou').hidden = true;
   const luta = prepararLuta();
   atualizarCentro();
   animarLuta(luta);
@@ -851,21 +874,10 @@ function resolver() {
 function descreverRodada(estado, resumo) {
   const nome = (i) => nomeJogador(estado, i);
   const [sa] = resumo.simbolos;
-  const face = (i) => {
-    if (resumo.modo === ARENA && resumo.dentro && !resumo.dentro[i]) return 'PAROU';
-    const s = resumo.simbolos[i];
-    return s === null ? 'GIRANDO' : rotulo(s);
-  };
-  const confronto = `${nome(0)}: ${face(0)} × ${nome(1)}: ${face(1)}.`;
-
-  if (resumo.nula) {
-    return {
-      veredito: ['Rodada nula', 'Rodada nula'],
-      etiquetas: [],
-      nota: { quem: null, texto: 'Os dois pararam ou saíram. Girem de novo.' },
-      leitura: `${confronto} Rodada nula: os dois pararam ou saíram da bandeja e ninguém perde vida.`,
-    };
-  }
+  const batalha = resumo.modo === ARENA;
+  const confronto = batalha
+    ? `${nome(0)} contra ${nome(1)}, na bandeja.`
+    : `${nome(0)}: ${rotulo(resumo.simbolos[0])} × ${nome(1)}: ${rotulo(resumo.simbolos[1])}.`;
 
   if (resumo.choque) {
     // mesmo símbolo: os dois se chocam e cada um perde CHOQUE_DANO (o escudo segura)
@@ -881,7 +893,7 @@ function descreverRodada(estado, resumo) {
       veredito: ['Choque!', 'Choque!'],
       etiquetas,
       nota: zerados ? { quem: null, texto: 'Os dois ficaram sem vida!' } : null,
-      leitura: `${confronto} Choque: os dois tiraram ${rotulo(sa)}; ${partes.join(' e ')}.${zerados ? ' Os dois ficaram sem vida!' : ''}`,
+      leitura: `${confronto} Choque: ${batalha ? 'empate na bandeja' : `os dois tiraram ${rotulo(sa)}`}; ${partes.join(' e ')}.${zerados ? ' Os dois ficaram sem vida!' : ''}`,
     };
   }
 
@@ -896,8 +908,7 @@ function descreverRodada(estado, resumo) {
 
   const v = resumo.vencedor;
   const p = 1 - v;
-  const porFora = resumo.bonusFora > 0;
-  const especial = !porFora && resumo.simboloVencedor === ESPECIAL
+  const especial = !batalha && resumo.simboloVencedor === ESPECIAL
     ? estado.jogadores[v].criatura.especial
     : null;
   const etiquetas = [];
@@ -905,8 +916,9 @@ function descreverRodada(estado, resumo) {
 
   if (especial) selo(v, 'especial', iconeEspecial(), especial.nome);
   // Vencer com DEFESA não é óbvio para a criança: o selo dá nome à jogada.
-  if (!porFora && resumo.simboloVencedor === DEFESA) selo(v, 'contra', iconeSimbolo(DEFESA), 'Contra-ataque');
-  if (porFora) selo(p, 'fora', iconeFora(), `Parou +${resumo.bonusFora}`);
+  if (resumo.simboloVencedor === DEFESA) selo(v, 'contra', iconeSimbolo(DEFESA), 'Contra-ataque');
+  if (resumo.jeito === GIROU) selo(v, 'girou', iconeArena(), `Girou mais +${resumo.bonusGirou}`);
+  if (resumo.jeito === FORA) selo(p, 'fora', iconeFora(), `Pra fora +${resumo.bonusFora}`);
   if (resumo.modo === MIRA) {
     if (resumo.metade) selo(v, 'errou', iconeErrou(), 'Errou: metade');
     else if (resumo.bonusAcerto > 0) selo(v, 'alvo', iconeAlvo(), `Alvo +${resumo.bonusAcerto}`);
@@ -937,9 +949,10 @@ function descreverRodada(estado, resumo) {
     nota = { quem: null, texto: 'Os dois ficaram sem vida!' };
   }
 
-  const golpe = porFora
-    ? `continuou girando e ${nome(p)} parou ou saiu da bandeja`
-    : (especial ? `venceu com ESPECIAL, ${especial.nome}` : `venceu com ${rotulo(resumo.simboloVencedor)}`);
+  let golpe;
+  if (resumo.jeito === GIROU) golpe = 'girou mais tempo na bandeja';
+  else if (resumo.jeito === FORA) golpe = `jogou ${nome(p)} pra fora da bandeja`;
+  else golpe = especial ? `venceu com ESPECIAL, ${especial.nome}` : `venceu com ${rotulo(resumo.simboloVencedor)}`;
   const efeito = resumo.bloqueado
     ? `o escudo do ${nome(p)} anulou o dano e acabou`
     : `${resumo.dano} de dano no ${nome(p)}`;
@@ -960,7 +973,6 @@ function etiqueta(e) {
 // O papel de cada jogador na luta (e a pose em que ele termina) e os números
 // que sobem do bichinho.
 function papelNaLuta(resumo, i) {
-  if (resumo.nula) return { papel: 'nula', flutuantes: [] };
   if (resumo.choque) {
     const flutuantes = resumo.choqueBloqueado[i]
       ? [{ tipo: 'bloqueado', valor: CHOQUE_DANO }]
@@ -969,7 +981,8 @@ function papelNaLuta(resumo, i) {
   }
   if (resumo.vencedor === null) return { papel: 'empate', flutuantes: [] };
   if (i !== resumo.vencedor) {
-    const fora = resumo.bonusFora > 0;
+    // Batalha: quem foi jogado para fora não avança para o choque
+    const fora = resumo.jeito === FORA;
     if (resumo.bloqueado) {
       return { papel: 'protegido', fora, flutuantes: [{ tipo: 'bloqueado', valor: resumo.danoPrevisto }] };
     }
@@ -997,9 +1010,9 @@ function numeroFlutuante(f) {
 // um código desconhecido cai no efeito genérico, sem quebrar nada.
 function configurarEfeitos(tela, estado, resumo) {
   const v = resumo.vencedor;
-  const houveGolpe = v !== null && !resumo.nula;
-  // o especial só "acontece" quando a face especial venceu de verdade
-  const usouEspecial = houveGolpe && resumo.simboloVencedor === ESPECIAL && resumo.bonusFora === 0;
+  const houveGolpe = v !== null;
+  // o especial só "acontece" quando a face especial venceu (nunca na Batalha)
+  const usouEspecial = houveGolpe && resumo.simboloVencedor === ESPECIAL && resumo.modo !== ARENA;
   const codigo = usouEspecial ? estado.jogadores[v].criatura.codigo : '';
   tela.dataset.efeito = codigo;
   // lingua | bola | estrela (genérico, inclusive código desconhecido)
@@ -1044,8 +1057,7 @@ function prepararLuta() {
       ...c, papel,
       vidaAntes: jAntes.vida, vidaDepois: j.vida,
       escudoAntes: jAntes.escudo, escudoDepois: j.escudo,
-      // Batalha: quem parou ou saiu da bandeja não avança para o choque
-      avanca: !resumo.nula && !papel.fora,
+      avanca: !papel.fora,
     };
   });
 
@@ -1078,7 +1090,6 @@ const POSE = {
   protegido: [0, 1, 0],
   choque: [0, 1, 0],
   empate: [0, 1, 0],
-  nula: [0, 1, 0],
 };
 const NEUTRO = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
@@ -1144,6 +1155,7 @@ function animarLuta(luta) {
         b.disabled = fim.terminou;
         b.setAttribute('aria-pressed', 'false');
       }
+      l.corpo.querySelector('.botao-proxima').disabled = fim.terminou;
     }
     atualizarCentro();
   };
@@ -1197,7 +1209,6 @@ function animarLuta(luta) {
       let meio;
       if (l.papel.papel === 'perdeu') meio = [30, 0.84, -16];
       else if (l.papel.papel === 'tombou') meio = [26, 0.9, -40];
-      else if (l.papel.papel === 'nula') meio = [0, 1, -7];
       else if (l.papel.papel === 'venceu' && lados[1 - i].papel.papel === 'protegido') {
         // o escudo do outro devolve o golpe: o atacante quica para trás
         meio = [24, 0.96, 5];

@@ -136,6 +136,22 @@
 
       <div class="metade metade-1" id="metade-1"></div>
 
+      <!-- Batalha (ARENA): um toque diz quem ganhou e como. A tela escurece por
+           trás; a pergunta vem escrita para os dois lados (a de baixo do painel
+           fica de cabeça para baixo, para o jogador de cima). -->
+      <div id="quem-ganhou" class="quem-ganhou" role="dialog" aria-modal="true" aria-labelledby="qg-titulo" hidden>
+        <div class="qg-painel">
+          <p class="qg-titulo" id="qg-titulo">Quem ganhou?</p>
+          <div class="qg-grade">
+            <div class="qg-lado" id="qg-lado-0"></div>
+            <button type="button" class="qg-opcao qg-empate" data-ganhou="EMPATE">Empate</button>
+            <div class="qg-lado" id="qg-lado-1"></div>
+          </div>
+          <p class="qg-titulo qg-titulo-cima" aria-hidden="true">Quem ganhou?</p>
+          <button type="button" class="botao-link qg-sair">Sair</button>
+        </div>
+      </div>
+
       <!-- A tela conta a rodada por desenho; esta linha conta por extenso
            para quem usa leitor de tela. -->
       <p id="resultado-leitura" class="so-leitor" aria-live="polite"></p>
