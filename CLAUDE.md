@@ -18,9 +18,10 @@ app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativ
 ## Modos de jogo (fonte da verdade: `js/regras.js`)
 
 - **Rolar** (clássico): as regras abaixo.
-- **Arena**: os dois dentro do círculo → igual ao Rolar. Só um dentro → ele
-  vence, a face não importa, o outro leva `forca + BONUS_FORA` (1). Nenhum
-  dentro → rodada nula. Escudo continua valendo.
+- **Arena** (na tela: **Batalha**; as peças são piões numa bandeja): os dois
+  ainda girando (`dentro`) → igual ao Rolar. Só um girando → ele vence, a face
+  não importa, o outro (parou primeiro ou saiu da bandeja) leva
+  `forca + BONUS_FORA` (1). Os dois pararam/saíram → rodada nula. Escudo continua valendo.
 - **Mira**: igual ao Rolar; vencedor acertou o alvo → `+BONUS_ACERTO` (2), que
   **não soma** com o +2 do tropeço (extra máximo da rodada é +2); errou → dano
   pela metade, arredondado para baixo. Cura, recuo e escudo não mudam.
@@ -119,7 +120,10 @@ Regras que não podem regredir:
   os dois. Jogador 1 na metade de cima, girada 180° pelo CSS; Jogador 2 embaixo.
   As duas metades têm o mesmo desenho: bichinho perto do meio, botões perto da
   borda. A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
-  resultado separada. Nunca ponha `transform` na `.metade` (é o giro): anime
+  resultado separada, e sem botão de lutar: quando os dois responderam, o
+  botão do meio vira DESFAZER por 1,5 s (`ESPERA_DESFAZER`) e a rodada resolve
+  sozinha; depois da animação os botões de símbolo já aceitam a próxima escolha
+  (o primeiro toque começa a rodada nova). Nunca ponha `transform` na `.metade` (é o giro): anime
   `.metade-corpo` ou `.bicho-luta`. No JS, deslocamento medido na tela vira
   deslocamento da metade por `naMetade()`.
 - **A luta é animada em JS** (Web Animations, `animarLuta` em `js/app.js`): o
@@ -128,13 +132,18 @@ Regras que não podem regredir:
   [data-papel]` (CSS) — mantenha os dois iguais. Sem `Element.animate`, pula
   direto para o fim.
 - **A rodada é contada por desenho, não por parágrafo:** cada metade mostra o
-  veredito do seu jogador (VENCEU!, PERDEU, Tropeçou!...) e os selos
-  (`.etiqueta`) do que aconteceu com ele, no lugar dos botões de símbolo; no
-  máximo uma `.nota`, só para o que a tela esconderia. O texto completo continua
+  veredito do seu jogador (VENCEU!, PERDEU, Tropeçou!, Choque!...) e os selos
+  (`.etiqueta`) do que aconteceu com ele, ao lado do bichinho (os botões de
+  símbolo ficam no lugar); no máximo uma `.nota`, só para o que a tela esconderia. O texto completo continua
   em `#resultado-leitura` (`.so-leitor`), para leitor de tela — ao mexer no
   resultado, mantenha essa linha em dia.
-- Efeitos por especial são mapeados por código da criatura em `css/estilo.css`;
-  código desconhecido cai no efeito genérico.
+- O especial tem momento próprio: o nome entra grande na `.faixa-especial` (uma
+  linha para cada jogador) e o efeito vem de `EFEITO_ESPECIAL` em `js/app.js`
+  (`data-fx`): Língua Chicote puxa a vida de um painel para o outro, Bola de
+  Ferro cai no oponente e acende o escudo; qualquer outro código (inclusive
+  desconhecido) usa a estrela genérica.
+- Com arte, o bichinho da batalha fica grande (`.metade.tem-arte`) e reage ao
+  resultado: vencedor pula, perdedor treme (≤ 0,8 s, dentro do teto da rodada).
 
 ## Comandos
 

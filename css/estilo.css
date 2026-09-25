@@ -542,6 +542,9 @@ input:focus-visible {
   transform-origin: 50% 70%;
 }
 .bicho-luta .bichinho { height: 100%; max-height: 190px; }
+/* Com arte, o bichinho é a estrela do painel: coluna maior e imagem alta. */
+.metade.tem-arte .palco-luta { grid-template-columns: minmax(0, 52%) minmax(0, 1fr); }
+.metade.tem-arte .bicho-luta { max-height: 250px; }
 .bicho-luta .painel-bicho-placa { right: 2%; bottom: 0; font-size: 38px; }
 /* Trocou de símbolo, o retrato é redesenhado: a entrada confirma o toque. */
 .bicho-luta .bichinho, .painel-bicho-placa .placa { animation: bicho-troca 220ms ease-out; }
@@ -662,7 +665,8 @@ input:focus-visible {
 .metade-cabeca .vida-trilho { height: 18px; }
 .metade-cabeca .vida-numero { font-size: 1.15rem; min-width: 4.2ch; }
 
-/* base: botões de símbolo e, no resultado, os selos no mesmo lugar */
+/* base: os botões de símbolo. Ficam sempre ali: depois da luta já aceitam a
+   escolha da rodada seguinte (o resultado fica ao lado do bichinho). */
 .base { display: grid; }
 /* Arena com alguém fora: o símbolo não conta, e a base diz isso */
 .base-aviso {
@@ -675,18 +679,10 @@ input:focus-visible {
 }
 .fase-texto .base-aviso { visibility: hidden; }
 .base > * { grid-area: 1 / 1; }
-.selos-rodada {
-  align-content: center;
-  justify-content: center;
-  min-height: var(--toque);
-  visibility: hidden;
-  opacity: 0;
-  transition: opacity 160ms ease-out;
-}
-.selos-rodada .etiqueta { font-size: 0.9rem; padding: 3px 9px 3px 6px; }
-.selos-rodada .etiqueta .icone { font-size: 1.2rem; }
-.fase-texto .base .simbolos { visibility: hidden; }
-.fase-texto .selos-rodada { visibility: visible; opacity: 1; }
+/* os selos da rodada, embaixo do veredito */
+.selos-rodada { gap: 4px; }
+.selos-rodada .etiqueta { gap: 4px; padding: 2px 7px 2px 5px; border-width: 2px; font-size: 0.82rem; line-height: 1.15; }
+.selos-rodada .etiqueta .icone { font-size: 1.05rem; }
 .fase-texto .lado-info { visibility: hidden; }
 .fase-texto .lado-resultado { visibility: visible; opacity: 1; transform: none; }
 
@@ -794,6 +790,7 @@ input:focus-visible {
 .botao-sair:focus-visible { outline: 4px solid var(--sistema-neon); outline-offset: 2px; }
 
 .botao-lutar {
+  position: relative;
   display: grid;
   place-items: center;
   align-content: center;
@@ -822,8 +819,25 @@ input:focus-visible {
   cursor: default;
   transform: none;
 }
-.lutar-texto { display: block; font-size: 0.95rem; font-weight: 700; line-height: 1.05; letter-spacing: 0.04em; }
+.lutar-texto { position: relative; display: block; font-size: 0.95rem; font-weight: 700; line-height: 1.05; letter-spacing: 0.04em; }
 .lutar-cima { transform: rotate(180deg); }
+/* esperando os dois: VS grande */
+.botao-lutar:disabled .lutar-texto { font-size: 1.15rem; }
+/* DESFAZER: palavra longa, letra menor; o anel fecha em 1,5 s (ESPERA_DESFAZER) */
+.botao-lutar.contando .lutar-texto { font-size: 0.74rem; letter-spacing: 0.02em; }
+.lutar-anel {
+  position: absolute;
+  inset: -12px;
+  border: 4px solid var(--sistema-neon);
+  border-radius: 50%;
+  opacity: 0;
+  pointer-events: none;
+}
+.botao-lutar.contando .lutar-anel { animation: anel-fecha 1500ms linear both; }
+@keyframes anel-fecha {
+  from { opacity: 1; transform: scale(1.3); }
+  to { opacity: 0.2; transform: scale(0.86); }
+}
 /* os dois prontos: o botão chama (loop só aqui, é sinal de estado) */
 .botao-lutar:not(:disabled):not([aria-disabled="true"]) { animation: chama 900ms ease-in-out infinite alternate; }
 @keyframes chama {
@@ -1118,10 +1132,12 @@ input:focus-visible {
 
 
 /* ---------- Efeitos do confronto ----------
-   Peças genéricas (clarão, anel, estilhaços no meio da tela; língua e domo
-   no bichinho que venceu; carimbo em quem tropeçou) que o data-efeito de
-   #tela-batalha liga ou desliga. Cada um dos 6 especiais acende uma
-   combinação diferente; código desconhecido cai no anel genérico.
+   Peças genéricas (clarão e anel no meio da tela; carimbo em quem tropeçou)
+   e o momento do especial, ligado por data-fx em #tela-batalha:
+     lingua  — Língua Chicote (SAP02): a língua alcança o outro e puxa a vida
+     bola    — Bola de Ferro (TAT01): a bola cai no outro e o escudo acende
+     estrela — os outros especiais e qualquer código desconhecido
+   O nome do especial entra grande na faixa do meio (.faixa-especial).
    Tudo em transform/opacity, tudo termina antes dos 1,2s da rodada. */
 
 /* o ponto de encontro: centro exato da faixa do meio */
@@ -1146,10 +1162,6 @@ input:focus-visible {
 #tela-batalha { --cor-efeito: var(--especial); }
 #tela-batalha[data-efeito="TAT01"] { --cor-efeito: var(--escudo); }   /* Bola de Ferro */
 #tela-batalha[data-efeito="SAP02"] { --cor-efeito: #d1006b; }         /* Língua Chicote */
-#tela-batalha[data-efeito="TAT03"] { --cor-efeito: var(--tatu); }     /* Espinho */
-#tela-batalha[data-efeito="SAP04"] { --cor-efeito: var(--sapo); }     /* Pulo Duplo */
-#tela-batalha[data-efeito="TAT05"] { --cor-efeito: var(--cura); }     /* Casca Dura */
-#tela-batalha[data-efeito="SAP06"] { --cor-efeito: #e35205; }         /* Estouro */
 
 .clarao {
   left: -60px;
@@ -1168,12 +1180,9 @@ input:focus-visible {
 
 /* quem aparece em cada especial */
 [data-golpe="dano"] .choque .onda, [data-golpe="bloqueado"] .choque .onda { display: block; }
-/* o segundo anel é só do Pulo Duplo (mesma especificidade: vale a ordem) */
-[data-golpe] .choque .onda-2 { display: none; }
-[data-efeito="SAP04"] .choque .onda-2 { display: block; }
-[data-efeito="TAT03"] .choque .estilhacos, [data-efeito="SAP06"] .choque .estilhacos { display: block; }
-[data-efeito="SAP02"] .metade.atacante .lingua { display: block; }
-[data-efeito="TAT01"] .metade.atacante .domo, [data-efeito="TAT05"] .metade.atacante .domo { display: block; }
+[data-fx="estrela"] .choque .estrela { display: block; }
+[data-fx="lingua"] .metade.atacante .lingua, [data-fx="lingua"] .choque .gota-vida { display: block; }
+[data-fx="bola"] .metade.atacante .domo, [data-fx="bola"] .choque .bola-ferro { display: block; }
 
 /* anel de choque, no ponto de encontro */
 .onda {
@@ -1185,27 +1194,93 @@ input:focus-visible {
   border-radius: 50%;
 }
 .fase-impacto .onda { animation: onda 440ms cubic-bezier(0.1, 0.7, 0.3, 1) both; }
-.fase-impacto .onda-2 { animation: onda 440ms cubic-bezier(0.1, 0.7, 0.3, 1) 140ms both; }
 @keyframes onda {
   0% { opacity: 0.95; transform: scale(0.2); }
   100% { opacity: 0; transform: scale(4.2); }
 }
 
-/* espinhos / estouro: raios saindo do centro */
-.estilhacos {
-  left: -100px;
-  top: -100px;
-  width: 200px;
-  height: 200px;
-  background: repeating-conic-gradient(from 0deg,
-    var(--cor-efeito) 0deg 3.5deg, rgba(255, 255, 255, 0) 3.5deg 24deg);
-  -webkit-mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 16%, #000 30%, #000 44%, rgba(0, 0, 0, 0) 56%);
-  mask-image: radial-gradient(circle, rgba(0, 0, 0, 0) 16%, #000 30%, #000 44%, rgba(0, 0, 0, 0) 56%);
+/* estrela genérica: gira e cresce no ponto de encontro */
+.estrela {
+  left: -70px;
+  top: -70px;
+  width: 140px;
+  height: 140px;
+  fill: var(--especial);
+  stroke: var(--tinta);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  overflow: visible;
 }
-.fase-impacto .estilhacos { animation: estilhacos 480ms cubic-bezier(0.1, 0.75, 0.3, 1) both; }
-@keyframes estilhacos {
-  0% { opacity: 1; transform: scale(0.25) rotate(-10deg); }
-  100% { opacity: 0; transform: scale(1.6) rotate(10deg); }
+/* curta: some antes do nome do especial ficar sozinho na faixa */
+.fase-impacto .estrela { animation: estrela 440ms cubic-bezier(0.15, 0.8, 0.3, 1) both; }
+@keyframes estrela {
+  0% { opacity: 0; transform: scale(0.2) rotate(-60deg); }
+  35% { opacity: 1; transform: scale(0.95) rotate(0deg); }
+  100% { opacity: 0; transform: scale(1.9) rotate(30deg); }
+}
+
+/* Bola de Ferro e a vida da Língua Chicote: o JS leva cada uma de um
+   bichinho a outro (Web Animations, medindo a tela); aqui só o desenho. */
+.bola-ferro {
+  left: -30px;
+  top: -30px;
+  z-index: 2;
+  width: 60px;
+  height: 60px;
+  border: 4px solid var(--tinta);
+  border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #d9dee6 0 12%, #6b7485 34%, #252b36 72%);
+}
+.gota-vida {
+  left: -24px;
+  top: -24px;
+  z-index: 2;
+  width: 48px;
+  height: 48px;
+  color: var(--perigo);
+  font-size: 48px;
+  line-height: 1;
+}
+.gota-vida .icone { width: 48px; height: 48px; stroke: #fff; stroke-width: 2.4px; paint-order: stroke; }
+
+/* O nome do especial: faixa amarela por cima da faixa do meio, uma linha
+   virada para cada jogador. Entra no impacto e sai antes do fim da rodada. */
+.faixa-especial {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -3px;
+  bottom: -3px;
+  z-index: 4; /* por cima das metades, por baixo do choque (a estrela passa na frente) */
+  display: none;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  border-top: 3px solid var(--tinta);
+  border-bottom: 3px solid var(--tinta);
+  background-color: var(--especial);
+  background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.35) 0 10px, rgba(255, 255, 255, 0) 10px 22px);
+  color: var(--especial-texto);
+  opacity: 0;
+  pointer-events: none;
+}
+.faixa-especial span {
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.faixa-especial .fe-cima { transform: rotate(180deg); }
+[data-fx="lingua"] .faixa-especial, [data-fx="bola"] .faixa-especial, [data-fx="estrela"] .faixa-especial { display: grid; }
+.fase-impacto .faixa-especial { animation: faixa-especial 760ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@keyframes faixa-especial {
+  0% { opacity: 0; transform: scaleX(0.2); }
+  16% { opacity: 1; transform: scaleX(1.03); }
+  26% { opacity: 1; transform: scaleX(1); }
+  82% { opacity: 1; transform: scaleX(1); }
+  100% { opacity: 0; transform: scaleX(1); }
 }
 
 /* Língua Chicote: sai do vencedor, atravessa o meio e alcança o outro.
@@ -1231,7 +1306,7 @@ input:focus-visible {
   100% { opacity: 0; transform: rotate(var(--giro-lingua, 0rad)) scaleY(0.06); }
 }
 
-/* domo: escudo (Bola de Ferro) ou casca (Casca Dura), em volta do vencedor */
+/* domo: o escudo da Bola de Ferro acendendo em volta do vencedor */
 .domo {
   left: 50%;
   top: 50%;
@@ -1489,7 +1564,9 @@ input:focus-visible {
 .cartao-avatar .bichinho { height: 78px; margin-bottom: -8px; }
 
 /* espera: a peça lida, esperando a segunda */
-.espera-selo { margin-top: 3vh; }
+.espera-selo { display: flex; justify-content: center; margin-top: 3vh; }
+.espera-arte { width: min(180px, 46vw); height: min(180px, 46vw); }
+.espera-arte .arte-bicho { animation: arte-entra 700ms cubic-bezier(0.2, 1.3, 0.4, 1) 60ms both; }
 .espera-qr { font-size: 4rem; line-height: 1; color: var(--sistema); }
 /* moldura de leitura: quatro cantos, como visor de scanner */
 .mira-leitura {

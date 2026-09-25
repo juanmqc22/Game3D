@@ -109,19 +109,28 @@
       <div class="faixa-centro">
         <button type="button" class="botao-link botao-sair" id="btn-sair">Sair</button>
         <span class="chip-rodada chip-rodada-cima" id="rodada-cima"></span>
-        <!-- O texto do botão vem escrito nos dois sentidos, um para cada jogador. -->
+        <!-- Não há botão de lutar: a rodada resolve sozinha quando os dois
+             responderam. O meio mostra VS, DESFAZER (1,5 s, com o anel fechando)
+             ou VER FIM. O texto vem escrito nos dois sentidos, um para cada jogador. -->
         <button type="button" class="botao-lutar" id="btn-lutar" disabled>
+          <span class="lutar-anel" aria-hidden="true"></span>
           <span class="lutar-texto lutar-cima" aria-hidden="true"></span>
           <span class="lutar-texto lutar-baixo"></span>
         </button>
         <span class="chip-rodada" id="rodada-baixo"></span>
+        <!-- O nome do especial, grande, por cima da faixa: uma linha para cada jogador. -->
+        <div class="faixa-especial" aria-hidden="true">
+          <span class="fe-cima"></span>
+          <span class="fe-baixo"></span>
+        </div>
         <!-- camada do choque, no meio da tela: quais efeitos aparecem é decidido
-             por data-efeito em #tela-batalha (um por especial). Ver css/estilo.css. -->
+             por data-fx em #tela-batalha (lingua, bola ou estrela). Ver css/estilo.css. -->
         <div class="choque" aria-hidden="true">
           <span class="onda"></span>
-          <span class="onda onda-2"></span>
-          <span class="estilhacos"></span>
+          <svg class="estrela" viewBox="-50 -50 100 100"><polygon points="0,-46 13,-15 46,-14 20,7 29,40 0,21 -29,40 -20,7 -46,-14 -13,-15"/></svg>
           <span class="clarao"></span>
+          <span class="bola-ferro"></span>
+          <span class="gota-vida"></span>
         </div>
       </div>
 
