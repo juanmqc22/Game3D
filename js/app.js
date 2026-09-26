@@ -3,24 +3,24 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=14';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=15';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   GIROU, FORA, estadoInicial, resolverRodadaModo, golpeDaRodada,
-} from './regras.js?v=14';
+} from './regras.js?v=15';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida,
   iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
   iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr, iconeSom,
-} from './icones.js?v=14';
+} from './icones.js?v=15';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
-} from './escaneio.js?v=14';
+} from './escaneio.js?v=15';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, listaDeEscolha,
-} from './colecao.js?v=14';
-import { arteDaCriatura } from './arte.js?v=14';
-import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=14';
+} from './colecao.js?v=15';
+import { arteDaCriatura } from './arte.js?v=15';
+import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=15';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
