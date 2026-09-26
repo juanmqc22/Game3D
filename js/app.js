@@ -640,18 +640,19 @@ function abrirModo() {
 
 // ---------- tela: batalha (tela dividida) ----------
 //
-// Tudo se lê de um lado só, na orientação normal do celular (nada gira; a
-// auditoria em test/orientacao.test.js falha se algum texto girar). O
-// Jogador 1 fica na metade de cima e o Jogador 2 embaixo. Nas duas o
-// bichinho fica perto do meio da tela (é lá que a luta acontece) e os botões
-// perto da borda: na de cima a ordem de dentro é invertida pelo CSS.
+// O celular fica na mesa entre os dois jogadores. Cada um tem a sua metade:
+// o Jogador 1 em cima (a metade é girada 180° pelo CSS, então fica de frente
+// para ele), o Jogador 2 embaixo. A ordem dentro da metade é a mesma para os
+// dois: o bichinho perto do meio da tela (é lá que a luta acontece) e os
+// botões perto da borda, onde a mão da criança alcança.
 //
 // A luta acontece na mesma tela e sem botão de lutar: quando os dois
 // responderam, o botão do meio vira DESFAZER por ESPERA_DESFAZER e a rodada
 // resolve sozinha. Depois da animação os botões de símbolo já aceitam a
 // próxima escolha: o primeiro toque limpa o resultado e começa a rodada nova.
 
-// Contra o Rato do Mato ele fica sempre na metade de cima.
+// Contra o Rato do Mato a criança joga sozinha, sentada de um lado: o Rato
+// fica sempre na metade de cima, e essa metade não gira (ver .metade-rival).
 function iniciarPartida() {
   if (app.escolhas[1]?.rival) app.escolhas = [app.escolhas[1], app.escolhas[0]];
   app.partida = estadoInicial(app.escolhas[0], app.escolhas[1]);
@@ -723,7 +724,7 @@ function renderBatalha() {
   tela.dataset.modo = modo;
   tela.classList.toggle('contra-rival', contraRival());
 
-  for (const chip of [$('rodada')]) {
+  for (const chip of [$('rodada-cima'), $('rodada')]) {
     chip.replaceChildren(
       el('span', { class: 'chip-rodada-nome' }, 'Rodada'),
       el('b', {}, String(estado.rodada + 1)),
@@ -855,7 +856,8 @@ function atualizarEntradas() {
   atualizarCentro();
 }
 
-// O texto do botão do meio.
+// O mesmo texto nas duas metades do botão: uma de cabeça para baixo, para o
+// jogador de cima.
 function rotularLutar(texto) {
   const botao = $('btn-lutar');
   for (const s of botao.querySelectorAll('.lutar-texto')) s.textContent = texto;
@@ -1250,6 +1252,8 @@ function tocarCena({ tela, lados, resumo }, animar, em) {
   const cv = centroNaCena(lados[v], base);
   const cp = centroNaCena(lados[p], base);
   const fx = tela.dataset.fx;
+  // a arte vem de frente para quem usou o especial (a metade de cima está girada)
+  const girada = v === 0 && !contraRival() ? ' rotate(180deg)' : '';
   // a arte grande fica no painel de quem usou o especial, um pouco para fora,
   // sem cobrir a faixa do nome no meio da tela
   const arteEm = { x: base.width / 2, y: cv.y + (cv.y < base.height / 2 ? -14 : 14) };
@@ -1267,11 +1271,11 @@ function tocarCena({ tela, lados, resumo }, animar, em) {
     { opacity: 0 }, { opacity: 1, offset: 0.14 }, { opacity: 1, offset: 0.86 }, { opacity: 0 },
   ], { duration: T, fill: 'none' });
   animar(arte, [
-    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.3)`) },
-    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1.08)`), offset: 0.2, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
-    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)`), offset: 0.28 },
-    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)`), offset: 0.82 },
-    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.5)`) },
+    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.3)${girada}`) },
+    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1.08)${girada}`), offset: 0.2, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
+    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)${girada}`), offset: 0.28 },
+    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)${girada}`), offset: 0.82 },
+    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.5)${girada}`) },
   ], { duration: T, fill: 'none' });
   animar(cena.querySelector('.cena-nome'), [
     { opacity: 0, transform: 'scaleX(0.2)' },
@@ -1369,9 +1373,10 @@ function tremer(corpo, animar, forca, duracao) {
 // Rodada de especial: tudo isso começa depois da cena (tocarCena).
 // Um toque em qualquer lugar pula para o final.
 //
-// As metades têm o mesmo desenho, com a ordem de dentro invertida na de cima:
-// "para o meio da tela" é para baixo na metade de cima e para cima na de
-// baixo (sentidoDoMeio). quadro() espelha as poses de acordo.
+// As metades têm o mesmo desenho, só que a de cima está girada: nas duas,
+// "para o meio da tela" é para cima (translateY negativo) no próprio sistema
+// de coordenadas. Por isso uma só receita serve aos dois jogadores — menos na
+// metade do Rato, que fica em cima sem girar (sentidoDoMeio, quadro()).
 
 // Pose em que cada papel termina — igual às regras .fase-final [data-papel] do CSS, para o
 // último quadro da animação e o estado final baterem sem salto.
@@ -1386,27 +1391,30 @@ const POSE = {
 };
 const NEUTRO = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
-// Transform do bichinho da metade i. Na metade de cima "longe do meio" é
-// para cima, então y e o giro trocam de sinal.
+// Transform do bichinho da metade i. Na metade do Rato (em cima, sem giro)
+// "longe do meio" é para cima, então y e o giro trocam de sinal.
 function quadro(i, [y, escala, giro]) {
   const s = -sentidoDoMeio(i);
   return `translate3d(0, ${y * s}px, 0) scale(${escala}) rotate(${giro * s}deg)`;
 }
 
-// Centro do bichinho na tela.
+// Centro do bichinho na tela (getBoundingClientRect já considera o giro).
 function centroNaTela(lado) {
   const r = lado.bicho.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, altura: r.height };
 }
 
-// Deslocamento na tela = deslocamento na metade (nenhuma metade gira).
+// Converte um deslocamento na tela para o sistema da metade: a de cima está
+// girada 180°, então lá x e y trocam de sinal. Contra o Rato a de cima não gira.
 function naMetade(i, dx, dy) {
-  return { x: dx, y: dy };
+  const giro = i === 0 && !contraRival() ? -1 : 1;
+  return { x: giro * dx, y: giro * dy };
 }
 
-// "Para o meio da tela": +1 (para baixo) na metade de cima, -1 na de baixo.
+// "Para o meio da tela" no sistema da metade: -1 (para cima) nas metades de
+// sempre; +1 na do Rato, que fica em cima sem girar.
 function sentidoDoMeio(i) {
-  return i === 0 ? 1 : -1;
+  return i === 0 && contraRival() ? 1 : -1;
 }
 
 // Até onde cada bichinho anda para encostar no outro de frente, no meio da
@@ -1610,7 +1618,7 @@ function nocaute(luta) {
         ], { duration: TEMPO_NOCAUTE.desmaio, fill: 'none' });
         return;
       }
-      // "longe do meio": para cima na metade de cima, para baixo na de baixo
+      // "longe do meio", no sistema da metade (ver sentidoDoMeio)
       const s = -sentidoDoMeio(i);
       const passo = (x, y, giro, escala) => `translate3d(${x}px, ${y * s}px, 0) rotate(${giro * s}deg) scale(${escala})`;
       animar(figura, [

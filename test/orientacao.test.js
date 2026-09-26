@@ -1,6 +1,8 @@
-// Orientação dos textos: tudo se lê de um lado só, na orientação normal do
-// celular — com UMA exceção: na tela de fim, a metade do Jogador 1 (em cima)
-// vem girada 180° para quem está do outro lado da mesa (contra o Rato, não).
+// Orientação dos textos: o celular fica na mesa entre os dois jogadores. Na
+// batalha e na tela de fim, a metade do Jogador 1 (em cima) vem girada 180°
+// para quem está do outro lado, junto com as cópias de cabeça para baixo do
+// meio (rodada, botão do meio, "Quem ganhou?", nome do especial). Contra o
+// Rato nada gira (é uma criança só). Todo o resto fica de pé.
 // Percorre todas as telas e estados num navegador de verdade e falha se algum
 // elemento com texto visível tiver rotação diferente da esperada (somando o
 // giro de todos os ancestrais). Sem Chrome/Edge na máquina, a parte do
@@ -14,20 +16,18 @@ const css = readFileSync(new URL('../css/estilo.css', import.meta.url), 'utf8');
 const html = readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 
 describe('orientação: checagem estática', () => {
-  test('rotate(180deg) só na metade de cima da tela de fim', () => {
-    const regras = [...css.matchAll(/([^{}]+)\{[^{}]*rotate\(\s*180deg\s*\)[^{}]*\}/g)].map((m) => m[1].trim());
-    assert.deepEqual(regras, ['.fim-metade-0 .fim-conteudo']);
+  test('rotate(180deg) só nas partes do jogador de cima', () => {
+    const regras = [...css.matchAll(/([^{}]+)\{[^{}]*rotate\(\s*180deg\s*\)[^{}]*\}/g)]
+      .map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim());
+    assert.deepEqual(regras, [
+      '.metade-0', '.chip-rodada-cima', '.lutar-cima', '.qg-titulo-cima', '.cena-nome .cn-cima', '.fim-metade-0 .fim-conteudo',
+    ]);
     assert.doesNotMatch(html, /rotate\(\s*180deg\s*\)/);
-  });
-  test('sem as cópias de cabeça para baixo de antes', () => {
-    for (const velho of ['lutar-cima', 'rodada-cima', 'qg-titulo-cima', 'cn-cima', 'fe-cima']) {
-      assert.ok(!html.includes(velho), velho);
-    }
   });
 });
 
 // Giro de cada elemento com texto visível, somando os ancestrais. Esperado:
-// 180° na metade de cima do fim (fora do jogo contra o Rato), 0° no resto.
+// 180° nas partes do jogador de cima (fora do jogo contra o Rato), 0° no resto.
 const GIRADOS = `(() => {
   const giro = (el) => {
     let m = new DOMMatrix();
@@ -45,7 +45,8 @@ const GIRADOS = `(() => {
       const cs = getComputedStyle(el);
       if (r.width < 1 || r.height < 1 || cs.visibility === 'hidden' || el.closest('[hidden]')) continue;
       const g = giro(el);
-      const esperado = el.closest('#tela-fim:not(.contra-rival) #fim-metade-0') ? 180 : 0;
+      const esperado = el.closest('#tela-fim:not(.contra-rival) #fim-metade-0, '
+        + '#tela-batalha:not(.contra-rival) :is(#metade-0, .chip-rodada-cima, .lutar-cima, .qg-titulo-cima, .cn-cima)') ? 180 : 0;
       const erro = Math.abs((((g - esperado) % 360) + 540) % 360 - 180);
       if (erro > 0.5) fora.push(el.textContent.trim().slice(0, 24) + ' (' + g.toFixed(1) + '°)');
     }

@@ -472,10 +472,10 @@ input:focus-visible {
 .cartao-em-breve .cartao-codigo { color: #fff; }
 
 /* ---------- Batalha em tela dividida ----------
-   Tudo se lê de um lado só, na orientação normal do celular: nada gira.
-   Metade de cima = Jogador 1, metade de baixo = Jogador 2. Nas duas o
-   bichinho fica perto do meio (onde a luta acontece) e os botões perto da
-   borda: na de cima a ordem de dentro é invertida (column-reverse). */
+   O celular fica na mesa entre os dois. Metade de cima = Jogador 1, girada
+   180° para ficar de frente para ele; metade de baixo = Jogador 2. As duas
+   metades têm o mesmo desenho: bichinho perto do meio (onde a luta acontece),
+   botões perto da borda (onde a mão alcança). */
 
 .tela.dividida {
   position: fixed;
@@ -499,10 +499,22 @@ input:focus-visible {
   min-height: 0;
   padding: 6px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 8px);
 }
-.metade-0 { padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--gutter) 6px; }
-.metade-0 .metade-corpo { flex-direction: column-reverse; }
-/* a faixa da espécie fica sempre do lado do meio da tela */
-.metade-0 .metade-corpo::before { top: auto; bottom: -3px; border-radius: 0 0 16px 3px; }
+/* de frente para o jogador do outro lado; a borda de baixo dele é o topo da tela */
+.metade-0 {
+  transform: rotate(180deg);
+  padding-bottom: calc(env(safe-area-inset-top, 0px) + 8px);
+}
+/* Contra o Rato a criança joga sozinha, de um lado: a metade dele (sempre a
+   de cima) não gira. A ordem de dentro inverte para o bichinho continuar
+   perto do meio e os botões perto da borda. */
+.metade-0.metade-rival {
+  transform: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--gutter) 6px;
+}
+.metade-rival .metade-corpo { flex-direction: column-reverse; }
+.metade-rival .metade-corpo::before { top: auto; bottom: -3px; border-radius: 0 0 16px 3px; }
+/* sozinho contra o Rato: as cópias de cabeça para baixo saem */
+.contra-rival .chip-rodada-cima, .contra-rival .lutar-cima { display: none; }
 /* quem ataca passa por cima da outra metade (língua, bote) */
 .metade.atacante { z-index: 3; }
 
@@ -879,6 +891,8 @@ input:focus-visible {
   font-size: 1.5rem;
   font-variant-numeric: tabular-nums;
 }
+/* a do jogador de cima vem de cabeça para baixo, do lado esquerdo */
+.chip-rodada-cima { grid-column: 1; justify-self: end; transform: rotate(180deg); }
 #btn-lutar { grid-column: 2; }
 #rodada { grid-column: 3; }
 .botao-sair {
@@ -927,6 +941,7 @@ input:focus-visible {
   transform: none;
 }
 .lutar-texto { position: relative; display: block; font-size: 0.95rem; font-weight: 700; line-height: 1.05; letter-spacing: 0.04em; }
+.lutar-cima { transform: rotate(180deg); }
 /* esperando os dois: VS grande */
 .botao-lutar:disabled .lutar-texto { font-size: 1.15rem; }
 /* DESFAZER: palavra longa, letra menor; o anel fecha em 1,5 s (ESPERA_DESFAZER) */
@@ -1100,6 +1115,9 @@ input:focus-visible {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
+/* a mesma pergunta, de cabeça para baixo, para o jogador de cima */
+.qg-titulo-cima { font-size: 1.3rem; transform: rotate(180deg); }
+.contra-rival .qg-titulo-cima { display: none; }
 .qg-grade {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1384,9 +1402,9 @@ input:focus-visible {
 .fase-final .metade[data-papel="venceu"] .bicho-luta { transform: translate3d(0, 0, 0) scale(1.06) rotate(0deg); }
 .fase-final .metade[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, 10px, 0) scale(0.88) rotate(-9deg); }
 .fase-final .metade[data-papel="tombou"] .bicho-luta { transform: translate3d(0, 16px, 0) scale(0.86) rotate(-84deg); }
-/* na metade de cima "para longe do meio" é para cima: quadro() no JS */
-.fase-final .metade-0[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, -10px, 0) scale(0.88) rotate(9deg); }
-.fase-final .metade-0[data-papel="tombou"] .bicho-luta { transform: translate3d(0, -16px, 0) scale(0.86) rotate(84deg); }
+/* na metade do Rato (sem giro) "para longe do meio" é para cima: quadro() no JS */
+.fase-final .metade-rival[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, -10px, 0) scale(0.88) rotate(9deg); }
+.fase-final .metade-rival[data-papel="tombou"] .bicho-luta { transform: translate3d(0, -16px, 0) scale(0.86) rotate(84deg); }
 
 .halo {
   position: absolute;
@@ -1583,16 +1601,18 @@ input:focus-visible {
   font-size: 160px;
 }
 .cena-arte .arte-bicho { width: 100%; height: 100%; }
-/* o nome do especial: faixa amarela no meio da tela */
+/* o nome do especial: faixa amarela no meio da tela, uma linha para cada jogador */
 .cena-nome {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
   display: grid;
-  place-items: center;
-  height: 72px;
-  margin: -36px 0 0;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  height: 112px;
+  margin: -56px 0 0;
   border-top: 4px solid var(--tinta);
   border-bottom: 4px solid var(--tinta);
   background-color: var(--especial);
@@ -1609,6 +1629,9 @@ input:focus-visible {
   white-space: nowrap;
 }
 
+.cena-nome .cn-cima { transform: rotate(180deg); }
+.contra-rival .cena-nome { grid-template-rows: 1fr; height: 64px; margin-top: -32px; }
+.contra-rival .cena-nome .cn-cima { display: none; }
 /* Língua Chicote: rosa, fina, com a ponta redonda. A base fica no ponto de
    partida (bottom: 100% põe a borda de baixo em y = 0) e ela estica em scaleY. */
 .fx-lingua {

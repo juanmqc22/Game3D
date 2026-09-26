@@ -84,7 +84,7 @@ test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 
 test/golpe.test.js          nome do golpe (golpeDaRodada)
 test/som.test.js            modo do som e queda sem Web Audio
 test/trilha.test.js         trilha: durações pedidas, seções bem formadas, voltas da batalha, música < efeitos
-test/orientacao.test.js     texto girado só na metade de cima do fim, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
+test/orientacao.test.js     texto girado só nas partes do jogador de cima, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
 test/navegador.js           apoio: servidor estático + Chrome/Edge headless via DevTools Protocol
 test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
@@ -144,13 +144,15 @@ Regras que não podem regredir:
   rodada gravado no peito. O corpo usa `--cor-corpo` da espécie (tom claro do
   plástico): espécie nova precisa de `--cor-corpo` junto de `--cor-tema`, e quem
   contém o retrato tem que carregar `data-especie`.
-- **Tudo se lê de um lado só, na orientação normal do celular: nenhum texto
-  gira** (nem 180°, nem inclinado) — **com uma única exceção:** na tela de fim,
-  a metade do Jogador 1 (`.fim-metade-0 .fim-conteudo`) gira 180° para quem está
-  do outro lado da mesa (contra o Rato não gira). `test/orientacao.test.js`
-  percorre todas as telas e estados num Chrome/Edge headless (`test/navegador.js`)
-  e falha se algum elemento com texto tiver rotação diferente da esperada, ou se
-  aparecer outro `rotate(180deg)` no CSS. Sem navegador na máquina ele se pula;
+- **O celular fica na mesa entre os dois: o Jogador 1 lê de cabeça para baixo.**
+  Na batalha (nos 3 modos) e na tela de fim, a metade de cima gira 180° para
+  quem está do outro lado; no meio, rodada, botão do meio, "Quem ganhou?" e o
+  nome do especial vêm escritos nos dois sentidos (`-cima` = cópia girada,
+  `aria-hidden`). **Contra o Rato nada gira** (é uma criança só; as cópias somem).
+  Fora disso nenhum texto gira nem inclina. `test/orientacao.test.js` percorre
+  todas as telas e estados num Chrome/Edge headless (`test/navegador.js`) e falha
+  se algum texto tiver rotação diferente da esperada, ou se aparecer um
+  `rotate(180deg)` fora da lista permitida. Sem navegador na máquina ele se pula;
   `NAVEGADOR=/caminho` escolhe outro.
 - **Fim da partida sem botão** (`nocaute` em `js/app.js`, `TEMPO_NOCAUTE`): depois
   da rodada que zera alguém, o último número fica 450 ms na tela, quem zerou
@@ -160,15 +162,17 @@ Regras que não podem regredir:
 - **Tela de fim dividida** (`#tela-fim`, `renderFim`): cada metade mostra o
   resultado de quem está daquele lado (VENCEU!/PERDEU/EMPATE!, arte, nome, vida;
   confete só na metade do vencedor). Revanche e Nova batalha ficam no meio, de pé.
-- **Batalha em tela dividida** (`#tela-batalha`): Jogador 1 na metade de cima,
-  Jogador 2 embaixo, nenhuma gira. Nas duas o bichinho fica perto do meio e os
-  botões perto da borda (a de cima usa `column-reverse`). A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
+- **Batalha em tela dividida** (`#tela-batalha`): Jogador 1 na metade de cima
+  (girada 180°, `.metade-0`), Jogador 2 embaixo. Nas duas o bichinho fica perto
+  do meio e os botões perto da borda (a metade do Rato, sem giro, usa
+  `column-reverse`). A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
   resultado separada, e sem botão de lutar: quando os dois responderam, o
   botão do meio vira DESFAZER por 1,5 s (`ESPERA_DESFAZER`) e a rodada resolve
   sozinha; depois da animação os botões de símbolo já aceitam a próxima escolha
   (o primeiro toque começa a rodada nova). Anime `.metade-corpo` ou `.bicho-luta`,
-  não a `.metade`. "Para o meio da tela" muda de sinal entre as metades
-  (`sentidoDoMeio`; `quadro()` espelha as poses).
+  não a `.metade`. No sistema de cada metade, "para o meio da tela" é para cima;
+  só na do Rato (em cima, sem giro) muda de sinal (`sentidoDoMeio`, `naMetade`;
+  `quadro()` espelha as poses).
 - **A luta é animada em JS** (Web Animations, `animarLuta` em `js/app.js`): o
   bote é medido na tela de verdade para os dois se chocarem de frente no meio.
   A pose final de cada papel está em `POSE` (JS) e em `.fase-final
