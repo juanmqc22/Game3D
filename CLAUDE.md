@@ -67,7 +67,8 @@ js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global
 js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), selo de Fundador (&f=1..10), contador por série, puro
 js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
-js/som.js                   som gerado em código (Web Audio): efeitos, música, modo tudo/efeitos/mudo (localStorage `bichinhos:som`)
+js/som.js                   som gerado em código (Web Audio): efeitos, sequenciador da trilha, modo tudo/efeitos/mudo (localStorage `bichinhos:som`)
+js/trilha.js                a trilha sonora como dados (melodias, acordes, arranjo, voltas da batalha), pura
 js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta
 img/criaturas/              arte publicada (WebP 256 e 512, gerada por `npm run arte`)
 img/originais/              originais da arte, CODIGO.png|webp — fora do Pages (_config.yml)
@@ -82,6 +83,7 @@ test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 80 KB
 test/golpe.test.js          nome do golpe (golpeDaRodada)
 test/som.test.js            modo do som e queda sem Web Audio
+test/trilha.test.js         trilha: durações pedidas, seções bem formadas, voltas da batalha, música < efeitos
 test/orientacao.test.js     nenhum texto girado, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
 test/navegador.js           apoio: servidor estático + Chrome/Edge headless via DevTools Protocol
 test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
@@ -100,7 +102,7 @@ Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3
 
 **Cache (Pages usa max-age=600):** ao mudar qualquer `.js`, `estilo.css` ou a estrutura do
 `index.html`, aumente o `?v=N` em `index.html` (CSS e app.js), nos imports do topo de
-`js/app.js` **e** nos imports de `js/escaneio.js` e `js/colecao.js` (e, se mudar
+`js/app.js` **e** nos imports de `js/escaneio.js`, `js/colecao.js` e `js/som.js` (e, se mudar
 `js/arte.js`, `criaturas.js` ou `icones.js`, nos imports de `raposa/js/app.js`). Sem isso o celular
 mistura HTML novo com JS antigo e trava. Mudar só `criaturas.js` não exige (no pior caso o
 bichinho novo aparece ~10 min depois).
@@ -208,3 +210,10 @@ Regras que não podem regredir:
 - **Som** (`js/som.js`): só Web Audio gerado em código — nenhum arquivo de áudio,
   biblioteca ou música existente. Curto e baixo. O áudio nasce no primeiro toque
   (iPhone); sem Web Audio o botão some. Padrão: só efeitos.
+- **Trilha** (`js/trilha.js`, só no modo "tudo"): tema (telas fora da batalha, ≥ 60 s
+  até repetir), batalha (≥ 45 s, instrumentação muda a cada volta), estingers de VS
+  (≤ 2,5 s), vitória (≤ 4 s) e derrota. Toda melodia é original: **nunca** imitar
+  melodia, motivo, ritmo ou progressão reconhecível de obra existente, nem citar
+  franquias. As notas são agendadas pelo relógio do AudioContext (o `setTimeout`
+  só enche a janela de 1,2 s); troca de faixa com fade de 0,5 s; `VOLUME_MUSICA`
+  sempre abaixo de `VOLUME_EFEITOS`. `faixaDaTela` em `js/app.js` escolhe a faixa.

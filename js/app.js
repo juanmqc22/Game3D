@@ -145,8 +145,18 @@ function movimentoReduzido() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
+// A faixa de fundo de cada tela (js/trilha.js). VS e fim tocam os seus
+// estingers direto (abrirVs, renderFim).
+function faixaDaTela(id) {
+  if (id === 'tela-batalha') return 'batalha';
+  if (id === 'tela-vs' || id === 'tela-fim') return undefined;
+  return 'tema';
+}
+
 function mostrarTela(id) {
   document.body.classList.toggle('em-batalha', id === 'tela-batalha');
+  const faixa = faixaDaTela(id);
+  if (faixa) som.musica(faixa);
   // saiu do VS por outro caminho (ex.: voltar do navegador): o VS não segue sozinho
   if (id !== 'tela-vs' && app.vs) { const vs = app.vs; app.vs = null; vs.cancelar?.(); }
   if (id !== 'tela-espera') pararNfc();
@@ -574,6 +584,7 @@ function abrirVs(depois) {
   const tela = $('tela-vs');
   tela.classList.remove('anima', 'impacto');
   mostrarTela('tela-vs');
+  som.musica('vs');
 
   let feito = false;
   const timers = [];
@@ -1558,6 +1569,7 @@ function renderFim() {
     sub.textContent = 'Os dois ficaram sem vida na mesma rodada.';
     iconeFim.replaceChildren(icone(iconeEmpate()));
     delete iconeFim.dataset.especie;
+    som.musica('derrota');
     $('fim-confete').replaceChildren();
   } else {
     const v = fim.vencedor;
@@ -1582,8 +1594,10 @@ function renderFim() {
       el('b', { class: 'fim-perdeu-selo' }, 'Perdeu'),
     );
     $('fim-confete').replaceChildren(...(movimentoReduzido() ? [] : confete()));
-    // fanfarra só quando a criança ganha (não quando o Rato ganha)
-    if (!campeao.rival) som.tocar('vitoria');
+    // Trilha ligada: fanfarra (ou a frase simpática quando o Rato ganha).
+    // Só efeitos: o efeito curto de vitória, só quando a criança ganha.
+    if (som.modo() === 'tudo') som.musica(campeao.rival ? 'derrota' : 'vitoria');
+    else if (!campeao.rival) som.tocar('vitoria');
   }
 
   // entrada de ~600ms (reinicia a cada fim de partida)
