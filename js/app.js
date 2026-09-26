@@ -3,24 +3,24 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=15';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=16';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   GIROU, FORA, estadoInicial, resolverRodadaModo, golpeDaRodada,
-} from './regras.js?v=15';
+} from './regras.js?v=16';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida,
   iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
   iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr, iconeSom,
-} from './icones.js?v=15';
+} from './icones.js?v=16';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
-} from './escaneio.js?v=15';
+} from './escaneio.js?v=16';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, listaDeEscolha,
-} from './colecao.js?v=15';
-import { arteDaCriatura } from './arte.js?v=15';
-import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=15';
+} from './colecao.js?v=16';
+import { arteDaCriatura } from './arte.js?v=16';
+import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=16';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -108,6 +108,7 @@ const app = {
   depoisDoDesbloqueio: null, // função a chamar ao tocar "Continuar" no card de novo bichinho
   leituraNfc: null, // AbortController da leitura NFC em andamento (tela de espera)
   contagem: null, // timer da resolução automática (enquanto o DESFAZER está no ar)
+  vs: null, // { seguir } enquanto a tela de VS está no ar
   ultimoToque: null, // { jogador, campo } — o que o DESFAZER apaga
 };
 
@@ -144,8 +145,20 @@ function movimentoReduzido() {
   return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 }
 
+// A faixa de fundo de cada tela (js/trilha.js). VS e fim tocam os seus
+// estingers direto (abrirVs, renderFim).
+function faixaDaTela(id) {
+  if (id === 'tela-batalha') return 'batalha';
+  if (id === 'tela-vs' || id === 'tela-fim') return undefined;
+  return 'tema';
+}
+
 function mostrarTela(id) {
   document.body.classList.toggle('em-batalha', id === 'tela-batalha');
+  const faixa = faixaDaTela(id);
+  if (faixa) som.musica(faixa);
+  // saiu do VS por outro caminho (ex.: voltar do navegador): o VS não segue sozinho
+  if (id !== 'tela-vs' && app.vs) { const vs = app.vs; app.vs = null; vs.cancelar?.(); }
   if (id !== 'tela-espera') pararNfc();
   if (id !== 'tela-batalha') cancelarContagem();
   for (const tela of document.querySelectorAll('.tela')) {
@@ -510,12 +523,96 @@ function confirmarEscolha() {
   if (app.escolhaRestrita) {
     // veio da tela de espera: a peça escaneada não espera mais ninguém
     limparAguardando(armazemEspera());
-    abrirModo();
+    abrirVs(abrirModo);
   } else if (app.jogadorEscolhendo === 0) {
     abrirEscolha(1);
   } else {
-    iniciarPartida();
+    abrirVs(iniciarPartida);
   }
+}
+
+// ---------- tela: VS (o confronto) ----------
+//
+// Logo que a partida fica montada — duas peças lidas (QR ou NFC), a lista
+// manual ou "Não tenho a segunda peça", inclusive contra o Rato — aparece o
+// VS: a tela dividida na diagonal, cada metade na cor da espécie, a arte de
+// cada bichinho entrando pelo seu lado, o nome grande e vida/força embaixo.
+// O VS bate no meio (tremida, faíscas, som). Dura TEMPO_VS.total (<= 2,5 s);
+// um toque em qualquer lugar pula. Com movimento reduzido, a mesma
+// composição parada por TEMPO_VS.reduzido. Só transform e opacity (CSS).
+
+const TEMPO_VS = { impacto: 540, total: 2300, reduzido: 1200 };
+
+function ladoDoVs(c, colecao) {
+  const fundador = colecao?.[c.codigo]?.fundador ?? null;
+  const img = imagemArte(c, 220, { lazy: false });
+  return el('div', { class: 'vs-conteudo' },
+    el('span', { class: `vs-arte${img ? '' : ' sem-arte'}`, 'aria-hidden': 'true' }, img ?? retrato(c)),
+    el('span', { class: 'vs-textos' },
+      fundador ? seloFundador(fundador) : null,
+      c.rival ? el('span', { class: 'vs-rival' }, 'Rival de treino') : null,
+      el('span', { class: 'vs-nome' }, c.nome),
+      el('span', { class: 'vs-numeros' },
+        el('span', {}, icone(iconeVida()), ` ${c.vida} de vida`),
+        el('span', {}, `Força ${c.forca}`)),
+    ),
+  );
+}
+
+// Faíscas em ângulos fixos (nada sorteado): o JS só diz para onde cada uma voa.
+function faiscasDoVs() {
+  return Array.from({ length: 14 }, (_, i) => {
+    const angulo = (i / 14) * Math.PI * 2 + 0.2;
+    const raio = 90 + (i % 3) * 38;
+    return el('i', { style: `--dx: ${Math.round(Math.cos(angulo) * raio)}px; --dy: ${Math.round(Math.sin(angulo) * raio)}px; --a: ${(i % 4) * 25}ms;` });
+  });
+}
+
+// depois: função chamada no fim (escolha de modo ou a partida direto).
+function abrirVs(depois) {
+  // contra o Rato ele fica em cima, como na batalha
+  if (app.escolhas[1]?.rival) app.escolhas = [app.escolhas[1], app.escolhas[0]];
+  const colecao = colecaoAtual();
+  app.escolhas.forEach((c, i) => {
+    const lado = $(`vs-lado-${i}`);
+    lado.dataset.especie = c.especie;
+    lado.style.setProperty('--cor-base', corDaEspecie(c));
+    lado.replaceChildren(ladoDoVs(c, colecao));
+  });
+  $('vs-faiscas').replaceChildren(...faiscasDoVs());
+  $('vs-leitura').textContent = `${app.escolhas[0].nome} contra ${app.escolhas[1].nome}!`;
+  const tela = $('tela-vs');
+  tela.classList.remove('anima', 'impacto');
+  mostrarTela('tela-vs');
+  som.musica('vs');
+
+  let feito = false;
+  const timers = [];
+  const seguir = () => {
+    if (feito) return;
+    feito = true;
+    timers.forEach(clearTimeout);
+    tela.removeEventListener('click', seguir);
+    app.vs = null;
+    depois();
+  };
+  app.vs = {
+    seguir,
+    cancelar: () => { feito = true; timers.forEach(clearTimeout); tela.removeEventListener('click', seguir); },
+  };
+  tela.addEventListener('click', seguir);
+  if (movimentoReduzido()) {
+    som.tocar('vs');
+    timers.push(setTimeout(seguir, TEMPO_VS.reduzido));
+    return;
+  }
+  void tela.offsetWidth;
+  tela.classList.add('anima');
+  timers.push(setTimeout(() => {
+    tela.classList.add('impacto');
+    som.tocar('vs');
+  }, TEMPO_VS.impacto));
+  timers.push(setTimeout(seguir, TEMPO_VS.total));
 }
 
 // ---------- tela: modo (depois de escanear as duas peças) ----------
@@ -530,19 +627,18 @@ function abrirModo() {
 
 // ---------- tela: batalha (tela dividida) ----------
 //
-// O celular fica no chão entre os dois jogadores. Cada um tem a sua metade:
-// o Jogador 1 em cima (a metade é girada 180° pelo CSS, então fica de frente
-// para ele), o Jogador 2 embaixo. A ordem dentro da metade é a mesma para os
-// dois: o bichinho perto do meio da tela (é lá que a luta acontece) e os
-// botões perto da borda, onde a mão da criança alcança.
+// Tudo se lê de um lado só, na orientação normal do celular (nada gira; a
+// auditoria em test/orientacao.test.js falha se algum texto girar). O
+// Jogador 1 fica na metade de cima e o Jogador 2 embaixo. Nas duas o
+// bichinho fica perto do meio da tela (é lá que a luta acontece) e os botões
+// perto da borda: na de cima a ordem de dentro é invertida pelo CSS.
 //
 // A luta acontece na mesma tela e sem botão de lutar: quando os dois
 // responderam, o botão do meio vira DESFAZER por ESPERA_DESFAZER e a rodada
 // resolve sozinha. Depois da animação os botões de símbolo já aceitam a
 // próxima escolha: o primeiro toque limpa o resultado e começa a rodada nova.
 
-// Contra o Rato do Mato a criança joga sozinha, sentada de um lado: o Rato
-// fica sempre na metade de cima, e essa metade não gira (ver .metade-rival).
+// Contra o Rato do Mato ele fica sempre na metade de cima.
 function iniciarPartida() {
   if (app.escolhas[1]?.rival) app.escolhas = [app.escolhas[1], app.escolhas[0]];
   app.partida = estadoInicial(app.escolhas[0], app.escolhas[1]);
@@ -614,7 +710,7 @@ function renderBatalha() {
   tela.dataset.modo = modo;
   tela.classList.toggle('contra-rival', contraRival());
 
-  for (const chip of [$('rodada-cima'), $('rodada-baixo')]) {
+  for (const chip of [$('rodada')]) {
     chip.replaceChildren(
       el('span', { class: 'chip-rodada-nome' }, 'Rodada'),
       el('b', {}, String(estado.rodada + 1)),
@@ -638,7 +734,7 @@ function renderBatalha() {
     const estampa = el('span', { class: 'estampa' });
     const dica = el('p', { class: 'dica' });
     const resultado = el('div', { class: 'lado-resultado' });
-    // aria-label com o jogador: a metade de cima está girada, mas o leitor de
+    // aria-label com o jogador: as duas metades têm os mesmos botões, e o leitor de
     // tela lê o DOM, e os dois grupos precisam soar diferentes.
     const botoes = SIMBOLOS.map((s) =>
       el('button', {
@@ -746,8 +842,7 @@ function atualizarEntradas() {
   atualizarCentro();
 }
 
-// O mesmo texto nas duas metades do botão: uma de cabeça para baixo, para o
-// jogador de cima.
+// O texto do botão do meio.
 function rotularLutar(texto) {
   const botao = $('btn-lutar');
   for (const s of botao.querySelectorAll('.lutar-texto')) s.textContent = texto;
@@ -1140,8 +1235,6 @@ function tocarCena({ tela, lados, resumo }, animar, em) {
   const cv = centroNaCena(lados[v], base);
   const cp = centroNaCena(lados[p], base);
   const fx = tela.dataset.fx;
-  // a arte vem de frente para quem usou o especial (a metade de cima está girada)
-  const girada = v === 0 && !contraRival() ? ' rotate(180deg)' : '';
   // a arte grande fica no painel de quem usou o especial, um pouco para fora,
   // sem cobrir a faixa do nome no meio da tela
   const arteEm = { x: base.width / 2, y: cv.y + (cv.y < base.height / 2 ? -14 : 14) };
@@ -1159,11 +1252,11 @@ function tocarCena({ tela, lados, resumo }, animar, em) {
     { opacity: 0 }, { opacity: 1, offset: 0.14 }, { opacity: 1, offset: 0.86 }, { opacity: 0 },
   ], { duration: T, fill: 'none' });
   animar(arte, [
-    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.3)${girada}`) },
-    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1.08)${girada}`), offset: 0.2, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
-    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)${girada}`), offset: 0.28 },
-    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)${girada}`), offset: 0.82 },
-    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.5)${girada}`) },
+    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.3)`) },
+    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1.08)`), offset: 0.2, easing: 'cubic-bezier(0.2, 0.9, 0.3, 1.2)' },
+    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)`), offset: 0.28 },
+    { opacity: 1, transform: em0(arteEm.x, arteEm.y, `scale(1)`), offset: 0.82 },
+    { opacity: 0, transform: em0(cv.x, cv.y, `scale(0.5)`) },
   ], { duration: T, fill: 'none' });
   animar(cena.querySelector('.cena-nome'), [
     { opacity: 0, transform: 'scaleX(0.2)' },
@@ -1261,9 +1354,9 @@ function tremer(corpo, animar, forca, duracao) {
 // Rodada de especial: tudo isso começa depois da cena (tocarCena).
 // Um toque em qualquer lugar pula para o final.
 //
-// As metades têm o mesmo desenho, só que a de cima está girada: nas duas,
-// "para o meio da tela" é para cima (translateY negativo) no próprio sistema
-// de coordenadas. Por isso uma só receita serve aos dois jogadores.
+// As metades têm o mesmo desenho, com a ordem de dentro invertida na de cima:
+// "para o meio da tela" é para baixo na metade de cima e para cima na de
+// baixo (sentidoDoMeio). quadro() espelha as poses de acordo.
 
 // Pose em que cada papel termina — igual às regras .fase-final [data-papel] do CSS, para o
 // último quadro da animação e o estado final baterem sem salto.
@@ -1278,30 +1371,27 @@ const POSE = {
 };
 const NEUTRO = 'translate3d(0, 0, 0) scale(1) rotate(0deg)';
 
-// Transform do bichinho da metade i. Na metade do Rato (em cima, sem giro)
-// "longe do meio" é para cima, então y e o giro trocam de sinal.
+// Transform do bichinho da metade i. Na metade de cima "longe do meio" é
+// para cima, então y e o giro trocam de sinal.
 function quadro(i, [y, escala, giro]) {
   const s = -sentidoDoMeio(i);
   return `translate3d(0, ${y * s}px, 0) scale(${escala}) rotate(${giro * s}deg)`;
 }
 
-// Centro do bichinho na tela (getBoundingClientRect já considera o giro).
+// Centro do bichinho na tela.
 function centroNaTela(lado) {
   const r = lado.bicho.getBoundingClientRect();
   return { x: r.left + r.width / 2, y: r.top + r.height / 2, altura: r.height };
 }
 
-// Converte um deslocamento na tela para o sistema da metade: a de cima está
-// girada 180°, então lá x e y trocam de sinal. Contra o Rato a de cima não gira.
+// Deslocamento na tela = deslocamento na metade (nenhuma metade gira).
 function naMetade(i, dx, dy) {
-  const giro = i === 0 && !contraRival() ? -1 : 1;
-  return { x: giro * dx, y: giro * dy };
+  return { x: dx, y: dy };
 }
 
-// "Para o meio da tela" no sistema da metade: -1 (para cima) nas metades de
-// sempre; +1 na do Rato, que fica em cima sem girar.
+// "Para o meio da tela": +1 (para baixo) na metade de cima, -1 na de baixo.
 function sentidoDoMeio(i) {
-  return i === 0 && contraRival() ? 1 : -1;
+  return i === 0 ? 1 : -1;
 }
 
 // Até onde cada bichinho anda para encostar no outro de frente, no meio da
@@ -1479,6 +1569,7 @@ function renderFim() {
     sub.textContent = 'Os dois ficaram sem vida na mesma rodada.';
     iconeFim.replaceChildren(icone(iconeEmpate()));
     delete iconeFim.dataset.especie;
+    som.musica('derrota');
     $('fim-confete').replaceChildren();
   } else {
     const v = fim.vencedor;
@@ -1503,8 +1594,10 @@ function renderFim() {
       el('b', { class: 'fim-perdeu-selo' }, 'Perdeu'),
     );
     $('fim-confete').replaceChildren(...(movimentoReduzido() ? [] : confete()));
-    // fanfarra só quando a criança ganha (não quando o Rato ganha)
-    if (!campeao.rival) som.tocar('vitoria');
+    // Trilha ligada: fanfarra (ou a frase simpática quando o Rato ganha).
+    // Só efeitos: o efeito curto de vitória, só quando a criança ganha.
+    if (som.modo() === 'tudo') som.musica(campeao.rival ? 'derrota' : 'vitoria');
+    else if (!campeao.rival) som.tocar('vitoria');
   }
 
   // entrada de ~600ms (reinicia a cada fim de partida)
@@ -1833,7 +1926,7 @@ function tratarChegada(chegada) {
   if (chegada.tipo === 'partida') {
     app.escolhas = [...chegada.criaturas];
     app.escolhaRestrita = false;
-    abrirModo();
+    abrirVs(abrirModo);
     return;
   }
   irParaInicio();

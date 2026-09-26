@@ -45,6 +45,12 @@ const pares = [
   ['rato / superficie', P.rato, P.superficie], ['rato / chassi', P.rato, P.chassi],
   ['sistemaNeon / leitura (cartão travado)', P.sistemaNeon, P.leitura],
 ];
+// VS: texto branco sobre a cor da espécie com até 13% de branco por cima
+// (brilho 8% + listra 5%, css/estilo.css .vs-lado) — o pior ponto.
+const clarear = (hex, a) => '#' + [0, 2, 4].map((i) => Math.round(parseInt(hex.slice(1 + i, 3 + i), 16) * (1 - a) + 255 * a).toString(16).padStart(2, '0')).join('');
+for (const esp of ['tatu', 'sapo', 'rato']) pares.push([`branco / ${esp} +13% (VS)`, '#fff', clarear(P[esp], 0.13)]);
+pares.push(['especialTinta / especial (VS)', P.especialTinta, P.especial]);
+
 let ruins = 0;
 for (const [nome, a, b] of pares) {
   const r = razao(a, b);

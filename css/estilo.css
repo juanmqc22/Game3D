@@ -472,10 +472,10 @@ input:focus-visible {
 .cartao-em-breve .cartao-codigo { color: #fff; }
 
 /* ---------- Batalha em tela dividida ----------
-   O celular fica no chão entre os dois. Metade de cima = Jogador 1, girada
-   180° para ficar de frente para ele; metade de baixo = Jogador 2. As duas
-   metades têm o mesmo desenho: bichinho perto do meio (onde a luta acontece),
-   botões perto da borda (onde a mão alcança). */
+   Tudo se lê de um lado só, na orientação normal do celular: nada gira.
+   Metade de cima = Jogador 1, metade de baixo = Jogador 2. Nas duas o
+   bichinho fica perto do meio (onde a luta acontece) e os botões perto da
+   borda: na de cima a ordem de dentro é invertida (column-reverse). */
 
 .tela.dividida {
   position: fixed;
@@ -499,21 +499,10 @@ input:focus-visible {
   min-height: 0;
   padding: 6px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 8px);
 }
-/* de frente para o jogador do outro lado; a borda de baixo dele é o topo da tela */
-.metade-0 {
-  transform: rotate(180deg);
-  padding-bottom: calc(env(safe-area-inset-top, 0px) + 8px);
-}
-/* Contra o Rato a criança joga sozinha, de um lado: a metade dele (sempre a
-   de cima) não gira. A ordem de dentro inverte para o bichinho continuar
-   perto do meio e os botões perto da borda. */
-.metade-0.metade-rival {
-  transform: none;
-  padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--gutter) 6px;
-}
-.metade-rival .metade-corpo { flex-direction: column-reverse; }
-.metade-rival .metade-corpo::before { top: auto; bottom: -3px; border-radius: 0 0 16px 3px; }
-.contra-rival .chip-rodada-cima, .contra-rival .lutar-cima { transform: none; }
+.metade-0 { padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--gutter) 6px; }
+.metade-0 .metade-corpo { flex-direction: column-reverse; }
+/* a faixa da espécie fica sempre do lado do meio da tela */
+.metade-0 .metade-corpo::before { top: auto; bottom: -3px; border-radius: 0 0 16px 3px; }
 /* quem ataca passa por cima da outra metade (língua, bote) */
 .metade.atacante { z-index: 3; }
 
@@ -734,7 +723,7 @@ input:focus-visible {
   border-radius: var(--raio-p);
   font-size: 1.15rem;
 }
-.golpe-tropecou { background: var(--tropeco); color: #fff; transform: rotate(-4deg); }
+.golpe-tropecou { background: var(--tropeco); color: #fff; }
 .golpe-especial { background: var(--especial); color: var(--especial-texto); white-space: normal; line-height: 1.05; }
 /* o número grande de cada painel: quanto a vida mudou na rodada */
 .numero-painel {
@@ -777,7 +766,7 @@ input:focus-visible {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 1.05rem;
+  font-size: 1.3rem;
   font-weight: 700;
 }
 .metade-jogador {
@@ -890,10 +879,8 @@ input:focus-visible {
   font-size: 1.5rem;
   font-variant-numeric: tabular-nums;
 }
-/* a do jogador de cima vem de cabeça para baixo, do lado esquerdo */
-.chip-rodada-cima { grid-column: 1; justify-self: end; transform: rotate(180deg); }
 #btn-lutar { grid-column: 2; }
-#rodada-baixo { grid-column: 3; }
+#rodada { grid-column: 3; }
 .botao-sair {
   position: absolute;
   right: var(--gutter);
@@ -940,7 +927,6 @@ input:focus-visible {
   transform: none;
 }
 .lutar-texto { position: relative; display: block; font-size: 0.95rem; font-weight: 700; line-height: 1.05; letter-spacing: 0.04em; }
-.lutar-cima { transform: rotate(180deg); }
 /* esperando os dois: VS grande */
 .botao-lutar:disabled .lutar-texto { font-size: 1.15rem; }
 /* DESFAZER: palavra longa, letra menor; o anel fecha em 1,5 s (ESPERA_DESFAZER) */
@@ -1114,9 +1100,6 @@ input:focus-visible {
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
-/* a mesma pergunta, de cabeça para baixo, para o jogador de cima */
-.qg-titulo-cima { font-size: 1.3rem; transform: rotate(180deg); }
-.contra-rival .qg-titulo-cima { display: none; }
 .qg-grade {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -1178,6 +1161,157 @@ input:focus-visible {
   to { opacity: 1; transform: none; }
 }
 
+
+/* ---------- VS: o confronto ----------
+   Tela cheia dividida na diagonal (clip-path estático), cada metade na cor da
+   espécie. A arte entra pelo seu lado, o VS bate no meio com tremida e
+   faíscas. Só transform e opacity animam. Sem .anima (movimento reduzido) a
+   composição aparece inteira, parada. */
+.tela-vs {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  max-width: 560px;
+  margin: 0 auto;
+  display: block;
+  overflow: hidden;
+  background: var(--leitura);
+  cursor: pointer;
+}
+.vs-palco { position: absolute; inset: 0; }
+.vs-lado {
+  --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: calc(env(safe-area-inset-top, 0px) + 64px) 18px calc(env(safe-area-inset-bottom, 0px) + 22px);
+  background-color: var(--cor);
+  background-image:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 55%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+  /* brilho + listra somam no máximo 13% de branco: o texto branco continua
+     >= 4.5:1 nas três espécies (scripts/contraste.js, "VS") */
+  color: #fff;
+}
+.vs-lado-0 { clip-path: polygon(0 0, 100% 0, 100% 42%, 0 58%); align-items: flex-start; justify-content: flex-start; }
+.vs-lado-1 {
+  clip-path: polygon(0 58%, 100% 42%, 100% 100%, 0 100%);
+  align-items: flex-end;
+  justify-content: flex-end;
+  background-image:
+    radial-gradient(circle at 70% 78%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 55%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+}
+.vs-conteudo { display: flex; align-items: center; gap: 10px; max-width: 100%; }
+.vs-lado-1 .vs-conteudo { flex-direction: row-reverse; text-align: right; }
+.vs-textos { min-width: 0; }
+.vs-arte {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: min(176px, 44vw, 26vh);
+  height: min(176px, 44vw, 26vh);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.26) 0 55%, rgba(255, 255, 255, 0) 56%);
+  font-size: min(150px, 38vw, 22vh);
+}
+.vs-arte .arte-bicho { width: 100%; height: 100%; }
+.vs-textos { display: grid; gap: 2px; justify-items: inherit; }
+.vs-lado-0 .vs-textos { justify-items: start; }
+.vs-lado-1 .vs-textos { justify-items: end; }
+.vs-nome {
+  font-size: 2rem;
+  overflow-wrap: break-word;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.vs-numeros { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 1.05rem; font-weight: 700; }
+.vs-lado-1 .vs-numeros { justify-content: flex-end; }
+.vs-numeros .icone { color: #ffb3b3; }
+.vs-rival {
+  padding: 1px 8px;
+  border-radius: var(--raio-p);
+  background: #fff;
+  color: var(--rato);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* a linha da diagonal, na mesma inclinação do corte (clip-path, sem giro) */
+.vs-risco {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  clip-path: polygon(0 57.2%, 100% 41.2%, 100% 42.8%, 0 58.8%);
+}
+.vs-marca {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border: 5px solid var(--tinta);
+  border-radius: 50%;
+  background-color: var(--especial);
+  background-image: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 55%);
+  box-shadow: 0 0 0 5px var(--especial);
+  color: var(--especial-texto);
+  font-size: 2.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.vs-faiscas { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.vs-faiscas i {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--tinta);
+  border-radius: 3px;
+  background: var(--especial);
+  opacity: 0;
+}
+.vs-faiscas i:nth-child(odd) { background: #fff; }
+
+/* a animação: os dois entram pelos lados; o VS bate; a tela treme; faíscas */
+.tela-vs.anima .vs-lado-0 .vs-arte { animation: vs-entra-esq 480ms cubic-bezier(0.2, 0.9, 0.3, 1.05) both; }
+.tela-vs.anima .vs-lado-1 .vs-arte { animation: vs-entra-dir 480ms cubic-bezier(0.2, 0.9, 0.3, 1.05) 60ms both; }
+.tela-vs.anima .vs-lado-0 .vs-textos { animation: vs-entra-esq-leve 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 140ms both; }
+.tela-vs.anima .vs-lado-1 .vs-textos { animation: vs-entra-dir-leve 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 200ms both; }
+.tela-vs.anima:not(.impacto) .vs-marca { opacity: 0; }
+.tela-vs.impacto .vs-marca { animation: vs-bate 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.tela-vs.impacto .vs-palco { animation: vs-treme 320ms linear; }
+.tela-vs.impacto .vs-faiscas i { animation: vs-faisca 560ms cubic-bezier(0.1, 0.7, 0.3, 1) var(--a) both; }
+@keyframes vs-entra-esq { from { transform: translate3d(-130%, 0, 0) scale(0.8); } to { transform: none; } }
+@keyframes vs-entra-dir { from { transform: translate3d(130%, 0, 0) scale(0.8); } to { transform: none; } }
+@keyframes vs-entra-esq-leve { from { opacity: 0; transform: translate3d(-60px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes vs-entra-dir-leve { from { opacity: 0; transform: translate3d(60px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes vs-bate {
+  0% { opacity: 0; transform: scale(3.2); }
+  55% { opacity: 1; transform: scale(0.86); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes vs-treme {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20% { transform: translate3d(-8px, 4px, 0); }
+  40% { transform: translate3d(7px, -4px, 0); }
+  60% { transform: translate3d(-5px, 2px, 0); }
+  80% { transform: translate3d(3px, -1px, 0); }
+}
+@keyframes vs-faisca {
+  0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.2); }
+  100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) scale(0.3); }
+}
+@media (max-width: 374px) {
+  .vs-nome { font-size: 1.7rem; }
+}
 
 /* ---------- Modos de jogo ---------- */
 
@@ -1250,9 +1384,9 @@ input:focus-visible {
 .fase-final .metade[data-papel="venceu"] .bicho-luta { transform: translate3d(0, 0, 0) scale(1.06) rotate(0deg); }
 .fase-final .metade[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, 10px, 0) scale(0.88) rotate(-9deg); }
 .fase-final .metade[data-papel="tombou"] .bicho-luta { transform: translate3d(0, 16px, 0) scale(0.86) rotate(-84deg); }
-/* na metade do Rato (sem giro) "para longe do meio" é para cima: quadro() no JS */
-.fase-final .metade-rival[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, -10px, 0) scale(0.88) rotate(9deg); }
-.fase-final .metade-rival[data-papel="tombou"] .bicho-luta { transform: translate3d(0, -16px, 0) scale(0.86) rotate(84deg); }
+/* na metade de cima "para longe do meio" é para cima: quadro() no JS */
+.fase-final .metade-0[data-papel="perdeu"] .bicho-luta { transform: translate3d(0, -10px, 0) scale(0.88) rotate(9deg); }
+.fase-final .metade-0[data-papel="tombou"] .bicho-luta { transform: translate3d(0, -16px, 0) scale(0.86) rotate(84deg); }
 
 .halo {
   position: absolute;
@@ -1449,18 +1583,16 @@ input:focus-visible {
   font-size: 160px;
 }
 .cena-arte .arte-bicho { width: 100%; height: 100%; }
-/* o nome do especial: faixa amarela no meio da tela, uma linha para cada jogador */
+/* o nome do especial: faixa amarela no meio da tela */
 .cena-nome {
   position: absolute;
   left: 0;
   right: 0;
   top: 50%;
   display: grid;
-  grid-template-rows: 1fr 1fr;
-  align-items: center;
-  justify-items: center;
-  height: 112px;
-  margin: -56px 0 0;
+  place-items: center;
+  height: 72px;
+  margin: -36px 0 0;
   border-top: 4px solid var(--tinta);
   border-bottom: 4px solid var(--tinta);
   background-color: var(--especial);
@@ -1476,9 +1608,7 @@ input:focus-visible {
   text-transform: uppercase;
   white-space: nowrap;
 }
-.cena-nome .cn-cima { transform: rotate(180deg); }
-.contra-rival .cena-nome { grid-template-rows: 1fr; height: 64px; margin-top: -32px; }
-.contra-rival .cena-nome .cn-cima { display: none; }
+
 /* Língua Chicote: rosa, fina, com a ponta redonda. A base fica no ponto de
    partida (bottom: 100% põe a borda de baixo em y = 0) e ela estica em scaleY. */
 .fx-lingua {
@@ -1567,7 +1697,7 @@ input:focus-visible {
   letter-spacing: 0.06em;
   white-space: nowrap;
   opacity: 0;
-  transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(1);
+  transform: translate3d(-50%, -50%, 0) scale(1);
   pointer-events: none;
 }
 .estampa:empty { display: none; }
@@ -1575,10 +1705,10 @@ input:focus-visible {
 /* o carimbo sai quando entra o veredito "Tropeçou!", que fica no lugar dele */
 .fase-texto .estampa { visibility: hidden; }
 @keyframes carimbo {
-  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(2.4); }
-  50% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(0.9); }
-  68% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(1.08); }
-  100% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-7deg) scale(1); }
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(2.4); }
+  50% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(0.9); }
+  68% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1.08); }
+  100% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
 }
 
 
