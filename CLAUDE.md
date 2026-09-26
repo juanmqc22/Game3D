@@ -14,8 +14,7 @@ depois de carregada. Cada peça tem um código (ex: `TAT01`); o QR da peça abre
 **Rato do Mato (`RIVAL`, RAT00):** rival de treino de quem só tem uma peça — a criança
 gira o próprio pião duas vezes, uma por ela e uma pelo Rato. Não tem peça: fica fora
 de `CRIATURAS` (escaneio, coleção, contador, Raposa e média do elenco não o veem);
-`buscarCriaturaOuRival` acha os dois. Na batalha o Rato fica sempre em cima e a metade
-dele **não gira** (`.metade-rival`; `sentidoDoMeio`/`quadro()` no JS). Alvo: cada
+`buscarCriaturaOuRival` acha os dois. Na batalha e no VS o Rato fica sempre em cima. Alvo: cada
 fundador vence o Rato 65–75% (`node scripts/balanceamento.js --rival`). A lista manual
 (`listaDeEscolha`) mostra só os escaneados, o Rato e a Série 2 travada; não há sorteio.
 
@@ -83,6 +82,8 @@ test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 80 KB
 test/golpe.test.js          nome do golpe (golpeDaRodada)
 test/som.test.js            modo do som e queda sem Web Audio
+test/orientacao.test.js     nenhum texto girado, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
+test/navegador.js           apoio: servidor estático + Chrome/Edge headless via DevTools Protocol
 test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
@@ -141,16 +142,20 @@ Regras que não podem regredir:
   rodada gravado no peito. O corpo usa `--cor-corpo` da espécie (tom claro do
   plástico): espécie nova precisa de `--cor-corpo` junto de `--cor-tema`, e quem
   contém o retrato tem que carregar `data-especie`.
-- **Batalha em tela dividida** (`#tela-batalha`): o celular fica no chão entre
-  os dois. Jogador 1 na metade de cima, girada 180° pelo CSS; Jogador 2 embaixo.
-  As duas metades têm o mesmo desenho: bichinho perto do meio, botões perto da
-  borda. A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
+- **Tudo se lê de um lado só, na orientação normal do celular: nenhum texto
+  gira** (nem 180°, nem inclinado). `test/orientacao.test.js` percorre todas as
+  telas e estados num Chrome/Edge headless (`test/navegador.js`) e falha se algum
+  elemento com texto tiver rotação ≠ 0°. Sem navegador na máquina ele se pula;
+  `NAVEGADOR=/caminho` escolhe outro.
+- **Batalha em tela dividida** (`#tela-batalha`): Jogador 1 na metade de cima,
+  Jogador 2 embaixo, nenhuma gira. Nas duas o bichinho fica perto do meio e os
+  botões perto da borda (a de cima usa `column-reverse`). A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
   resultado separada, e sem botão de lutar: quando os dois responderam, o
   botão do meio vira DESFAZER por 1,5 s (`ESPERA_DESFAZER`) e a rodada resolve
   sozinha; depois da animação os botões de símbolo já aceitam a próxima escolha
-  (o primeiro toque começa a rodada nova). Nunca ponha `transform` na `.metade` (é o giro): anime
-  `.metade-corpo` ou `.bicho-luta`. No JS, deslocamento medido na tela vira
-  deslocamento da metade por `naMetade()`.
+  (o primeiro toque começa a rodada nova). Anime `.metade-corpo` ou `.bicho-luta`,
+  não a `.metade`. "Para o meio da tela" muda de sinal entre as metades
+  (`sentidoDoMeio`; `quadro()` espelha as poses).
 - **A luta é animada em JS** (Web Animations, `animarLuta` em `js/app.js`): o
   bote é medido na tela de verdade para os dois se chocarem de frente no meio.
   A pose final de cada papel está em `POSE` (JS) e em `.fase-final
@@ -165,8 +170,8 @@ Regras que não podem regredir:
   texto completo continua em `#resultado-leitura` (`.so-leitor`), para leitor de
   tela — ao mexer no resultado, mantenha essa linha em dia.
 - O especial tem **cena própria** (`tocarCena`, `#cena-especial`), antes da
-  luta: fundo escurece, a arte entra grande, o nome aparece (uma linha para cada
-  jogador) e o efeito vai de um painel ao outro, por `EFEITO_ESPECIAL`
+  luta: fundo escurece, a arte entra grande, o nome aparece na faixa do meio
+  e o efeito vai de um painel ao outro, por `EFEITO_ESPECIAL`
   (`data-fx`): Língua Chicote = língua rosa elástica que volta com um coração;
   Bola de Ferro = esfera cinza que cai com poeira e tremor + escudo azul;
   qualquer outro código usa a estrela genérica. Um toque pula; movimento

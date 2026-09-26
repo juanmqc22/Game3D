@@ -114,9 +114,9 @@
       <button type="button" class="botao botao-secundario" id="btn-modo-voltar">Recomeçar</button>
     </section>
 
-    <!-- 6. Batalha em tela dividida: o celular fica no chão entre os dois.
-         Jogador 1 na metade de cima (girada 180°, virada para ele), Jogador 2
-         embaixo. A luta acontece aqui mesmo, sem trocar de tela. -->
+    <!-- 6. Batalha em tela dividida. Tudo se lê de um lado só (nada gira):
+         Jogador 1 na metade de cima, Jogador 2 embaixo. A luta acontece aqui
+         mesmo, sem trocar de tela. -->
     <section id="tela-batalha" class="tela dividida" hidden>
       <div class="metade metade-0" id="metade-0"></div>
 
@@ -124,16 +124,14 @@
         <button type="button" class="botao-link botao-sair" id="btn-sair">Sair</button>
         <!-- Som (na batalha ele mora aqui; nas outras telas, no canto: #btn-som) -->
         <button type="button" class="botao-som botao-som-faixa" id="btn-som-batalha" hidden></button>
-        <span class="chip-rodada chip-rodada-cima" id="rodada-cima"></span>
         <!-- Não há botão de lutar: a rodada resolve sozinha quando os dois
              responderam. O meio mostra VS, DESFAZER (1,5 s, com o anel fechando)
              ou VER FIM. O texto vem escrito nos dois sentidos, um para cada jogador. -->
         <button type="button" class="botao-lutar" id="btn-lutar" disabled>
           <span class="lutar-anel" aria-hidden="true"></span>
-          <span class="lutar-texto lutar-cima" aria-hidden="true"></span>
           <span class="lutar-texto lutar-baixo"></span>
         </button>
-        <span class="chip-rodada" id="rodada-baixo"></span>
+        <span class="chip-rodada" id="rodada"></span>
         <!-- camada do choque, no meio da tela (clarão e anel do golpe) -->
         <div class="choque" aria-hidden="true">
           <span class="onda"></span>
@@ -144,8 +142,7 @@
       <div class="metade metade-1" id="metade-1"></div>
 
       <!-- Batalha (ARENA): um toque diz quem ganhou e como. A tela escurece por
-           trás; a pergunta vem escrita para os dois lados (a de baixo do painel
-           fica de cabeça para baixo, para o jogador de cima). -->
+           trás e aparecem as duas fotos lado a lado. -->
       <div id="quem-ganhou" class="quem-ganhou" role="dialog" aria-modal="true" aria-labelledby="qg-titulo" hidden>
         <div class="qg-painel">
           <p class="qg-titulo" id="qg-titulo">Quem ganhou?</p>
@@ -154,7 +151,6 @@
             <button type="button" class="qg-opcao qg-empate" data-ganhou="EMPATE">Empate</button>
             <div class="qg-lado" id="qg-lado-1"></div>
           </div>
-          <p class="qg-titulo qg-titulo-cima" aria-hidden="true">Quem ganhou?</p>
           <button type="button" class="botao-link qg-sair">Sair</button>
         </div>
       </div>
@@ -165,7 +161,7 @@
            efeito: lingua, bola ou estrela. Um toque pula. Ver tocarCena (js/app.js). -->
       <div id="cena-especial" class="cena-especial" aria-hidden="true" hidden>
         <div class="cena-fundo"></div>
-        <p class="cena-nome"><span class="cn-cima"></span><span class="cn-baixo"></span></p>
+        <p class="cena-nome"><span></span></p>
         <span class="fx-lingua"></span>
         <span class="fx-poeira"></span>
         <span class="fx-bola"></span>
