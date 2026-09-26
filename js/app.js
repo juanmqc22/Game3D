@@ -3,24 +3,24 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=16';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=17';
 import {
   DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   GIROU, FORA, estadoInicial, resolverRodadaModo, golpeDaRodada,
-} from './regras.js?v=16';
+} from './regras.js?v=17';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida,
-  iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
+  iconeTrofeu, iconeBichinho, iconePlaca,
   iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr, iconeSom,
-} from './icones.js?v=16';
+} from './icones.js?v=17';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
-} from './escaneio.js?v=16';
+} from './escaneio.js?v=17';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, listaDeEscolha,
-} from './colecao.js?v=16';
-import { arteDaCriatura } from './arte.js?v=16';
-import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=16';
+} from './colecao.js?v=17';
+import { arteDaCriatura } from './arte.js?v=17';
+import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=17';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -93,6 +93,16 @@ const TEMPO = {
   fim: 1080,
 };
 
+// Nocaute (depois da rodada que zerou alguém; fora do teto da rodada): o
+// número do último golpe fica um instante na tela, quem zerou desmaia e a
+// tela de fim entra sozinha. Um toque pula. Movimento reduzido: parada de 1,2 s.
+const TEMPO_NOCAUTE = {
+  pausa: 450, // lê o último número
+  desmaio: 1000,
+  depois: 350, // o chão vazio antes da tela de fim
+  reduzido: 1200,
+};
+
 const app = {
   modo: ROLAR,
   escolhas: [null, null], // criaturas escolhidas pelos jogadores 1 e 2
@@ -109,6 +119,7 @@ const app = {
   leituraNfc: null, // AbortController da leitura NFC em andamento (tela de espera)
   contagem: null, // timer da resolução automática (enquanto o DESFAZER está no ar)
   vs: null, // { seguir } enquanto a tela de VS está no ar
+  nocaute: null, // { pular, cancelar } entre o fim da última rodada e a tela de fim
   ultimoToque: null, // { jogador, campo } — o que o DESFAZER apaga
 };
 
@@ -155,12 +166,14 @@ function faixaDaTela(id) {
 
 function mostrarTela(id) {
   document.body.classList.toggle('em-batalha', id === 'tela-batalha');
+  document.body.classList.toggle('em-fim', id === 'tela-fim');
   const faixa = faixaDaTela(id);
   if (faixa) som.musica(faixa);
   // saiu do VS por outro caminho (ex.: voltar do navegador): o VS não segue sozinho
   if (id !== 'tela-vs' && app.vs) { const vs = app.vs; app.vs = null; vs.cancelar?.(); }
   if (id !== 'tela-espera') pararNfc();
   if (id !== 'tela-batalha') cancelarContagem();
+  if (id !== 'tela-batalha' && app.nocaute) app.nocaute.cancelar();
   for (const tela of document.querySelectorAll('.tela')) {
     tela.hidden = tela.id !== id;
   }
@@ -848,7 +861,7 @@ function rotularLutar(texto) {
   for (const s of botao.querySelectorAll('.lutar-texto')) s.textContent = texto;
 }
 
-// O botão do meio: VS (esperando), DESFAZER (contagem), VER FIM (acabou).
+// O botão do meio: VS (esperando), DESFAZER (contagem), FIM! (nocaute; um toque pula).
 function atualizarCentro() {
   const botao = $('btn-lutar');
   const acabou = app.fase === 'resultado' && Boolean(app.ultimaRodada?.resultado.fim.terminou);
@@ -858,7 +871,7 @@ function atualizarCentro() {
     botao.disabled = false;
     botao.setAttribute('aria-label', 'Desfazer a última escolha');
   } else if (acabou) {
-    rotularLutar('VER FIM');
+    rotularLutar('FIM!');
     botao.disabled = false;
     botao.removeAttribute('aria-label');
   } else {
@@ -915,6 +928,10 @@ function aplicarToque(t) {
 }
 
 function tocarBatalha(ev) {
+  if (app.nocaute) {
+    if (!ev.target.closest('#btn-sair, #btn-som-batalha, #btn-lutar')) app.nocaute.pular();
+    return;
+  }
   if (app.animacao) return;
   if (ev.target.closest('.qg-sair')) {
     $('btn-sair').click();
@@ -944,10 +961,8 @@ function tocarBatalha(ev) {
 function tocarLutar() {
   if (app.animacao) return;
   if (app.contagem) desfazer();
-  else if (app.fase === 'resultado' && app.ultimaRodada?.resultado.fim.terminou) {
-    renderFim();
-    mostrarTela('tela-fim');
-  }
+  else if (app.nocaute) app.nocaute.pular();
+  else if (app.fase === 'resultado' && app.ultimaRodada?.resultado.fim.terminou) irParaFim();
 }
 
 // Batalha: um toque na sobreposição diz quem ganhou e como (ou Empate) e já resolve.
@@ -1423,7 +1438,7 @@ function animarLuta(luta) {
     app.animacao = null;
     app.fase = 'resultado';
     // Sem "Próxima": os símbolos já aceitam a escolha da rodada seguinte
-    // (a partida acabou: ficam travados e o meio vira VER FIM).
+    // (a partida acabou: ficam travados e vem o nocaute).
     for (const l of lados) {
       const grupo = l.corpo.querySelector('.simbolos');
       grupo.classList.remove('tem-escolha');
@@ -1434,6 +1449,7 @@ function animarLuta(luta) {
       l.corpo.querySelector('.botao-proxima').disabled = fim.terminou;
     }
     atualizarCentro();
+    if (fim.terminou) nocaute(luta);
   };
   const anim = { finalizar };
   app.animacao = anim;
@@ -1542,6 +1558,81 @@ function animarLuta(luta) {
   em(t0 + TEMPO.fim, finalizar);
 }
 
+// ---------- nocaute: a partida acabou ----------
+//
+// Quem ficou sem vida desmaia no lugar dele (balança, tomba para a borda da
+// sua metade e some); quem venceu comemora com dois pulos. Depois a tela de
+// fim entra sozinha — sem botão. Só transform e opacity.
+function nocaute(luta) {
+  const { tela, lados } = luta;
+  const timers = [];
+  const anims = [];
+  const animar = (alvo, quadros, opcoes) => {
+    const a = alvo.animate(quadros, { fill: 'forwards', ...opcoes });
+    anims.push(a);
+    return a;
+  };
+  const cancelar = () => {
+    if (app.nocaute !== este) return;
+    for (const t of timers) clearTimeout(t);
+    for (const a of anims) a.cancel();
+    tela.classList.remove('fase-morte');
+    app.nocaute = null;
+  };
+  const pular = () => {
+    if (app.nocaute !== este) return;
+    cancelar();
+    irParaFim();
+  };
+  const este = { pular, cancelar };
+  app.nocaute = este;
+  tela.classList.add('fase-morte');
+  atualizarCentro();
+
+  const em = (ms, fn) => timers.push(setTimeout(fn, ms));
+  if (movimentoReduzido() || typeof Element.prototype.animate !== 'function') {
+    em(TEMPO_NOCAUTE.reduzido, pular);
+    return;
+  }
+
+  em(TEMPO_NOCAUTE.pausa, () => {
+    som.tocar('nocaute');
+    lados.forEach((l, i) => {
+      const figura = l.bicho.querySelector('.arte-bicho, .bichinho') ?? l.bicho;
+      if (l.vidaDepois > 0) {
+        animar(figura, [
+          { transform: 'translate3d(0, 0, 0) scale(1)' },
+          { transform: 'translate3d(0, -30px, 0) scale(1.08)', offset: 0.22, easing: 'cubic-bezier(0.3, 0, 0.6, 1)' },
+          { transform: 'translate3d(0, 0, 0) scale(1)', offset: 0.44, easing: 'cubic-bezier(0.4, 0, 1, 1)' },
+          { transform: 'translate3d(0, -30px, 0) scale(1.08)', offset: 0.66, easing: 'cubic-bezier(0.3, 0, 0.6, 1)' },
+          { transform: 'translate3d(0, 0, 0) scale(1)', offset: 0.88, easing: 'cubic-bezier(0.4, 0, 1, 1)' },
+          { transform: 'translate3d(0, 0, 0) scale(1)' },
+        ], { duration: TEMPO_NOCAUTE.desmaio, fill: 'none' });
+        return;
+      }
+      // "longe do meio": para cima na metade de cima, para baixo na de baixo
+      const s = -sentidoDoMeio(i);
+      const passo = (x, y, giro, escala) => `translate3d(${x}px, ${y * s}px, 0) rotate(${giro * s}deg) scale(${escala})`;
+      animar(figura, [
+        { transform: passo(0, 0, 0, 1), opacity: 1 },
+        { transform: passo(-7, 0, -10, 1), opacity: 1, offset: 0.12 },
+        { transform: passo(7, 0, 10, 1), opacity: 1, offset: 0.24 },
+        { transform: passo(-4, 0, -6, 1), opacity: 1, offset: 0.34 },
+        { transform: passo(0, -12, -30, 1.02), opacity: 1, offset: 0.48, easing: 'cubic-bezier(0.5, 0, 0.9, 0.5)' },
+        { transform: passo(10, 26, -95, 0.9), opacity: 1, offset: 0.7 },
+        { transform: passo(14, 34, -90, 0.5), opacity: 0 },
+      ], { duration: TEMPO_NOCAUTE.desmaio, easing: 'linear' });
+      tremer(l.corpo, animar, 6, 320);
+    });
+  });
+  em(TEMPO_NOCAUTE.pausa + TEMPO_NOCAUTE.desmaio + TEMPO_NOCAUTE.depois, pular);
+}
+
+function irParaFim() {
+  renderFim();
+  mostrarTela('tela-fim');
+}
+
 function proximaRodada() {
   if (app.animacao || app.ultimaRodada?.resultado.fim.terminou) return;
   novaRodadaLimpa();
@@ -1550,68 +1641,63 @@ function proximaRodada() {
 
 // ---------- tela: fim ----------
 
-// "VENCEU!" e "PERDEU" só aparecem aqui. O vencedor é inconfundível: selo
-// VENCEU!, arte grande com o troféu, o nome e confete (uma vez; sem confete
-// com movimento reduzido). Quem perdeu vem pequeno, embaixo.
+// "VENCEU!" e "PERDEU" só aparecem aqui. A tela é dividida como a batalha e
+// cada metade mostra o resultado de quem está daquele lado: a do Jogador 1
+// (em cima) vem girada 180°, para quem está do outro lado da mesa — contra o
+// Rato não gira, porque é uma criança só segurando o celular. O vencedor é
+// inconfundível: selo VENCEU!, arte grande com o troféu e confete (uma vez;
+// sem confete com movimento reduzido). O meio fica de pé para os dois.
 function renderFim() {
   const { resultado, placarGravado } = app.ultimaRodada;
   const { estado, fim } = resultado;
-  const titulo = $('fim-titulo');
-  const sub = $('fim-sub');
-  const iconeFim = $('fim-icone');
-  const perdeu = $('fim-perdeu');
   const empate = fim.vencedor === null;
-  $('fim-venceu').hidden = empate;
-  perdeu.hidden = empate;
-  iconeFim.classList.toggle('empate', empate);
-  if (empate) {
-    titulo.textContent = 'Empate!';
-    sub.textContent = 'Os dois ficaram sem vida na mesma rodada.';
-    iconeFim.replaceChildren(icone(iconeEmpate()));
-    delete iconeFim.dataset.especie;
-    som.musica('derrota');
-    $('fim-confete').replaceChildren();
-  } else {
-    const v = fim.vencedor;
-    const campeao = estado.jogadores[v].criatura;
-    const outro = estado.jogadores[1 - v].criatura;
-    titulo.textContent = nomeJogador(estado, v);
-    const detalhe = `${estado.rodada} rodadas · modo ${INFO_MODO[app.modo].nome}`;
-    sub.textContent = campeao.rival
-      ? `O Rato ganhou desta vez. Revanche? (${detalhe})`
-      : `Parabéns${contraRival() ? '' : `, Jogador ${v + 1}`}! (${detalhe})`;
-    iconeFim.dataset.especie = campeao.especie;
-    iconeFim.style.setProperty('--cor-base', corDaEspecie(campeao));
-    iconeFim.replaceChildren(
-      el('span', { class: 'fim-arte' }, imagemArte(campeao, 240, { lazy: false }) ?? retrato(campeao)),
-      icone(iconeTrofeu()),
+  const tela = $('tela-fim');
+  tela.classList.toggle('contra-rival', contraRival());
+
+  estado.jogadores.forEach((j, i) => {
+    const papel = empate ? 'empate' : (i === fim.vencedor ? 'venceu' : 'perdeu');
+    const c = j.criatura;
+    const metade = $(`fim-metade-${i}`);
+    metade.dataset.papel = papel;
+    metade.dataset.especie = c.especie;
+    metade.style.setProperty('--cor-base', corDaEspecie(c));
+    const quem = c.rival ? 'Rival' : (contraRival() ? 'Você' : `Jogador ${i + 1}`);
+    const selo = el('p', { class: `fim-selo fim-selo-${papel}` },
+      { venceu: 'Venceu!', perdeu: 'Perdeu', empate: 'Empate!' }[papel]);
+    const arte = el('div', { class: 'fim-icone', 'aria-hidden': 'true' },
+      el('span', { class: 'fim-arte' }, imagemArte(c, 240, { lazy: false }) ?? retrato(c)),
+      papel === 'venceu' ? icone(iconeTrofeu()) : null);
+    let recado;
+    if (papel === 'empate') recado = 'Os dois ficaram sem vida!';
+    else if (papel === 'venceu') recado = c.rival ? 'O Rato ganhou desta vez.' : 'Parabéns!';
+    else recado = c.rival ? 'O Rato caiu!' : 'Quase! Que tal a revanche?';
+    const conteudo = el('div', { class: 'fim-conteudo' },
+      papel === 'venceu' && !movimentoReduzido() ? el('div', { class: 'confete', 'aria-hidden': 'true' }, ...confete()) : null,
+      selo,
+      arte,
+      el('p', { class: 'fim-nome' }, el('span', { class: 'fim-quem' }, quem), ` ${nomeJogador(estado, i)}`),
+      el('p', { class: 'fim-recado' }, recado),
+      barraVida(j.vida, c.vida),
     );
-    perdeu.dataset.especie = outro.especie;
-    perdeu.style.setProperty('--cor-base', corDaEspecie(outro));
-    perdeu.replaceChildren(
-      el('span', { class: 'fim-perdeu-arte', 'aria-hidden': 'true' }, imagemArte(outro, 56, { lazy: false }) ?? retrato(outro)),
-      el('span', { class: 'fim-perdeu-nome' }, nomeJogador(estado, 1 - v)),
-      el('b', { class: 'fim-perdeu-selo' }, 'Perdeu'),
-    );
-    $('fim-confete').replaceChildren(...(movimentoReduzido() ? [] : confete()));
+    metade.replaceChildren(conteudo);
+    // entrada de ~600ms (reinicia a cada fim de partida)
+    for (const alvo of [selo, arte]) alvo.classList.add('fim-entrada');
+  });
+
+  const detalhe = `${estado.rodada} rodadas · modo ${INFO_MODO[app.modo].nome}`;
+  $('fim-sub').textContent = detalhe;
+  $('fim-titulo').textContent = empate
+    ? `Empate! Os dois ficaram sem vida na mesma rodada. ${detalhe}.`
+    : `${nomeJogador(estado, fim.vencedor)} venceu! ${detalhe}.`;
+
+  if (empate) som.musica('derrota');
+  else {
+    const campeao = estado.jogadores[fim.vencedor].criatura;
     // Trilha ligada: fanfarra (ou a frase simpática quando o Rato ganha).
     // Só efeitos: o efeito curto de vitória, só quando a criança ganha.
     if (som.modo() === 'tudo') som.musica(campeao.rival ? 'derrota' : 'vitoria');
     else if (!campeao.rival) som.tocar('vitoria');
   }
-
-  // entrada de ~600ms (reinicia a cada fim de partida)
-  for (const alvo of [iconeFim, titulo, $('fim-venceu')]) {
-    alvo.classList.remove('fim-entrada');
-    void alvo.offsetWidth;
-    alvo.classList.add('fim-entrada');
-  }
-
-  $('fim-barras').replaceChildren(...estado.jogadores.map((j, i) =>
-    el('div', {},
-      el('div', { class: 'barra-rotulo' }, `${j.criatura.rival ? 'Rival' : `J${i + 1}`} · ${j.criatura.nome}`),
-      barraVida(j.vida, j.criatura.vida),
-    )));
 
   const aviso = $('fim-placar');
   const espelhada = estado.jogadores[0].criatura.codigo === estado.jogadores[1].criatura.codigo;

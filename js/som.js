@@ -7,7 +7,7 @@
 // nasce depois do primeiro toque na página (regra do iPhone). Sem Web Audio,
 // criarSom() devolve um som que não faz nada e o botão some.
 
-import { FAIXAS, secaoDaVolta, eventosDaSecao, lerAcordes, soma } from './trilha.js?v=16';
+import { FAIXAS, secaoDaVolta, eventosDaSecao, lerAcordes, soma } from './trilha.js?v=17';
 
 export const CHAVE_SOM = 'bichinhos:som';
 export const MODOS_SOM = ['tudo', 'efeitos', 'mudo'];
@@ -193,6 +193,13 @@ export function criarSom({ janela = globalThis, storage = null } = {}) {
       nota('square', 587, 587, 0.03, 0.2, 0.12);
       nota('square', 880, 880, 0.03, 0.26, 0.1);
       nota('sine', 2200, 2100, 0.05, 0.3, 0.08);
+    },
+    // nocaute: o bichinho zerado desmaia — piuí descendo e o baque no chão
+    nocaute: () => {
+      nota('triangle', 900, 180, 0, 0.5, 0.4);
+      nota('triangle', 950, 190, 0.02, 0.5, 0.2);
+      nota('sine', 120, 50, 0.5, 0.26, 0.8);
+      chiado('lowpass', 600, 0.5, 0.2, 0.6);
     },
     // vitória: fanfarra curta
     vitoria: () => {

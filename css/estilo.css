@@ -1714,72 +1714,138 @@ input:focus-visible {
 
 
 /* ---------- Fim ----------
-   Só aqui aparecem VENCEU! e PERDEU. O vencedor é inconfundível: selo,
-   arte grande com troféu, nome e confete (uma vez). */
+   Só aqui aparecem VENCEU! e PERDEU. Tela dividida como a batalha: cada
+   metade mostra o resultado de quem está daquele lado. A do Jogador 1 (em
+   cima) gira 180° para quem está do outro lado da mesa — é o ÚNICO texto
+   girado do jogo (test/orientacao.test.js). Contra o Rato não gira: é uma
+   criança só. O meio (botões) fica de pé. */
 
-.tela-fim { position: relative; }
-.fim-venceu {
-  justify-self: center;
-  align-self: center;
-  margin: 2vh 0 0;
-  padding: 6px 22px;
+.tela-fim {
+  background-color: var(--chassi);
+  background-image: linear-gradient(180deg, var(--chassi) 0%, var(--chassi-alt) 50%, var(--chassi) 100%);
+}
+.fim-metade {
+  --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
+  position: relative;
+  display: flex;
+  min-height: 0;
+  padding: 6px var(--gutter) calc(env(safe-area-inset-bottom, 0px) + 8px);
+}
+.fim-metade-0 { padding: calc(env(safe-area-inset-top, 0px) + 8px) var(--gutter) 6px; }
+.fim-metade-0 .fim-conteudo { transform: rotate(180deg); }
+.tela-fim.contra-rival .fim-metade-0 .fim-conteudo { transform: none; }
+
+.fim-conteudo {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  padding: 10px 12px;
+  border: var(--borda) solid var(--tinta);
+  border-radius: var(--raio);
+  background-color: var(--superficie-2);
+  text-align: center;
+}
+/* faixa da espécie, do lado de baixo de quem lê */
+.fim-conteudo::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 8px;
+  background: var(--cor);
+}
+.fim-metade[data-papel="venceu"] .fim-conteudo {
+  border-width: 5px;
+  background-color: #fffbe6;
+  background-image: radial-gradient(circle at 50% 42%, #fff1a8 0%, rgba(255, 241, 168, 0) 62%);
+}
+.fim-conteudo > * { position: relative; z-index: 1; }
+.fim-conteudo > .confete { position: absolute; z-index: 2; }
+
+.fim-selo {
+  margin: 0;
+  padding: 4px 18px;
   border: 4px solid var(--tinta);
   border-radius: var(--raio);
-  background-color: var(--especial);
-  background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.35) 0 10px, rgba(255, 255, 255, 0) 10px 22px);
-  color: var(--especial-texto);
-  font-size: 2.4rem;
+  font-size: clamp(1.4rem, 4.6vh, 2.4rem);
   font-weight: 700;
   line-height: 1.05;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  box-shadow: 0 5px 0 var(--tinta);
+  box-shadow: 0 4px 0 var(--tinta);
 }
+.fim-selo-venceu {
+  background-color: var(--especial);
+  background-image: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.35) 0 10px, rgba(255, 255, 255, 0) 10px 22px);
+  color: var(--especial-texto);
+}
+.fim-selo-perdeu { background: var(--perigo-fundo); color: var(--perigo); border-color: var(--perigo); box-shadow: 0 4px 0 var(--perigo); }
+.fim-selo-empate { background: var(--superficie); color: var(--tinta); }
+
 .fim-icone {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: 6px;
-  margin: 0 auto;
-  font-size: 4.2rem;
+  gap: 4px;
+  min-height: 0;
+  font-size: min(3.6rem, 8vh);
   line-height: 1;
   color: #a87400;
 }
 .fim-arte {
-  --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
+  --tam: min(40vw, 19vh);
   display: grid;
   place-items: center;
-  width: min(230px, 58vw);
-  height: min(230px, 58vw);
+  width: var(--tam);
+  height: var(--tam);
   border-radius: 50%;
   background: radial-gradient(circle, var(--cor) 0 50%, rgba(255, 255, 255, 0) 51%);
-  font-size: min(200px, 50vw);
+  font-size: calc(var(--tam) * 0.87);
 }
+.fim-metade[data-papel="perdeu"] .fim-arte { --tam: min(30vw, 14vh); }
 .fim-arte .arte-bicho { width: 100%; height: 100%; }
-.fim-icone.empate { color: var(--tinta-media); }
-.fim-titulo { font-size: 2.1rem; text-align: center; text-transform: uppercase; letter-spacing: 0.02em; }
-.fim-titulo::before { content: none; }
-.fim-perdeu {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: -4px 0 0;
-  font-size: 1rem;
+.fim-nome {
+  margin: 0;
+  font-size: 1.3rem;
   font-weight: 700;
-  color: var(--tinta-media);
-}
-.fim-perdeu-arte { display: grid; place-items: center; width: 48px; height: 48px; font-size: 44px; }
-.fim-perdeu-arte .arte-bicho { width: 100%; height: 100%; }
-.fim-perdeu-selo { color: var(--perigo); text-transform: uppercase; letter-spacing: 0.06em; }
-.fim-entrada { animation: entrada 600ms cubic-bezier(0.2, 0.8, 0.3, 1) both; }
-.barras-resultado { display: grid; gap: 12px; }
-.barra-rotulo {
-  font-weight: 700;
-  font-size: 0.95rem;
+  line-height: 1.1;
   text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.fim-quem {
+  font-size: 0.8rem;
   letter-spacing: 0.08em;
   color: var(--tinta-media);
+}
+.fim-recado { margin: 0; font-size: 0.95rem; color: var(--tinta-media); }
+.fim-conteudo .vida { width: min(100%, 300px); margin-top: 2px; padding: 5px 8px; }
+.fim-conteudo .vida-trilho { height: 16px; }
+.fim-entrada { animation: entrada 600ms cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+
+.fim-centro {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  gap: 4px;
+  justify-items: center;
+  padding: 2px var(--gutter);
+  text-align: center;
+}
+.fim-sub, .fim-placar { margin: 0; font-size: 0.8rem; font-weight: 700; color: var(--tinta-media); line-height: 1.2; }
+.fim-botoes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+.fim-botoes .botao { padding: 8px 10px; font-size: 1.05rem; }
+
+/* tela baixa: o recado sai, o resto continua */
+@media (max-height: 700px) {
+  .fim-recado { display: none; }
 }
 
 @keyframes entrada {
@@ -1788,8 +1854,9 @@ input:focus-visible {
   100% { opacity: 1; transform: scale(1); }
 }
 
-/* confete: cai uma vez (as posições vêm do JS, sem sorteio) */
-.confete { position: fixed; inset: 0; z-index: 4; overflow: hidden; pointer-events: none; }
+/* confete: cai uma vez, dentro da metade de quem venceu (as posições vêm do
+   JS, sem sorteio). Na metade girada ele cai "para baixo" de quem lê. */
+.confete { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
 .confete i {
   position: absolute;
   top: -24px;
@@ -1804,7 +1871,7 @@ input:focus-visible {
 @keyframes confete {
   0% { opacity: 1; transform: translate3d(0, 0, 0) rotate(0deg); }
   85% { opacity: 1; }
-  100% { opacity: 0; transform: translate3d(var(--dx), 108vh, 0) rotate(var(--r)); }
+  100% { opacity: 0; transform: translate3d(var(--dx), 55vh, 0) rotate(var(--r)); }
 }
 
 /* ---------- Espera da segunda peça / desbloqueio ---------- */
@@ -2222,6 +2289,8 @@ input:focus-visible {
 .botao-som[data-modo="mudo"] { color: var(--tinta-media); background: var(--chassi-alt); }
 .botao-som:focus-visible { outline: 4px solid var(--sistema); outline-offset: 2px; }
 .em-batalha #btn-som { display: none; }
+/* no fim os dois cantos são das metades; a fanfarra é curta e a próxima tela tem o botão */
+.em-fim #btn-som { display: none; }
 .botao-som.botao-som-faixa {
   position: absolute;
   top: 50%;

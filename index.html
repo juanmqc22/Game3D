@@ -17,10 +17,10 @@
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=16">
+  <link rel="stylesheet" href="./css/estilo.css?v=17">
   <!-- Desvio NFC para /raposa/ (jogo adulto) só com partida da Raposa ativa. Script
        clássico e síncrono: precisa rodar antes do app ler o ?b=. -->
-  <script src="./js/desvio-raposa.js?v=16"></script>
+  <script src="./js/desvio-raposa.js?v=17"></script>
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -30,7 +30,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=16" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=17" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -126,7 +126,7 @@
         <button type="button" class="botao-som botao-som-faixa" id="btn-som-batalha" hidden></button>
         <!-- Não há botão de lutar: a rodada resolve sozinha quando os dois
              responderam. O meio mostra VS, DESFAZER (1,5 s, com o anel fechando)
-             ou VER FIM. O texto vem escrito nos dois sentidos, um para cada jogador. -->
+             ou FIM! (nocaute: a tela de fim entra sozinha; um toque pula). -->
         <button type="button" class="botao-lutar" id="btn-lutar" disabled>
           <span class="lutar-anel" aria-hidden="true"></span>
           <span class="lutar-texto lutar-baixo"></span>
@@ -177,17 +177,21 @@
     </section>
 
     <!-- 8. Fim -->
-    <section id="tela-fim" class="tela tela-fim" hidden>
-      <div id="fim-confete" class="confete" aria-hidden="true"></div>
-      <p id="fim-venceu" class="fim-venceu">Venceu!</p>
-      <div id="fim-icone" class="fim-icone" aria-hidden="true"></div>
-      <h2 id="fim-titulo" class="fim-titulo"></h2>
-      <p id="fim-perdeu" class="fim-perdeu"></p>
-      <p id="fim-sub" class="sub"></p>
-      <div id="fim-barras" class="barras-resultado"></div>
-      <p id="fim-placar" class="aviso-leve" hidden></p>
-      <button type="button" class="botao botao-principal" id="btn-revanche">Revanche</button>
-      <button type="button" class="botao botao-secundario" id="btn-fim-nova">Nova batalha</button>
+    <!-- Tela dividida como a batalha: cada jogador vê o SEU resultado. A metade
+         de cima (Jogador 1) vem girada 180°, para quem está do outro lado da mesa
+         (contra o Rato não gira: é uma criança só). -->
+    <section id="tela-fim" class="tela dividida tela-fim" hidden>
+      <div class="fim-metade fim-metade-0" id="fim-metade-0"></div>
+      <div class="fim-centro">
+        <h2 id="fim-titulo" class="so-leitor"></h2>
+        <p id="fim-sub" class="fim-sub"></p>
+        <p id="fim-placar" class="fim-placar" hidden></p>
+        <div class="fim-botoes">
+          <button type="button" class="botao botao-principal" id="btn-revanche">Revanche</button>
+          <button type="button" class="botao botao-secundario" id="btn-fim-nova">Nova batalha</button>
+        </div>
+      </div>
+      <div class="fim-metade fim-metade-1" id="fim-metade-1"></div>
     </section>
 
     <!-- 9. Minha coleção -->

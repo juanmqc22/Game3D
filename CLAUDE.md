@@ -84,7 +84,7 @@ test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 
 test/golpe.test.js          nome do golpe (golpeDaRodada)
 test/som.test.js            modo do som e queda sem Web Audio
 test/trilha.test.js         trilha: durações pedidas, seções bem formadas, voltas da batalha, música < efeitos
-test/orientacao.test.js     nenhum texto girado, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
+test/orientacao.test.js     texto girado só na metade de cima do fim, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
 test/navegador.js           apoio: servidor estático + Chrome/Edge headless via DevTools Protocol
 test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
@@ -145,10 +145,21 @@ Regras que não podem regredir:
   plástico): espécie nova precisa de `--cor-corpo` junto de `--cor-tema`, e quem
   contém o retrato tem que carregar `data-especie`.
 - **Tudo se lê de um lado só, na orientação normal do celular: nenhum texto
-  gira** (nem 180°, nem inclinado). `test/orientacao.test.js` percorre todas as
-  telas e estados num Chrome/Edge headless (`test/navegador.js`) e falha se algum
-  elemento com texto tiver rotação ≠ 0°. Sem navegador na máquina ele se pula;
+  gira** (nem 180°, nem inclinado) — **com uma única exceção:** na tela de fim,
+  a metade do Jogador 1 (`.fim-metade-0 .fim-conteudo`) gira 180° para quem está
+  do outro lado da mesa (contra o Rato não gira). `test/orientacao.test.js`
+  percorre todas as telas e estados num Chrome/Edge headless (`test/navegador.js`)
+  e falha se algum elemento com texto tiver rotação diferente da esperada, ou se
+  aparecer outro `rotate(180deg)` no CSS. Sem navegador na máquina ele se pula;
   `NAVEGADOR=/caminho` escolhe outro.
+- **Fim da partida sem botão** (`nocaute` em `js/app.js`, `TEMPO_NOCAUTE`): depois
+  da rodada que zera alguém, o último número fica 450 ms na tela, quem zerou
+  desmaia (balança, tomba para a borda da sua metade e some; o vencedor pula) e
+  a tela de fim entra sozinha (~1,8 s). Um toque pula; movimento reduzido =
+  parada de 1,2 s. O botão do meio mostra FIM! enquanto isso.
+- **Tela de fim dividida** (`#tela-fim`, `renderFim`): cada metade mostra o
+  resultado de quem está daquele lado (VENCEU!/PERDEU/EMPATE!, arte, nome, vida;
+  confete só na metade do vencedor). Revanche e Nova batalha ficam no meio, de pé.
 - **Batalha em tela dividida** (`#tela-batalha`): Jogador 1 na metade de cima,
   Jogador 2 embaixo, nenhuma gira. Nas duas o bichinho fica perto do meio e os
   botões perto da borda (a de cima usa `column-reverse`). A luta acontece na mesma tela (LUTAR → animação → PRÓXIMA), sem tela de
@@ -168,7 +179,7 @@ Regras que não podem regredir:
   `js/regras.js`: GARRADA!, DEFENDEU!, TROPEÇOU!, CHOQUE!, o nome do especial,
   GIROU MAIS!, PRA FORA!) e cada uma o **número** do que aconteceu com a vida
   dela (`.numero-painel`: −3, +4, 0), mais os selos (`.etiqueta`) e no máximo
-  uma `.nota`. VENCEU!/PERDEU só na tela de fim (arte grande, nome, confete). O
+  uma `.nota`. VENCEU!/PERDEU só na tela de fim (uma metade por jogador). O
   texto completo continua em `#resultado-leitura` (`.so-leitor`), para leitor de
   tela — ao mexer no resultado, mantenha essa linha em dia.
 - O especial tem **cena própria** (`tocarCena`, `#cena-especial`), antes da

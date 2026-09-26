@@ -107,6 +107,7 @@ export async function abrirPagina(executavel, { largura = 360, altura = 640 } = 
   const pagina = {
     erros,
     espera,
+    cdp: cmd, // comando cru do DevTools (ex.: Page.captureScreenshot)
     async js(expr) {
       const r = await cmd('Runtime.evaluate', { expression: expr, awaitPromise: true, returnByValue: true });
       if (r.exceptionDetails) throw new Error(r.exceptionDetails.exception?.description ?? r.exceptionDetails.text);
