@@ -184,6 +184,15 @@ export function criarSom({ janela = globalThis, storage = null } = {}) {
     'especial-estrela': () => {
       [1047, 1319, 1568, 2093].forEach((f, i) => nota('square', f, f, i * 0.06, 0.09, 0.14));
     },
+    // VS: o confronto — sopro subindo, estrondo grave e um "clang" metálico
+    vs: () => {
+      chiado('bandpass', 900, 0, 0.18, 0.35);
+      nota('sine', 110, 42, 0.02, 0.42, 0.95);
+      chiado('lowpass', 700, 0.02, 0.3, 0.8);
+      nota('square', 587, 587, 0.03, 0.2, 0.12);
+      nota('square', 880, 880, 0.03, 0.26, 0.1);
+      nota('sine', 2200, 2100, 0.05, 0.3, 0.08);
+    },
     // vitória: fanfarra curta
     vitoria: () => {
       [523, 659, 784].forEach((f, i) => nota('square', f, f, i * 0.11, 0.1, 0.2));

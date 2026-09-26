@@ -1179,6 +1179,155 @@ input:focus-visible {
 }
 
 
+/* ---------- VS: o confronto ----------
+   Tela cheia dividida na diagonal (clip-path estático), cada metade na cor da
+   espécie. A arte entra pelo seu lado, o VS bate no meio com tremida e
+   faíscas. Só transform e opacity animam. Sem .anima (movimento reduzido) a
+   composição aparece inteira, parada. */
+.tela-vs {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  max-width: 560px;
+  margin: 0 auto;
+  display: block;
+  overflow: hidden;
+  background: var(--leitura);
+  cursor: pointer;
+}
+.vs-palco { position: absolute; inset: 0; }
+.vs-lado {
+  --cor: var(--cor-tema, var(--cor-base, var(--tinta)));
+  position: absolute;
+  inset: 0;
+  display: flex;
+  padding: calc(env(safe-area-inset-top, 0px) + 64px) 18px calc(env(safe-area-inset-bottom, 0px) + 22px);
+  background-color: var(--cor);
+  background-image:
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+  color: #fff;
+}
+.vs-lado-0 { clip-path: polygon(0 0, 100% 0, 100% 42%, 0 58%); align-items: flex-start; justify-content: flex-start; }
+.vs-lado-1 {
+  clip-path: polygon(0 58%, 100% 42%, 100% 100%, 0 100%);
+  align-items: flex-end;
+  justify-content: flex-end;
+  background-image:
+    radial-gradient(circle at 70% 78%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+}
+.vs-conteudo { display: flex; align-items: center; gap: 10px; max-width: 100%; }
+.vs-lado-1 .vs-conteudo { flex-direction: row-reverse; text-align: right; }
+.vs-textos { min-width: 0; }
+.vs-arte {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: min(176px, 44vw, 26vh);
+  height: min(176px, 44vw, 26vh);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.26) 0 55%, rgba(255, 255, 255, 0) 56%);
+  font-size: min(150px, 38vw, 22vh);
+}
+.vs-arte .arte-bicho { width: 100%; height: 100%; }
+.vs-textos { display: grid; gap: 2px; justify-items: inherit; }
+.vs-lado-0 .vs-textos { justify-items: start; }
+.vs-lado-1 .vs-textos { justify-items: end; }
+.vs-nome {
+  font-size: 2rem;
+  overflow-wrap: break-word;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+.vs-numeros { display: flex; flex-wrap: wrap; gap: 2px 12px; font-size: 1.05rem; font-weight: 700; }
+.vs-lado-1 .vs-numeros { justify-content: flex-end; }
+.vs-numeros .icone { color: #ffb3b3; }
+.vs-rival {
+  padding: 1px 8px;
+  border-radius: var(--raio-p);
+  background: #fff;
+  color: var(--rato);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+/* a linha da diagonal, na mesma inclinação do corte (clip-path, sem giro) */
+.vs-risco {
+  position: absolute;
+  inset: 0;
+  background: #fff;
+  clip-path: polygon(0 57.2%, 100% 41.2%, 100% 42.8%, 0 58.8%);
+}
+.vs-marca {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: grid;
+  place-items: center;
+  width: 112px;
+  height: 112px;
+  margin: -56px 0 0 -56px;
+  border: 5px solid var(--tinta);
+  border-radius: 50%;
+  background-color: var(--especial);
+  background-image: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0) 55%);
+  box-shadow: 0 0 0 5px var(--especial);
+  color: var(--especial-texto);
+  font-size: 2.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.vs-faiscas { position: absolute; left: 50%; top: 50%; width: 0; height: 0; }
+.vs-faiscas i {
+  position: absolute;
+  left: -7px;
+  top: -7px;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--tinta);
+  border-radius: 3px;
+  background: var(--especial);
+  opacity: 0;
+}
+.vs-faiscas i:nth-child(odd) { background: #fff; }
+
+/* a animação: os dois entram pelos lados; o VS bate; a tela treme; faíscas */
+.tela-vs.anima .vs-lado-0 .vs-arte { animation: vs-entra-esq 480ms cubic-bezier(0.2, 0.9, 0.3, 1.05) both; }
+.tela-vs.anima .vs-lado-1 .vs-arte { animation: vs-entra-dir 480ms cubic-bezier(0.2, 0.9, 0.3, 1.05) 60ms both; }
+.tela-vs.anima .vs-lado-0 .vs-textos { animation: vs-entra-esq-leve 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 140ms both; }
+.tela-vs.anima .vs-lado-1 .vs-textos { animation: vs-entra-dir-leve 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 200ms both; }
+.tela-vs.anima:not(.impacto) .vs-marca { opacity: 0; }
+.tela-vs.impacto .vs-marca { animation: vs-bate 420ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.tela-vs.impacto .vs-palco { animation: vs-treme 320ms linear; }
+.tela-vs.impacto .vs-faiscas i { animation: vs-faisca 560ms cubic-bezier(0.1, 0.7, 0.3, 1) var(--a) both; }
+@keyframes vs-entra-esq { from { transform: translate3d(-130%, 0, 0) scale(0.8); } to { transform: none; } }
+@keyframes vs-entra-dir { from { transform: translate3d(130%, 0, 0) scale(0.8); } to { transform: none; } }
+@keyframes vs-entra-esq-leve { from { opacity: 0; transform: translate3d(-60px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes vs-entra-dir-leve { from { opacity: 0; transform: translate3d(60px, 0, 0); } to { opacity: 1; transform: none; } }
+@keyframes vs-bate {
+  0% { opacity: 0; transform: scale(3.2); }
+  55% { opacity: 1; transform: scale(0.86); }
+  100% { opacity: 1; transform: scale(1); }
+}
+@keyframes vs-treme {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  20% { transform: translate3d(-8px, 4px, 0); }
+  40% { transform: translate3d(7px, -4px, 0); }
+  60% { transform: translate3d(-5px, 2px, 0); }
+  80% { transform: translate3d(3px, -1px, 0); }
+}
+@keyframes vs-faisca {
+  0% { opacity: 1; transform: translate3d(0, 0, 0) scale(1.2); }
+  100% { opacity: 0; transform: translate3d(var(--dx), var(--dy), 0) scale(0.3); }
+}
+@media (max-width: 374px) {
+  .vs-nome { font-size: 1.7rem; }
+}
+
 /* ---------- Modos de jogo ---------- */
 
 .lista-modos { display: grid; gap: 11px; margin-top: 6px; }

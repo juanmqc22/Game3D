@@ -108,6 +108,7 @@ const app = {
   depoisDoDesbloqueio: null, // função a chamar ao tocar "Continuar" no card de novo bichinho
   leituraNfc: null, // AbortController da leitura NFC em andamento (tela de espera)
   contagem: null, // timer da resolução automática (enquanto o DESFAZER está no ar)
+  vs: null, // { seguir } enquanto a tela de VS está no ar
   ultimoToque: null, // { jogador, campo } — o que o DESFAZER apaga
 };
 
@@ -146,6 +147,8 @@ function movimentoReduzido() {
 
 function mostrarTela(id) {
   document.body.classList.toggle('em-batalha', id === 'tela-batalha');
+  // saiu do VS por outro caminho (ex.: voltar do navegador): o VS não segue sozinho
+  if (id !== 'tela-vs' && app.vs) { const vs = app.vs; app.vs = null; vs.cancelar?.(); }
   if (id !== 'tela-espera') pararNfc();
   if (id !== 'tela-batalha') cancelarContagem();
   for (const tela of document.querySelectorAll('.tela')) {
@@ -510,12 +513,95 @@ function confirmarEscolha() {
   if (app.escolhaRestrita) {
     // veio da tela de espera: a peça escaneada não espera mais ninguém
     limparAguardando(armazemEspera());
-    abrirModo();
+    abrirVs(abrirModo);
   } else if (app.jogadorEscolhendo === 0) {
     abrirEscolha(1);
   } else {
-    iniciarPartida();
+    abrirVs(iniciarPartida);
   }
+}
+
+// ---------- tela: VS (o confronto) ----------
+//
+// Logo que a partida fica montada — duas peças lidas (QR ou NFC), a lista
+// manual ou "Não tenho a segunda peça", inclusive contra o Rato — aparece o
+// VS: a tela dividida na diagonal, cada metade na cor da espécie, a arte de
+// cada bichinho entrando pelo seu lado, o nome grande e vida/força embaixo.
+// O VS bate no meio (tremida, faíscas, som). Dura TEMPO_VS.total (<= 2,5 s);
+// um toque em qualquer lugar pula. Com movimento reduzido, a mesma
+// composição parada por TEMPO_VS.reduzido. Só transform e opacity (CSS).
+
+const TEMPO_VS = { impacto: 540, total: 2300, reduzido: 1200 };
+
+function ladoDoVs(c, colecao) {
+  const fundador = colecao?.[c.codigo]?.fundador ?? null;
+  const img = imagemArte(c, 220, { lazy: false });
+  return el('div', { class: 'vs-conteudo' },
+    el('span', { class: `vs-arte${img ? '' : ' sem-arte'}`, 'aria-hidden': 'true' }, img ?? retrato(c)),
+    el('span', { class: 'vs-textos' },
+      fundador ? seloFundador(fundador) : null,
+      c.rival ? el('span', { class: 'vs-rival' }, 'Rival de treino') : null,
+      el('span', { class: 'vs-nome' }, c.nome),
+      el('span', { class: 'vs-numeros' },
+        el('span', {}, icone(iconeVida()), ` ${c.vida} de vida`),
+        el('span', {}, `Força ${c.forca}`)),
+    ),
+  );
+}
+
+// Faíscas em ângulos fixos (nada sorteado): o JS só diz para onde cada uma voa.
+function faiscasDoVs() {
+  return Array.from({ length: 14 }, (_, i) => {
+    const angulo = (i / 14) * Math.PI * 2 + 0.2;
+    const raio = 90 + (i % 3) * 38;
+    return el('i', { style: `--dx: ${Math.round(Math.cos(angulo) * raio)}px; --dy: ${Math.round(Math.sin(angulo) * raio)}px; --a: ${(i % 4) * 25}ms;` });
+  });
+}
+
+// depois: função chamada no fim (escolha de modo ou a partida direto).
+function abrirVs(depois) {
+  // contra o Rato ele fica em cima, como na batalha
+  if (app.escolhas[1]?.rival) app.escolhas = [app.escolhas[1], app.escolhas[0]];
+  const colecao = colecaoAtual();
+  app.escolhas.forEach((c, i) => {
+    const lado = $(`vs-lado-${i}`);
+    lado.dataset.especie = c.especie;
+    lado.style.setProperty('--cor-base', corDaEspecie(c));
+    lado.replaceChildren(ladoDoVs(c, colecao));
+  });
+  $('vs-faiscas').replaceChildren(...faiscasDoVs());
+  $('vs-leitura').textContent = `${app.escolhas[0].nome} contra ${app.escolhas[1].nome}!`;
+  const tela = $('tela-vs');
+  tela.classList.remove('anima', 'impacto');
+  mostrarTela('tela-vs');
+
+  let feito = false;
+  const timers = [];
+  const seguir = () => {
+    if (feito) return;
+    feito = true;
+    timers.forEach(clearTimeout);
+    tela.removeEventListener('click', seguir);
+    app.vs = null;
+    depois();
+  };
+  app.vs = {
+    seguir,
+    cancelar: () => { feito = true; timers.forEach(clearTimeout); tela.removeEventListener('click', seguir); },
+  };
+  tela.addEventListener('click', seguir);
+  if (movimentoReduzido()) {
+    som.tocar('vs');
+    timers.push(setTimeout(seguir, TEMPO_VS.reduzido));
+    return;
+  }
+  void tela.offsetWidth;
+  tela.classList.add('anima');
+  timers.push(setTimeout(() => {
+    tela.classList.add('impacto');
+    som.tocar('vs');
+  }, TEMPO_VS.impacto));
+  timers.push(setTimeout(seguir, TEMPO_VS.total));
 }
 
 // ---------- tela: modo (depois de escanear as duas peças) ----------
@@ -1833,7 +1919,7 @@ function tratarChegada(chegada) {
   if (chegada.tipo === 'partida') {
     app.escolhas = [...chegada.criaturas];
     app.escolhaRestrita = false;
-    abrirModo();
+    abrirVs(abrirModo);
     return;
   }
   irParaInicio();

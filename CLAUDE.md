@@ -128,6 +128,10 @@ Regras que não podem regredir:
 - **Sem `:has()`, `color-mix()` ou `backdrop-filter`** — faltam em WebView antiga
   de Android de entrada. Precisa de estado no CSS? Ponha uma classe pelo JS.
 - Validar em **360x640** além dos tamanhos grandes: sem rolagem lateral.
+- **Tela de VS** (`#tela-vs`, `abrirVs` em `js/app.js`): aparece sempre que a partida
+  fica montada (duas peças lidas, lista manual, "Não tenho a segunda peça", contra o
+  Rato), antes da escolha de modo. Diagonal com `clip-path` estático, cada metade na cor
+  da espécie; ≤ 2,5 s (`TEMPO_VS`), um toque pula; movimento reduzido = parada 1,2 s.
 - **Cenário por modo** (`#tela-batalha[data-modo]`, CSS/SVG estático): Rolar = terra e
   folhas, Batalha = estádio/bandeja vista de cima, Mira = gramado com alvo. Só na moldura
   e no chão sob o bichinho (`.bicho-lugar::before`) — nunca atrás de texto.

@@ -92,6 +92,20 @@
       </div>
     </section>
 
+    <!-- 4b. VS: o confronto, logo que a partida fica montada (duas peças lidas,
+         lista manual ou contra o Rato). Tela dividida na diagonal, cada metade na
+         cor da espécie; o VS bate no meio. <= 2,5 s, um toque pula. Ver abrirVs. -->
+    <section id="tela-vs" class="tela tela-vs" hidden>
+      <div class="vs-palco" id="vs-palco">
+        <div class="vs-lado vs-lado-0" id="vs-lado-0"></div>
+        <div class="vs-lado vs-lado-1" id="vs-lado-1"></div>
+        <span class="vs-risco" aria-hidden="true"></span>
+        <div class="vs-faiscas" id="vs-faiscas" aria-hidden="true"></div>
+        <span class="vs-marca" aria-hidden="true">VS</span>
+      </div>
+      <p id="vs-leitura" class="so-leitor" aria-live="polite"></p>
+    </section>
+
     <!-- 5. Escolher o modo (depois de escanear as duas peças) -->
     <section id="tela-modo" class="tela" hidden>
       <h2>Como vocês vão jogar?</h2>
