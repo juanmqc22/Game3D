@@ -17,10 +17,10 @@
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=14">
+  <link rel="stylesheet" href="./css/estilo.css?v=15">
   <!-- Desvio NFC para /raposa/ (jogo adulto) só com partida da Raposa ativa. Script
        clássico e síncrono: precisa rodar antes do app ler o ?b=. -->
-  <script src="./js/desvio-raposa.js?v=14"></script>
+  <script src="./js/desvio-raposa.js?v=15"></script>
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -30,7 +30,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=14" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=15" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -108,6 +108,8 @@
 
       <div class="faixa-centro">
         <button type="button" class="botao-link botao-sair" id="btn-sair">Sair</button>
+        <!-- Som (na batalha ele mora aqui; nas outras telas, no canto: #btn-som) -->
+        <button type="button" class="botao-som botao-som-faixa" id="btn-som-batalha" hidden></button>
         <span class="chip-rodada chip-rodada-cima" id="rodada-cima"></span>
         <!-- Não há botão de lutar: a rodada resolve sozinha quando os dois
              responderam. O meio mostra VS, DESFAZER (1,5 s, com o anel fechando)
@@ -118,23 +120,46 @@
           <span class="lutar-texto lutar-baixo"></span>
         </button>
         <span class="chip-rodada" id="rodada-baixo"></span>
-        <!-- O nome do especial, grande, por cima da faixa: uma linha para cada jogador. -->
-        <div class="faixa-especial" aria-hidden="true">
-          <span class="fe-cima"></span>
-          <span class="fe-baixo"></span>
-        </div>
-        <!-- camada do choque, no meio da tela: quais efeitos aparecem é decidido
-             por data-fx em #tela-batalha (lingua, bola ou estrela). Ver css/estilo.css. -->
+        <!-- camada do choque, no meio da tela (clarão e anel do golpe) -->
         <div class="choque" aria-hidden="true">
           <span class="onda"></span>
-          <svg class="estrela" viewBox="-50 -50 100 100"><polygon points="0,-46 13,-15 46,-14 20,7 29,40 0,21 -29,40 -20,7 -46,-14 -13,-15"/></svg>
           <span class="clarao"></span>
-          <span class="bola-ferro"></span>
-          <span class="gota-vida"></span>
         </div>
       </div>
 
       <div class="metade metade-1" id="metade-1"></div>
+
+      <!-- Batalha (ARENA): um toque diz quem ganhou e como. A tela escurece por
+           trás; a pergunta vem escrita para os dois lados (a de baixo do painel
+           fica de cabeça para baixo, para o jogador de cima). -->
+      <div id="quem-ganhou" class="quem-ganhou" role="dialog" aria-modal="true" aria-labelledby="qg-titulo" hidden>
+        <div class="qg-painel">
+          <p class="qg-titulo" id="qg-titulo">Quem ganhou?</p>
+          <div class="qg-grade">
+            <div class="qg-lado" id="qg-lado-0"></div>
+            <button type="button" class="qg-opcao qg-empate" data-ganhou="EMPATE">Empate</button>
+            <div class="qg-lado" id="qg-lado-1"></div>
+          </div>
+          <p class="qg-titulo qg-titulo-cima" aria-hidden="true">Quem ganhou?</p>
+          <button type="button" class="botao-link qg-sair">Sair</button>
+        </div>
+      </div>
+
+      <!-- A cena do especial (só nas rodadas de especial, até 2,5 s com a luta):
+           o fundo escurece, a arte entra grande, o nome aparece (uma linha para
+           cada jogador) e o efeito vai de um painel ao outro. data-fx escolhe o
+           efeito: lingua, bola ou estrela. Um toque pula. Ver tocarCena (js/app.js). -->
+      <div id="cena-especial" class="cena-especial" aria-hidden="true" hidden>
+        <div class="cena-fundo"></div>
+        <p class="cena-nome"><span class="cn-cima"></span><span class="cn-baixo"></span></p>
+        <span class="fx-lingua"></span>
+        <span class="fx-poeira"></span>
+        <span class="fx-bola"></span>
+        <span class="fx-domo"></span>
+        <svg class="fx-estrela" viewBox="-50 -50 100 100"><polygon points="0,-46 13,-15 46,-14 20,7 29,40 0,21 -29,40 -20,7 -46,-14 -13,-15"/></svg>
+        <div class="cena-arte"></div>
+        <span class="fx-coracao"></span>
+      </div>
 
       <!-- A tela conta a rodada por desenho; esta linha conta por extenso
            para quem usa leitor de tela. -->
@@ -142,9 +167,12 @@
     </section>
 
     <!-- 8. Fim -->
-    <section id="tela-fim" class="tela" hidden>
+    <section id="tela-fim" class="tela tela-fim" hidden>
+      <div id="fim-confete" class="confete" aria-hidden="true"></div>
+      <p id="fim-venceu" class="fim-venceu">Venceu!</p>
       <div id="fim-icone" class="fim-icone" aria-hidden="true"></div>
       <h2 id="fim-titulo" class="fim-titulo"></h2>
+      <p id="fim-perdeu" class="fim-perdeu"></p>
       <p id="fim-sub" class="sub"></p>
       <div id="fim-barras" class="barras-resultado"></div>
       <p id="fim-placar" class="aviso-leve" hidden></p>
@@ -166,6 +194,9 @@
 
     <noscript><p class="erro">Este jogo precisa de JavaScript ligado.</p></noscript>
   </main>
+
+  <!-- Som: tudo / só efeitos / mudo. Some se o navegador não tem Web Audio. -->
+  <button type="button" class="botao-som" id="btn-som" hidden></button>
 
   <div id="falha" class="falha" role="alert" hidden>
     <p>Algo deu errado.</p>

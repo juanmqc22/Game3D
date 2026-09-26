@@ -12,9 +12,9 @@ import {
   DES_ITEM, DES_FACE, desEstrela, desCeleiro, desCaminhao, desGalinha, desLua, desSol,
   desRaposa, desOlhos, desColinas, desCadeado,
 } from './desenhos.js?v=2';
-import { iconeSimbolo } from '../../js/icones.js?v=14';
-import { CRIATURAS } from '../../js/criaturas.js?v=14';
-import { arteDaCriatura } from '../../js/arte.js?v=14';
+import { iconeSimbolo } from '../../js/icones.js?v=15';
+import { CRIATURAS } from '../../js/criaturas.js?v=15';
+import { arteDaCriatura } from '../../js/arte.js?v=15';
 
 // ---------- utilidades de DOM ----------
 

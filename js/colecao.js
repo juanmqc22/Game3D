@@ -5,7 +5,7 @@
 //   { TAT01: { descobertoEm: '2026-09-18T12:00:00.000Z', partidas: 3, vitorias: 2, fundador: 3 }, ... }
 // fundador só existe nas peças da primeira leva (etiqueta com &f=N, N de 1 a 10).
 
-import { CRIATURAS, buscarCriatura } from './criaturas.js?v=14';
+import { CRIATURAS, RIVAL, SERIE_ATUAL, buscarCriatura } from './criaturas.js?v=15';
 
 export const CHAVE_COLECAO = 'bichinhos:colecao';
 
@@ -113,8 +113,19 @@ export function registrarPartida(storage, codigos, vencedor) {
   return mudou ? gravarColecao(storage, colecao) : false;
 }
 
-// Oponente surpresa: sorteia entre todas as criaturas (aleatorio: função 0 <= x < 1).
-export function sortearOponente(aleatorio = Math.random, criaturas = CRIATURAS) {
-  const i = Math.min(criaturas.length - 1, Math.max(0, Math.floor(aleatorio() * criaturas.length)));
-  return criaturas[i];
+// Lista manual (tela de escolha e "Não tenho a segunda peça"). Devolve
+// { itens, temPeca }, na ordem da tela:
+//   { tipo: 'bicho', criatura }   — já escaneado (qualquer série)
+//   { tipo: 'rival', criatura }   — o Rato do Mato (comRival = false tira)
+//   { tipo: 'em-breve', serie }   — série futura ainda não escaneada: sem nome nem números
+// Bichinho da série atual ainda não escaneado não aparece. Quem não escaneou
+// nada vê só o Rato (temPeca = false; a tela pede para escanear a peça).
+// Sem storage (colecao null) vale como coleção vazia.
+export function listaDeEscolha(colecao, { comRival = true, criaturas = CRIATURAS, serieAtual = SERIE_ATUAL, rival = RIVAL } = {}) {
+  const bichos = criaturas.filter((c) => estaDescoberta(colecao, c.codigo)).map((criatura) => ({ tipo: 'bicho', criatura }));
+  const temPeca = bichos.length > 0;
+  const emBreve = temPeca
+    ? criaturas.filter((c) => c.serie > serieAtual && !estaDescoberta(colecao, c.codigo)).map((c) => ({ tipo: 'em-breve', serie: c.serie }))
+    : [];
+  return { itens: [...bichos, ...(comRival ? [{ tipo: 'rival', criatura: rival }] : []), ...emBreve], temPeca };
 }

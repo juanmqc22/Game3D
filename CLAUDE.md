@@ -11,6 +11,14 @@ depois de carregada. Cada peça tem um código (ex: `TAT01`); o QR da peça abre
 `?b=TAT01`. Escanear duas peças em sequência (mesmo em abas diferentes, como no iPhone) monta a partida
 (`js/escaneio.js`); cada código escaneado entra na coleção (`js/colecao.js`).
 
+**Rato do Mato (`RIVAL`, RAT00):** rival de treino de quem só tem uma peça — a criança
+gira o próprio pião duas vezes, uma por ela e uma pelo Rato. Não tem peça: fica fora
+de `CRIATURAS` (escaneio, coleção, contador, Raposa e média do elenco não o veem);
+`buscarCriaturaOuRival` acha os dois. Na batalha o Rato fica sempre em cima e a metade
+dele **não gira** (`.metade-rival`; `sentidoDoMeio`/`quadro()` no JS). Alvo: cada
+fundador vence o Rato 65–75% (`node scripts/balanceamento.js --rival`). A lista manual
+(`listaDeEscolha`) mostra só os escaneados, o Rato e a Série 2 travada; não há sorteio.
+
 **Segundo jogo (adulto):** Raposa na Fazenda, tudo em `raposa/` — ver `RAPOSA.md`.
 A única ligação com o jogo das crianças é `js/desvio-raposa.js` (carregado antes do
 app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativa.
@@ -18,10 +26,11 @@ app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativ
 ## Modos de jogo (fonte da verdade: `js/regras.js`)
 
 - **Rolar** (clássico): as regras abaixo.
-- **Arena** (na tela: **Batalha**; as peças são piões numa bandeja): os dois
-  ainda girando (`dentro`) → igual ao Rolar. Só um girando → ele vence, a face
-  não importa, o outro (parou primeiro ou saiu da bandeja) leva
-  `forca + BONUS_FORA` (1). Os dois pararam/saíram → rodada nula. Escudo continua valendo.
+- **Arena** (na tela: **Batalha**; as peças são piões numa bandeja): sem face.
+  Uma sobreposição ("QUEM GANHOU?") resolve num toque: **Girou mais** → o
+  vencedor causa `forca + BONUS_GIROU` (1); **Jogou pra fora** → `forca +
+  BONUS_FORA` (2); **Empate** → Choque. Nenhum especial ativa. Escudo continua
+  valendo (inclusive no choque). Simulador: `--modo ARENA --girou 45 --fora 35 --empate 20`.
 - **Mira**: igual ao Rolar; vencedor acertou o alvo → `+BONUS_ACERTO` (2), que
   **não soma** com o +2 do tropeço (extra máximo da rodada é +2); errou → dano
   pela metade, arredondado para baixo. Cura, recuo e escudo não mudam.
@@ -54,11 +63,12 @@ Esclarecimentos (cobertos por teste):
 ```
 index.html                  telas (trocadas com `hidden`)
 css/estilo.css              estilo mobile-first, alvo de toque >= 64px
-js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um; `serie` + `SERIE_ATUAL`
+js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um; `serie` + `SERIE_ATUAL`; `RIVAL` (Rato)
 js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global)
 js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), selo de Fundador (&f=1..10), contador por série, puro
 js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
+js/som.js                   som gerado em código (Web Audio): efeitos, música, modo tudo/efeitos/mudo (localStorage `bichinhos:som`)
 js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta
 img/criaturas/              arte publicada (WebP 256 e 512, gerada por `npm run arte`)
 img/originais/              originais da arte, CODIGO.png|webp — fora do Pages (_config.yml)
@@ -71,6 +81,9 @@ test/escaneio.test.js       loop de escaneio
 test/colecao.test.js        coleção
 test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 80 KB
+test/golpe.test.js          nome do golpe (golpeDaRodada)
+test/som.test.js            modo do som e queda sem Web Audio
+test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
 js/desvio-raposa.js         desvio NFC para raposa/ (script clássico; test/raposa-desvio.test.js)
@@ -107,12 +120,17 @@ Regras que não podem regredir:
   box-shadow/filter, e nada de `backdrop-filter`. Efeitos decorativos rodam uma
   vez; loop infinito só onde é sinal de estado (vida baixa, escudo, leitura do QR).
 - **Teto de 1,2s por rodada**, incluindo a latência do toque. A linha do tempo
-  está em `TEMPO` no topo de `js/app.js` (hoje 1080ms internos, ~1126ms medidos).
+  está em `TEMPO` no topo de `js/app.js` (hoje 1080ms internos, ~1087ms medidos).
+  **Só as rodadas de especial** podem ir até **2,5 s**: a cena (`TEMPO_CENA`,
+  1400ms) vem antes da luta (~2486ms medidos).
 - **`prefers-reduced-motion`** desliga tudo e a informação continua completa.
 - **Alvos de toque >= 44px**; os principais em 64px (`--toque`).
 - **Sem `:has()`, `color-mix()` ou `backdrop-filter`** — faltam em WebView antiga
   de Android de entrada. Precisa de estado no CSS? Ponha uma classe pelo JS.
 - Validar em **360x640** além dos tamanhos grandes: sem rolagem lateral.
+- **Cenário por modo** (`#tela-batalha[data-modo]`, CSS/SVG estático): Rolar = terra e
+  folhas, Batalha = estádio/bandeja vista de cima, Mira = gramado com alvo. Só na moldura
+  e no chão sob o bichinho (`.bicho-lugar::before`) — nunca atrás de texto.
 - A cor da espécie vem do CSS por `data-especie`; `--cor-base` (de
   `js/criaturas.js`) é o fallback de uma espécie nova.
 - O bichinho (`iconeBichinho`) é a silhueta da peça impressa, com o símbolo da
@@ -134,17 +152,21 @@ Regras que não podem regredir:
   A pose final de cada papel está em `POSE` (JS) e em `.fase-final
   [data-papel]` (CSS) — mantenha os dois iguais. Sem `Element.animate`, pula
   direto para o fim.
-- **A rodada é contada por desenho, não por parágrafo:** cada metade mostra o
-  veredito do seu jogador (VENCEU!, PERDEU, Tropeçou!, Choque!...) e os selos
-  (`.etiqueta`) do que aconteceu com ele, ao lado do bichinho (os botões de
-  símbolo ficam no lugar); no máximo uma `.nota`, só para o que a tela esconderia. O texto completo continua
-  em `#resultado-leitura` (`.so-leitor`), para leitor de tela — ao mexer no
-  resultado, mantenha essa linha em dia.
-- O especial tem momento próprio: o nome entra grande na `.faixa-especial` (uma
-  linha para cada jogador) e o efeito vem de `EFEITO_ESPECIAL` em `js/app.js`
-  (`data-fx`): Língua Chicote puxa a vida de um painel para o outro, Bola de
-  Ferro cai no oponente e acende o escudo; qualquer outro código (inclusive
-  desconhecido) usa a estrela genérica.
+- **A rodada é contada por desenho, não por parágrafo:** nas rodadas não existe
+  VENCEU/PERDEU. As duas metades mostram o **nome do golpe** (`golpeDaRodada` em
+  `js/regras.js`: GARRADA!, DEFENDEU!, TROPEÇOU!, CHOQUE!, o nome do especial,
+  GIROU MAIS!, PRA FORA!) e cada uma o **número** do que aconteceu com a vida
+  dela (`.numero-painel`: −3, +4, 0), mais os selos (`.etiqueta`) e no máximo
+  uma `.nota`. VENCEU!/PERDEU só na tela de fim (arte grande, nome, confete). O
+  texto completo continua em `#resultado-leitura` (`.so-leitor`), para leitor de
+  tela — ao mexer no resultado, mantenha essa linha em dia.
+- O especial tem **cena própria** (`tocarCena`, `#cena-especial`), antes da
+  luta: fundo escurece, a arte entra grande, o nome aparece (uma linha para cada
+  jogador) e o efeito vai de um painel ao outro, por `EFEITO_ESPECIAL`
+  (`data-fx`): Língua Chicote = língua rosa elástica que volta com um coração;
+  Bola de Ferro = esfera cinza que cai com poeira e tremor + escudo azul;
+  qualquer outro código usa a estrela genérica. Um toque pula; movimento
+  reduzido vai direto ao resultado.
 - Com arte, o bichinho da batalha fica grande (`.metade.tem-arte`) e reage ao
   resultado: vencedor pula, perdedor treme (≤ 0,8 s, dentro do teto da rodada).
 
@@ -173,4 +195,7 @@ Regras que não podem regredir:
 - A tabela de `js/criaturas.js` está balanceada e validada: não mexer. (Língua
   Chicote 4/4 e o Choque foram pedidos e medidos — ver ENTREGA.md.)
 - Fora de escopo na v1: backend, login, XP, multiplayer em rede, leitor de QR,
-  animações elaboradas, PWA, sons, dark mode, i18n, admin. Perguntar antes.
+  PWA, dark mode, i18n, admin. Perguntar antes.
+- **Som** (`js/som.js`): só Web Audio gerado em código — nenhum arquivo de áudio,
+  biblioteca ou música existente. Curto e baixo. O áudio nasce no primeiro toque
+  (iPhone); sem Web Audio o botão some. Padrão: só efeitos.

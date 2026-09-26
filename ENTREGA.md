@@ -1,3 +1,245 @@
+# Entrega — polimento 2: Rato do Mato, Batalha simplificada, especiais e som
+
+Branch `feat/polimento-2`, um commit por fase, levada para a `main` (merge
+local; **falta o `git push`** para o Pages publicar). As cinco fases ficaram prontas.
+
+**Testes:** 306 antes, **371 depois** (`node --test`: 371 pass, 0 fail). A
+suíte passou em cada commit. Paleta: `node scripts/contraste.js` → todos >= 4.5:1.
+
+| Commit | Fase | Testes |
+|---|---|---|
+| `Fase 1` | Rato do Mato (rival de treino) e lista manual sem sorteio | 356 |
+| `Fase 2` | Batalha em uma tela só ("Quem ganhou?") | 355 |
+| `Fase 3` | nome do golpe nas rodadas, cena do especial, fim com VENCEU! | 363 |
+| `Fase 4` | cenário por modo | 363 |
+| `Fase 5` | som gerado em código | 371 |
+| `Entrega` | versão de cache 14 → 15 e este arquivo | 371 |
+
+Na Fase 2 a conta caiu 1: saíram os testes da Arena antiga e entraram os da
+nova. Ela nunca ficou abaixo dos 306 de partida e terminou em 371.
+
+## Roteiro para testar no iPhone
+
+Espere ~10 min depois do push (o Pages guarda cache por 600 s) ou use uma aba
+anônima. Para zerar tudo: Ajustes → Safari → Avançado → Dados de Sites → apague
+`juanmqc22.github.io`.
+
+1. **Contra o Rato com uma peça só.** Escaneie só o Bocão
+   (`https://juanmqc22.github.io/Game3D/?b=SAP02&f=1`) → Continuar → na tela
+   "Bocão está pronto!" toque em **Não tenho a segunda peça**. A lista mostra o
+   Bocão, o **Rato do Mato** (selo "Rival de treino", com a arte) e quatro
+   cartões "Série 2 — em breve". Não existe mais "Oponente surpresa". Escolha o
+   Rato → modo **Rolar**. O Rato fica **em cima, sem estar de cabeça para
+   baixo**, com "Gire o pião pelo Rato". Gire o seu pião e toque o desenho na
+   sua metade (embaixo); gire de novo e toque o desenho na metade do Rato.
+2. **Lista manual sem nada escaneado.** Numa aba anônima, abra
+   `https://juanmqc22.github.io/Game3D/` e toque em Rolar: aparece só o Rato e
+   "Escaneie a sua peça para jogar com o seu bichinho."
+3. **Uma partida de Batalha.** Escaneie SAP02 e TAT01 → **Batalha**. A tela
+   escurece e aparece **QUEM GANHOU?** com as duas fotos. Toque **Girou mais**
+   ou **Jogou pra fora** embaixo de quem ganhou, ou **Empate** no meio. A
+   rodada resolve no toque. Depois, **Girar de novo** abre a pergunta outra vez.
+   Jogue até o fim: a tela de fim mostra **VENCEU!**, a arte grande, o nome, o
+   confete e, embaixo, o outro com **PERDEU**.
+4. **Um especial de cada fundador** (modo Rolar). Bocão com ESPECIAL vencendo
+   → cena da **Língua Chicote**: a língua rosa estica até o Couraça e volta com
+   um coração. Couraça com ESPECIAL vencendo → **Bola de Ferro**: a bola cinza
+   cai no Bocão, levanta poeira, o painel treme e o escudo azul acende no
+   Couraça. Cada cena leva ~2,5 s com o resultado; um toque em qualquer lugar
+   pula. Nas rodadas normais o nome do golpe aparece grande (**GARRADA!**,
+   **DEFENDEU!**, **TROPEÇOU!**, **CHOQUE!**) e cada painel mostra o número da
+   vida (−3, +4, 0).
+5. **Botão de som** (canto de cima; na batalha, à esquerda da faixa do meio).
+   Começa em **só efeitos** (alto-falante com ondas). Toque uma vez → **mudo**
+   (X); outra → **tudo** (nota musical: entra a musiquinha); outra → só efeitos
+   de novo. Recarregue a página: ele lembra. Com a chave lateral do iPhone no
+   silencioso, o Safari não toca Web Audio. Isso é do aparelho, não do jogo.
+
+Se algo parecer antigo, é cache: confira que
+`https://juanmqc22.github.io/Game3D/js/som.js?v=15` existe.
+
+## Fase 1 — Rato do Mato ✅
+
+**Números finais: vida 14, força 2, Mordida Rápida 3 de dano.**
+
+Os números de partida (vida 12) davam 75,5–76,2% para os fundadores e, pior,
+**reprovavam o guarda-corpo como alvo**: Salta e Trovão batem 8 no Rolar, e 60%
+de 12 é 7,2. Com vida 14 (60% = 8,4) todo golpe de todo bichinho, em todo
+modo, fica dentro do limite, e os fundadores caem no meio da faixa sem mexer na
+força nem no especial.
+
+Fundadores contra o Rato (10.000 partidas por ordem, as duas ordens somadas;
+alvo 65–75%):
+
+| Modo | Faces | Couraça | Bocão | Mediana |
+|---|---|---|---|---|
+| Rolar | justo, semente 1 | 69,5% | 70,9% | 7–8 |
+| Rolar | justo, semente 2 | 69,7% | 71,2% | 7–8 |
+| Rolar | medido (11,21,31,32), semente 1 | 68,5% | 70,1% | 7–8 |
+| Rolar | medido, semente 2 | 68,3% | 70,0% | 7–8 |
+| Mira | justo | 68,5% | 70,4% | 8–10 |
+| Mira | medido | 68,6% | 71,2% | 9–10 |
+| Batalha (nova), semente 1 | 45/35/20 | 70,4% | 66,3% | 7 |
+| Batalha (nova), semente 2 | 45/35/20 | 70,1% | 66,4% | 7 |
+
+`node scripts/balanceamento.js --rival` (aceita `--modo`, `--faces` e
+`--ajuste RAT00.vida=12`). Também ficou um teste (`test/rival.test.js`) que
+roda a simulação e exige 65–75% nas duas distribuições, e o guarda-corpo de
+60% com o Rato como alvo **e** como atacante, nos três modos.
+
+- O Rato fica **fora de `CRIATURAS`** (`RIVAL` em `js/criaturas.js`, com
+  `rival: true`). Assim nenhum caminho de peça o vê: `?b=RAT00` é código
+  inválido, ele nunca entra na coleção nem no contador, não aparece na Raposa e
+  não conta na média do elenco. `buscarCriaturaOuRival` acha os dois.
+- Cor ardósia `--rato: #44536a` (7,80:1 com branco; 6,44:1 no chassi), no
+  `scripts/contraste.js`. Arte: `img/originais/rato.png` virou `RAT00.png`
+  (o `npm run arte` só aceita o nome no formato do código) → `RAT00-512.webp`
+  com 24 KB e `RAT00-256.webp` com 10 KB.
+- **Lista manual:** só os escaneados (com a arte), depois o Rato, depois os da
+  Série 2 travados ("Série 2 — em breve", sem nome nem números). Sem nada
+  escaneado: só o Rato e o texto pedido. O "Oponente surpresa" e o
+  `sortearOponente` saíram de todo lugar, inclusive do README.
+
+## Fase 2 — Batalha em uma tela só ✅
+
+`BONUS_GIROU = 1` e `BONUS_FORA = 2` em `js/regras.js`. **Não precisei baixar
+o BONUS_FORA:** com +2 nada saiu do alvo.
+
+Simulador: `--modo ARENA --girou 45 --fora 35 --empate 20` (esses são os
+padrões). Em cada rodada: 20% empate (Choque); senão um lado ganha (metade das
+vezes cada), por "girou" (45 em 80) ou "fora" (35 em 80). Como a Batalha não
+usa faces, justo e medido dão o mesmo resultado.
+
+| Bichinho | Média contra o elenco (semente 1) | Semente 2 |
+|---|---|---|
+| TAT01 Couraça | 51,5% | 51,4% |
+| SAP02 Bocão | 46,9% | 46,9% |
+| TAT03 Ferrão | 46,9% | 46,9% |
+| SAP04 Salta | 52,8% | 52,8% |
+| TAT05 Casco | 55,0% | 55,2% |
+| SAP06 Trovão | 46,9% | 46,9% |
+
+Alvo 45–57%: todos dentro. Nenhum confronto fora de 30–70% (o pior é 42,7%),
+medianas de 5 a 7 rodadas, nenhuma partida no limite de 40. Couraça × Bocão:
+54,3 × 45,7. Guarda-corpo: o maior golpe da Batalha é força 4 + 2 = 6 (Salta),
+abaixo de 60% de qualquer alvo.
+
+Bocão, Ferrão e Trovão empatam em 46,9% porque, sem faces nem especial, a
+Batalha é decidida só por força e vida, e os três têm força 3 e vida 15. Ela
+virou um modo de pura habilidade no pião.
+
+## Fase 3 — leitura da rodada e especiais ✅
+
+- **Nome do golpe no lugar de VENCEU/PERDEU**, igual nas duas metades, vindo de
+  `golpeDaRodada` (função pura em `js/regras.js`, com teste): GARRADA!,
+  DEFENDEU!, TROPEÇOU!, CHOQUE!, o nome do especial; na Batalha, GIROU MAIS! e
+  PRA FORA!. Cada painel mostra o número grande da própria vida na rodada (−3
+  vermelho, +4 verde, 0 cinza, 0 azul com escudo quando o escudo segurou).
+- **Tela de fim:** selo amarelo **VENCEU!**, arte grande (até 230 px) com o
+  troféu, o nome, 28 papéis de confete (uma vez) e, embaixo, a miniatura do
+  outro com **PERDEU**. Com movimento reduzido, sem confete.
+- **Cena do especial:** o fundo escurece, a arte entra grande sobre o painel de
+  quem usou, o nome aparece na faixa do meio (uma linha para cada jogador) e o
+  efeito vai de um painel ao outro. Língua Chicote = língua **rosa, fina e
+  elástica**, que **estica na diagonal** até o outro e volta com um coração
+  vermelho. Bola de Ferro = esfera **cinza e pesada** que **cai de cima**,
+  achata no impacto, levanta poeira e faz o painel tremer, e o escudo **azul**
+  acende. Os outros especiais (inclusive a Mordida Rápida do Rato) usam a estrela.
+- **Tempos medidos** (do fim do DESFAZER até os botões liberarem): rodada
+  normal **~1087 ms** (≤ 1,2 s); rodada de especial **~2486 ms** (≤ 2,5 s). Um
+  toque pula a cena; com movimento reduzido o resultado aparece direto.
+
+## Fase 4 — cenário por modo ✅
+
+Só CSS e SVG em data URI, estático: Rolar = terra com folhas e pedrinhas;
+Batalha = estádio redondo em anéis (a bandeja vista de cima); Mira = gramado
+listrado com um alvo vermelho e branco. Aparece na moldura em volta dos painéis
+e num "chão" sob cada bichinho. Nunca fica atrás de texto, por isso o contraste
+medido não muda (ver a auditoria abaixo).
+
+## Fase 5 — som ✅
+
+`js/som.js`, só Web Audio gerado em código: toque em botão, garrada (três
+arranhões), defesa (pancada + "ting"), tropeço (escorregão), choque (estalo +
+duas notas brigando), girou/pra fora na Batalha, **Língua Chicote** (slurp
+subindo, estalo, volta), **Bola de Ferro** (assobio caindo + baque pesado com
+poeira), estrela genérica e fanfarra de vitória. Música opcional: loop de 4
+compassos em onda quadrada com baixo triangular, volume 0,07. Botão com três
+estados, padrão **só efeitos**, guardado em `bichinhos:som`. O `AudioContext`
+só nasce no primeiro toque. Sem Web Audio os dois botões somem (testado
+apagando o `AudioContext` antes de carregar: nenhum erro).
+
+## Decisões que tomei sozinho (a mais simples em cada caso)
+
+- **Plan mode:** como na entrega anterior, aprovar um plano seria uma pergunta;
+  li os arquivos inteiros, planejei e segui.
+- **O Rato fica fora de `CRIATURAS`**, em vez de um filtro em cada lugar. É o
+  jeito de ele nunca vazar para escaneio, coleção, contador ou Raposa.
+- **Vida do Rato 14, não 12**, por causa do guarda-corpo (ver Fase 1).
+- **Contra o Rato ele fica sempre em cima, e a metade dele não gira:** a
+  criança joga sozinha, sentada de um lado, e precisa ler "Gire o pião pelo
+  Rato" do lado certo. Se o Rato for escolhido como Jogador 1, a ordem troca.
+- **Vitória contra o Rato conta** nas estatísticas do bichinho da criança (só
+  o Rato não tem cartão). Quando o Rato ganha, não toca a fanfarra.
+- **Não existe Rato contra Rato:** se o Jogador 1 escolheu o Rato, ele some da
+  lista do Jogador 2. Os travados ficam depois do Rato.
+- **"QUEM GANHOU?" resolve no toque, sem DESFAZER.** A pergunta vem escrita
+  para os dois lados (a cópia de baixo do painel fica de cabeça para baixo, para
+  o jogador de cima). Depois do resultado, **Girar de novo** abre a pergunta da
+  próxima rodada. A pergunta tem um "Sair" próprio, porque cobre a faixa do meio.
+- **Nomes que você não definiu:** TROPEÇO × TROPEÇO = "TROPEÇARAM!"; na
+  Batalha, "GIROU MAIS!" e "PRA FORA!". Especial vencendo quem tropeçou mostra
+  o nome do especial (o carimbo "TROPEÇOU! +2" continua na metade de quem
+  tropeçou).
+- **O número de cada painel é quanto a vida mudou**, inclusive 0, porque você
+  pediu o número "em cada painel".
+- **A cena do especial acontece mesmo se o escudo segurar o dano;** a luta que
+  vem depois mostra o escudo segurando.
+- **Os efeitos antigos do especial dentro da luta** (faixa amarela, língua e
+  bola) saíram: a cena já conta isso, e repetir estouraria os 2,5 s.
+- **Notas curtas na tela** ("Escudo não acumula.") para caber em 360×640; o
+  leitor de tela continua lendo a versão por extenso.
+- **O cenário fica só na moldura e no chão sob o bichinho**, nunca atrás de texto.
+- **Botão de som:** na batalha ele vai para a faixa do meio (no canto ele
+  cobriria os botões do jogador de cima). Cada toque avança um estado: tudo →
+  efeitos → mudo → tudo.
+- **Confete e ruído do som sem `Math.random`:** posições fixas pela razão áurea
+  e ruído com semente. O app continua sem sortear nada.
+
+## Cache
+
+`?v=14` → `?v=15` em `index.html` (CSS, desvio da Raposa, app.js), nos imports
+de `js/app.js` (inclusive o novo `som.js`), de `js/escaneio.js` e de
+`js/colecao.js`, e nos imports de `../../js/` em `raposa/js/app.js`
+(`criaturas.js`, `arte.js` e `icones.js` mudaram). A entrada da Raposa foi de
+`app.js?v=3` para `?v=4`. A Raposa carrega sem erro.
+
+## Como validei
+
+- `node --test`: 371 pass, 0 fail. `node scripts/contraste.js`: todos >= 4.5:1.
+- Edge headless via DevTools Protocol (script fora do repositório), em 360×640
+  e 390×844. **Atenção:** o Edge desta máquina informa `prefers-reduced-motion`
+  ligado (vem da configuração do Windows). Os testes de animação forçam "sem
+  preferência", e o teste de movimento reduzido liga a opção de propósito.
+- **Contraste no DOM real** (cor do texto contra o fundo efetivo, misturando
+  camadas translúcidas) em 12 telas: início, escolha vazia e cheia, coleção,
+  batalha antes e depois nos três modos, contra o Rato e fim. **0 textos abaixo
+  de 4,5:1.**
+- **FPS com CPU 4x mais lenta** (`Emulation.setCPUThrottlingRate`), pior quadro
+  de cada cena: rodada normal 19 ms, Língua Chicote 19 ms, Bola de Ferro 19 ms,
+  Batalha com a sobreposição 13 ms, Mordida Rápida na Mira 19 ms, fim com
+  confete 7 ms. Nenhuma cena abaixo de ~52 fps. (O headless não trava em 60 Hz;
+  a média passou de 150 fps em todas.)
+- Sem rolagem lateral em 360 e sem erro de console. O resultado cabe ao lado do
+  bichinho em 360×640. O caso mais cheio (Mira, especial com escudo) passa 4 px
+  do palco para o vão antes da barra de vida, sem cobrir nada.
+- **Não validei em aparelho de verdade:** o som no Safari do iPhone (inclusive
+  com a chave de silencioso), o ritmo real de uma criança girando o pião duas
+  vezes contra o Rato, e se as cenas de 2,5 s ficam longas demais no uso. O
+  roteiro acima é o teste que falta.
+
+---
+
 # Entrega — polimento para o lançamento (fundadores Couraça e Bocão)
 
 Branch `feat/lancamento`, um commit por fase, levada para a `main`. As quatro

@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import { statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { arteDaCriatura, CODIGOS_COM_ARTE } from '../js/arte.js';
-import { buscarCriatura } from '../js/criaturas.js';
+import { buscarCriaturaOuRival } from '../js/criaturas.js';
 
 test('toda arte do mapa é de um bichinho que existe', () => {
-  for (const codigo of CODIGOS_COM_ARTE) assert.ok(buscarCriatura(codigo), codigo);
+  for (const codigo of CODIGOS_COM_ARTE) assert.ok(buscarCriaturaOuRival(codigo), codigo);
 });
 
 test('os dois tamanhos existem e cabem em 80 KB', () => {

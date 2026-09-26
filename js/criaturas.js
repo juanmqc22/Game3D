@@ -16,6 +16,7 @@
 export const ESPECIES = {
   tatu: { rotulo: 'Tatu', cor: '#8a4b12' },
   sapo: { rotulo: 'Sapo', cor: '#1f6b2a' },
+  rato: { rotulo: 'Rato', cor: '#44536a' },
 };
 
 // A série à venda agora.
@@ -66,9 +67,30 @@ export const CRIATURAS = [
   },
 ];
 
-// Aceita "sap02", " SAP 02 " etc. Retorna null se o código não existir.
+// Rival de treino: joga contra quem só tem uma peça (a criança gira o próprio
+// pião duas vezes, uma por ela e uma pelo Rato). Não tem peça física, então
+// fica FORA de CRIATURAS: nenhum caminho de peça o enxerga (escaneio, coleção,
+// contador, Raposa, média do elenco). Números medidos: ver ENTREGA.md.
+export const RIVAL = {
+  codigo: 'RAT00', nome: 'Rato do Mato', especie: 'rato', vida: 14, forca: 2, rival: true,
+  especial: {
+    nome: 'Mordida Rápida', dano: 3, cura: 0, roubo: false, escudo: false, recuo: 0,
+    texto: '3 de dano',
+  },
+};
+
+const normalizar = (codigo) => codigo.replace(/\s+/g, '').toUpperCase();
+
+// Só peças de verdade. Aceita "sap02", " SAP 02 " etc. Retorna null se o
+// código não existir (inclusive RAT00, que não tem peça).
 export function buscarCriatura(codigo) {
   if (typeof codigo !== 'string') return null;
-  const normalizado = codigo.replace(/\s+/g, '').toUpperCase();
+  const normalizado = normalizar(codigo);
   return CRIATURAS.find((c) => c.codigo === normalizado) ?? null;
+}
+
+// Peças e o Rato: para a tela (lista manual, arte).
+export function buscarCriaturaOuRival(codigo) {
+  if (typeof codigo !== 'string') return null;
+  return normalizar(codigo) === RIVAL.codigo ? RIVAL : buscarCriatura(codigo);
 }
