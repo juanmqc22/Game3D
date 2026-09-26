@@ -1187,8 +1187,10 @@ input:focus-visible {
   padding: calc(env(safe-area-inset-top, 0px) + 64px) 18px calc(env(safe-area-inset-bottom, 0px) + 22px);
   background-color: var(--cor);
   background-image:
-    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+    radial-gradient(circle at 30% 25%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 55%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+  /* brilho + listra somam no máximo 13% de branco: o texto branco continua
+     >= 4.5:1 nas três espécies (scripts/contraste.js, "VS") */
   color: #fff;
 }
 .vs-lado-0 { clip-path: polygon(0 0, 100% 0, 100% 42%, 0 58%); align-items: flex-start; justify-content: flex-start; }
@@ -1197,8 +1199,8 @@ input:focus-visible {
   align-items: flex-end;
   justify-content: flex-end;
   background-image:
-    radial-gradient(circle at 70% 78%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 55%),
-    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.07) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
+    radial-gradient(circle at 70% 78%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 55%),
+    repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 12px, rgba(255, 255, 255, 0) 12px 26px);
 }
 .vs-conteudo { display: flex; align-items: center; gap: 10px; max-width: 100%; }
 .vs-lado-1 .vs-conteudo { flex-direction: row-reverse; text-align: right; }

@@ -7,7 +7,7 @@
 // nasce depois do primeiro toque na página (regra do iPhone). Sem Web Audio,
 // criarSom() devolve um som que não faz nada e o botão some.
 
-import { FAIXAS, secaoDaVolta, eventosDaSecao, lerAcordes, soma } from './trilha.js?v=15';
+import { FAIXAS, secaoDaVolta, eventosDaSecao, lerAcordes, soma } from './trilha.js?v=16';
 
 export const CHAVE_SOM = 'bichinhos:som';
 export const MODOS_SOM = ['tudo', 'efeitos', 'mudo'];

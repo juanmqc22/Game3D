@@ -1,3 +1,173 @@
+# Entrega — polimento 3: tela de VS, orientação dos textos e trilha sonora
+
+Branch `feat/polimento-3`, um commit por fase, levada para a `main` (merge
+local; **falta o `git push`** para o Pages publicar). As três fases ficaram prontas.
+
+**Testes:** 371 antes, **398 depois** (`node --test`: 398 pass, 0 fail, 0
+pulados). A suíte passou em cada commit. Paleta: `node scripts/contraste.js` →
+todos >= 4.5:1. Regras, balanceamento e Raposa na Fazenda não foram tocados.
+
+| Commit | Fase | Testes |
+|---|---|---|
+| `Fase 1` | tela de VS antes da escolha de modo | 371 |
+| `Fase 2` | tudo legível de um lado só + auditoria de orientação na suíte | 378 |
+| `Fase 3` | trilha sonora gerada em código | 398 |
+| `Entrega` | versão de cache 15 → 16 e este arquivo | 398 |
+
+## Roteiro para testar no iPhone
+
+Espere ~10 min depois do push (o Pages guarda cache por 600 s) ou use uma aba
+anônima. Para zerar tudo: Ajustes → Safari → Avançado → Dados de Sites → apague
+`juanmqc22.github.io`.
+
+1. **Escanear as duas peças e ver o VS.** Encoste o Couraça
+   (`https://juanmqc22.github.io/Game3D/?b=TAT01&f=3`) → Continuar → encoste o
+   Bocão (`?b=SAP02&f=1`) → Continuar. Aparece o **VS**: tela dividida na
+   diagonal, marrom em cima e verde embaixo; cada bichinho entra pelo seu lado
+   com o nome grande, a vida e a força; o selo **Fundador #3** e **#1** em cada
+   metade; o VS amarelo bate no meio com uma tremida, faíscas e um estrondo. Em
+   ~2,3 s ele vai sozinho para "Como vocês vão jogar?". Toque na tela durante o
+   VS para pular.
+2. **Jogar contra o Rato pela lista manual.** Tela inicial → **Rolar** →
+   escolha o seu bichinho → escolha o **Rato do Mato**. Aparece o VS com o Rato
+   em cima (selo "Rival de treino") e depois a batalha. Repare que **nada está
+   de cabeça para baixo**: a metade do Rato (em cima) e a sua (embaixo) se leem
+   do mesmo lado, cada uma com o nome grande do bichinho.
+3. **Ouvir as faixas com o som em "tudo".** Toque no botão de som (canto de
+   cima) até aparecer a **nota musical**. Com a chave lateral do iPhone fora do
+   silencioso:
+   - **Tema principal** na tela inicial e na coleção. Deixe tocar ~1 min e
+     meio: ele tem introdução com celesta, a melodia de metal, a parte B com
+     cordas e sinos, a ponte com rufo de caixa, e só então repete (81 s).
+   - **Estinger do VS** ao montar uma partida.
+   - **Batalha** durante a luta: mais rápida. Jogue algumas rodadas: a cada
+     volta (~51 s) a instrumentação muda (metal → cordas com celesta e golpes de
+     metal → metal dobrado com sinos e marcha).
+   - **Vitória** (fanfarra) no fim de uma partida; **derrota** (frase curta e
+     simpática) quando o Rato ganha ou dá empate.
+   - Toque no botão de novo: **só efeitos** (a música some em meio segundo) e
+     depois **mudo**.
+
+## Fase 1 — tela de VS ✅
+
+- Aparece sempre que a partida fica montada, antes da escolha de modo: duas
+  peças lidas (QR ou NFC pela URL), a segunda peça lida pelo botão NFC do
+  Android (o mesmo caminho), "Não tenho a segunda peça" e a lista manual,
+  inclusive contra o Rato (que fica em cima, como na batalha). Na lista manual
+  o VS vem logo antes da batalha (o modo já foi escolhido na tela inicial).
+- Tela cheia dividida na diagonal por `clip-path` estático, cada metade na cor
+  da espécie; arte grande entrando pelo seu lado; nome em letras grandes; vida
+  e força embaixo; selo de Fundador na metade de quem tem.
+- Linha do tempo: os dois entram (0–0,5 s), o VS bate aos 0,54 s com tremida,
+  14 faíscas em ângulos fixos e o som `vs` (sopro, estrondo e "clang"; toca
+  também em "só efeitos"); segue sozinho aos **2,3 s**. Um toque pula.
+  Movimento reduzido: a mesma composição parada por **1,2 s**.
+- Só transform e opacity. CPU 4x: pior quadro 6 ms, nenhum acima de 20 ms.
+
+## Fase 2 — orientação dos textos ✅
+
+- A metade de cima **deixou de girar 180°**; ficou com o arranjo que antes era
+  só do Rato (bichinho perto do meio, botões perto da borda, ordem invertida
+  por `column-reverse`). O nome do bichinho no painel cresceu (1,05 → 1,3 rem).
+- Saíram as cópias de cabeça para baixo: o segundo chip de rodada, o segundo
+  texto do botão do meio, o segundo "Quem ganhou?" e a segunda linha do nome do
+  especial. A arte da cena do especial também não gira mais. Saíram ainda as
+  inclinações de texto: o carimbo "TROPEÇOU! +2" e o veredito "TROPEÇOU!".
+- **Auditoria automática na suíte** (`test/orientacao.test.js`): sobe um
+  servidor e um Chrome/Edge headless (`test/navegador.js`, sem dependência) e
+  percorre início, escolha vazia, desbloqueio com Fundador, espera, "não tenho
+  a segunda peça", VS parado e animado (3 momentos), escolha de modo, coleção,
+  Rolar (antes, TROPEÇOU!, CHOQUE!), Mira com especial, Batalha ("Quem
+  ganhou?" e resultado), contra o Rato, a tela de fim e a cena da Língua
+  Chicote no meio da animação. Em cada estado, soma o giro de cada elemento com
+  texto e de todos os ancestrais e falha se passar de 0,5°. Conferi que ela
+  pega de fato: girar o título de propósito, ou inclinar 4° uma tela inteira,
+  faz o teste acusar. Sem Chrome/Edge na máquina essa parte se pula (há também
+  uma checagem estática que roda sempre: nenhum `rotate(180deg)` no CSS/HTML).
+
+## Fase 3 — trilha sonora ✅
+
+Tudo gerado em código com Web Audio. As melodias, os acordes e o arranjo são
+dados em `js/trilha.js`; os acompanhamentos (cordas em ostinato, baixo,
+sinos, celesta, percussão de marcha) são gerados a partir dos acordes. O
+sequenciador em `js/som.js` agenda cada nota pelo relógio do AudioContext,
+1,2 s à frente; um `setTimeout` de 250 ms só enche essa janela (não existe
+`setInterval` tocando notas). Troca de faixa com fade de 0,5 s. Música com
+volume 0,12 contra 0,32 dos efeitos (um teste confere que fica abaixo). Toda
+melodia é original, composta para o jogo.
+
+Instrumentos sintetizados: **metal** (dois dentes de serra desafinados num
+filtro que abre no ataque, a fanfarra), **cordas** (dentes de serra suaves,
+curtos no ostinato e longos nos acordes parados), **sino** (parciais
+inarmônicos que decaem devagar), **celesta** (triangular com brilho agudo),
+**baixo**, **bumbo**, **caixa**, **chimbal** e **prato**.
+
+| Faixa | Onde toca | Andamento | Duração até repetir | Descrição |
+|---|---|---|---|---|
+| Tema principal | início, coleção, escolha, espera, modo | 112 | **81 s** (38 compassos) | Dó maior. Intro com celesta e sinos, subindo para um Ré maior (o toque lídio, "mágico"). **A**: melodia de metal com cordas em ostinato e marcha. **A2**: a mesma ideia mais alta, dobrada pela celesta. **B**: em lá menor, as cordas cantam, celesta em arpejos e sinos. **Ponte**: Mi bemol → Fá → Sol com rufo de caixa crescendo (o bVII mixolídio abre o caminho). **A3**: a melodia do início com tudo junto. |
+| Batalha | tela de batalha | 152 | **51 s** (32 compassos) | Ré dórico, colcheias puxadas pelo baixo, bumbo e caixa de batalha. Quatro partes (A, B, C mais leve e staccato, D de clímax). **A cada volta muda a instrumentação**: 1ª metal; 2ª cordas + celesta + golpes curtos de metal; 3ª metal dobrado nas cordas, sinos e marcha — depois recomeça. |
+| VS | tela de VS | 120 | **2,25 s** (toca uma vez) | Dois golpes rápidos de metal subindo para um acorde longo, com bumbo, caixa e prato no ataque. |
+| Vitória | fim, quando a criança ganha | 126 | **3,3 s** | Fanfarra de metal com celesta: arpejo subindo, cadência e acorde final de Dó com sinos. |
+| Derrota | fim, quando o Rato ganha ou empata | 104 | **2,9 s** | Celesta descendo devagar e terminando em Dó maior: simpática, não triste. |
+
+Com "só efeitos" (o padrão) não toca música: no fim da partida continua o
+efeito curto de vitória de antes.
+
+## Decisões que tomei sozinho (a mais simples em cada caso)
+
+- **Plan mode:** como nas outras rodadas, aprovar um plano seria uma pergunta;
+  li `js/app.js`, `css/estilo.css` e `js/som.js` inteiros e segui.
+- **VS vale para a lista manual também quando os dois jogadores escolhem da
+  lista** (não só contra o Rato), porque é o mesmo momento de "partida
+  montada". "Revanche" não mostra o VS de novo.
+- **Metade de cima sem giro para todos**, com o mesmo arranjo que o Rato já
+  usava. Assim a regra nova vale sem exceção.
+- **Carimbos sem inclinação:** "rotação diferente de 0°" inclui os −4° e −7°
+  dos carimbos de tropeço. Só giram agora elementos **sem texto** (o bichinho
+  tombando, a língua, a estrela, o confete).
+- **O teste de orientação precisa de navegador.** Na sua máquina ele usa o Edge;
+  onde não houver Chrome/Edge ele se pula com aviso, em vez de falhar.
+- **Qual faixa em cada tela:** o tema vale para todas as telas fora da batalha,
+  não só início e coleção, para não ficar silêncio entre elas. Na tela de fim,
+  depois do estinger, fica o silêncio até a próxima tela.
+- **Derrota também no empate**, e quando o Rato ganha. Em partida de dois
+  jogadores sempre tem um vencedor, então toca a vitória.
+- **Contraste do VS:** o brilho decorativo das metades foi baixado para somar no
+  máximo 13% de branco, o que deixa o texto branco em 4,83:1 no pior caso
+  (Sapo). O cálculo desse pior caso está no `scripts/contraste.js`.
+
+## Cache
+
+`?v=15` → `?v=16` em `index.html` (CSS, desvio da Raposa, app.js), nos imports
+de `js/app.js`, `js/escaneio.js`, `js/colecao.js` e `js/som.js` (que agora
+importa `trilha.js`). A Raposa não mudou (os arquivos compartilhados que ela
+importa — `criaturas.js`, `arte.js`, `icones.js` — ficaram iguais) e carrega
+sem erro.
+
+## Como validei
+
+- `node --test`: 398 pass, 0 fail, 0 pulados (a auditoria de orientação rodou
+  no Edge). `node scripts/contraste.js`: todos >= 4.5:1, inclusive o pior caso
+  do VS.
+- **Contraste no DOM real** em 14 telas (início, escolhas, coleção, VS com
+  Fundador, escolha de modo, batalha antes e depois nos três modos, contra o
+  Rato e fim): **0 textos abaixo de 4,5:1**.
+- **FPS com CPU 4x mais lenta:** VS 0 de 353 quadros acima de 20 ms (pior 6 ms);
+  rodada normal, Língua Chicote, Bola de Ferro, Batalha e fim: nenhum quadro
+  acima de 20 ms; Mordida Rápida na Mira: 1 de 398 (25 ms). **Com a trilha
+  tocando** (som em "tudo", destravado por um toque de verdade), três rodadas de
+  especial com CPU 4x deram 1, 0 e 0 quadros acima de 20 ms em ~400 — igual ou
+  melhor que sem música (o headless tem picos isolados com ou sem som).
+- Trilha no navegador: nada toca antes do primeiro toque; o tema criou ~40
+  osciladores a cada 3 s; a batalha entrou ao começar a luta; em "só efeitos" a
+  música para (0 osciladores novos em 2,5 s).
+- Sem rolagem lateral em 360 e sem erro de console. A Raposa carrega.
+- **Não validei em aparelho de verdade:** como a trilha soa no alto-falante do
+  iPhone (volume relativo, graves), o VS no Safari e o NFC do Android. O
+  roteiro acima é o teste que falta.
+
+---
+
 # Entrega — polimento 2: Rato do Mato, Batalha simplificada, especiais e som
 
 Branch `feat/polimento-2`, um commit por fase, levada para a `main` (merge
