@@ -125,6 +125,9 @@ Regras que não podem regredir:
 - **Sem `:has()`, `color-mix()` ou `backdrop-filter`** — faltam em WebView antiga
   de Android de entrada. Precisa de estado no CSS? Ponha uma classe pelo JS.
 - Validar em **360x640** além dos tamanhos grandes: sem rolagem lateral.
+- **Cenário por modo** (`#tela-batalha[data-modo]`, CSS/SVG estático): Rolar = terra e
+  folhas, Batalha = estádio/bandeja vista de cima, Mira = gramado com alvo. Só na moldura
+  e no chão sob o bichinho (`.bicho-lugar::before`) — nunca atrás de texto.
 - A cor da espécie vem do CSS por `data-especie`; `--cor-base` (de
   `js/criaturas.js`) é o fallback de uma espécie nova.
 - O bichinho (`iconeBichinho`) é a silhueta da peça impressa, com o símbolo da

@@ -606,6 +606,58 @@ input:focus-visible {
 .bicho-lugar .selo-escudo .icone { font-size: 1.1rem; }
 .selo-escudo.desligado { opacity: 0; transform: scale(0.5); }
 
+/* ---------- Cenário por modo (#tela-batalha[data-modo]) ----------
+   Só CSS e SVG em data URI, tudo estático (nada anima). Aparece em dois
+   lugares sem texto por cima: a moldura em volta dos painéis e o chão sob
+   cada bichinho (.bicho-lugar::before). O texto fica nos painéis brancos, então
+   o contraste medido não muda.
+     Rolar  — chão de terra com folhas
+     Batalha — estádio redondo visto de cima, como a bandeja
+     Mira   — gramado com um alvo desenhado no centro */
+#tela-batalha[data-modo="ROLAR"] {
+  background-color: #b8966a;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cg fill='%23557a2c' fill-opacity='.55'%3E%3Cpath d='M14 20c8-10 20-8 22 0-8 8-18 8-22 0z'/%3E%3Cpath d='M62 64c4-12 16-14 20-6-4 10-14 12-20 6z'/%3E%3C/g%3E%3Cg fill='%237a5a36' fill-opacity='.5'%3E%3Ccircle cx='70' cy='18' r='3'/%3E%3Ccircle cx='24' cy='74' r='4'/%3E%3Ccircle cx='48' cy='44' r='2'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(circle at 30% 20%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 55%);
+}
+#tela-batalha[data-modo="ARENA"] {
+  background-color: #aab6c4;
+  background-image:
+    repeating-radial-gradient(circle at 50% 50%, rgba(10, 17, 32, 0.12) 0 3px, rgba(10, 17, 32, 0) 3px 38px),
+    radial-gradient(circle at 50% 50%, #dfe5ec 0%, #aab6c4 70%);
+}
+#tela-batalha[data-modo="MIRA"] {
+  background-color: #7fb069;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0) 0 120px, rgba(255, 255, 255, 0.55) 120px 128px, rgba(255, 255, 255, 0) 128px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0 28px, rgba(255, 255, 255, 0) 28px 56px);
+}
+/* o chão sob o bichinho: uma elipse baixa, sempre atrás dele */
+.bicho-lugar::before {
+  content: "";
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  bottom: 2%;
+  height: 34%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+[data-modo="ROLAR"] .bicho-lugar::before {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60' viewBox='0 0 120 60'%3E%3Cg fill='%23557a2c'%3E%3Cpath d='M8 38c6-9 16-8 18-1-6 7-14 7-18 1z'/%3E%3Cpath d='M92 16c6-8 15-6 16 1-6 6-13 6-16-1z'/%3E%3Cpath d='M86 48c3-7 11-8 13-3-3 6-10 7-13 3z' fill='%236d8f33'/%3E%3C/g%3E%3C/svg%3E") center / 100% 100% no-repeat,
+    radial-gradient(closest-side, #a57b4c 0%, #c19a6b 70%, rgba(193, 154, 107, 0) 100%);
+}
+[data-modo="ARENA"] .bicho-lugar::before {
+  background: repeating-radial-gradient(closest-side, #7b8797 0 4px, #c7d0da 4px 13px, #aeb9c6 13px 16px);
+  border: 3px solid #4a5566;
+  bottom: 4%;
+}
+[data-modo="MIRA"] .bicho-lugar::before {
+  background: radial-gradient(closest-side,
+    #c41f1f 0 14%, #fff 14% 28%, #c41f1f 28% 44%, #fff 44% 60%, #5f9a48 60% 88%, rgba(95, 154, 72, 0) 100%);
+}
+
 /* ---------- arte dos bichinhos (js/arte.js) ---------- */
 .arte-bicho { display: block; width: 100%; height: 100%; object-fit: contain; }
 /* com arte: o símbolo tocado vai numa placa no canto da imagem */
