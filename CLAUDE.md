@@ -68,6 +68,7 @@ js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global
 js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), selo de Fundador (&f=1..10), contador por série, puro
 js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
+js/som.js                   som gerado em código (Web Audio): efeitos, música, modo tudo/efeitos/mudo (localStorage `bichinhos:som`)
 js/arte.js                  mapa código → arte (img/criaturas/CODIGO-256/512.webp); quem não está nele usa a silhueta
 img/criaturas/              arte publicada (WebP 256 e 512, gerada por `npm run arte`)
 img/originais/              originais da arte, CODIGO.png|webp — fora do Pages (_config.yml)
@@ -80,6 +81,8 @@ test/escaneio.test.js       loop de escaneio
 test/colecao.test.js        coleção
 test/criaturas.test.js      dados + guarda-corpo de golpe máximo nos 3 modos
 test/arte.test.js           mapa de arte: código existe, arquivos existem e <= 80 KB
+test/golpe.test.js          nome do golpe (golpeDaRodada)
+test/som.test.js            modo do som e queda sem Web Audio
 test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
@@ -192,4 +195,7 @@ Regras que não podem regredir:
 - A tabela de `js/criaturas.js` está balanceada e validada: não mexer. (Língua
   Chicote 4/4 e o Choque foram pedidos e medidos — ver ENTREGA.md.)
 - Fora de escopo na v1: backend, login, XP, multiplayer em rede, leitor de QR,
-  animações elaboradas, PWA, sons, dark mode, i18n, admin. Perguntar antes.
+  PWA, dark mode, i18n, admin. Perguntar antes.
+- **Som** (`js/som.js`): só Web Audio gerado em código — nenhum arquivo de áudio,
+  biblioteca ou música existente. Curto e baixo. O áudio nasce no primeiro toque
+  (iPhone); sem Web Audio o botão some. Padrão: só efeitos.

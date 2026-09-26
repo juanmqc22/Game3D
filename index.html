@@ -108,6 +108,8 @@
 
       <div class="faixa-centro">
         <button type="button" class="botao-link botao-sair" id="btn-sair">Sair</button>
+        <!-- Som (na batalha ele mora aqui; nas outras telas, no canto: #btn-som) -->
+        <button type="button" class="botao-som botao-som-faixa" id="btn-som-batalha" hidden></button>
         <span class="chip-rodada chip-rodada-cima" id="rodada-cima"></span>
         <!-- Não há botão de lutar: a rodada resolve sozinha quando os dois
              responderam. O meio mostra VS, DESFAZER (1,5 s, com o anel fechando)
@@ -192,6 +194,9 @@
 
     <noscript><p class="erro">Este jogo precisa de JavaScript ligado.</p></noscript>
   </main>
+
+  <!-- Som: tudo / só efeitos / mudo. Some se o navegador não tem Web Audio. -->
+  <button type="button" class="botao-som" id="btn-som" hidden></button>
 
   <div id="falha" class="falha" role="alert" hidden>
     <p>Algo deu errado.</p>

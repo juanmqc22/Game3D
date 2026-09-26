@@ -729,10 +729,10 @@ input:focus-visible {
 .golpe-tropecou, .golpe-especial {
   justify-self: start;
   max-width: 100%;
-  padding: 4px 9px;
+  padding: 3px 8px;
   border: 3px solid var(--tinta);
   border-radius: var(--raio-p);
-  font-size: 1.3rem;
+  font-size: 1.15rem;
 }
 .golpe-tropecou { background: var(--tropeco); color: #fff; transform: rotate(-4deg); }
 .golpe-especial { background: var(--especial); color: var(--especial-texto); white-space: normal; line-height: 1.05; }
@@ -742,12 +742,23 @@ input:focus-visible {
   align-items: center;
   gap: 4px;
   margin: 0;
-  font-size: 2.6rem;
+  font-size: 2.3rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 0.95;
   font-variant-numeric: tabular-nums;
 }
+/* tela baixa: o número e os selos encolhem para caber ao lado do bichinho */
+@media (max-height: 700px) {
+  .numero-painel { font-size: 1.9rem; }
+  .lado-resultado { gap: 2px; }
+  .selos-rodada .etiqueta { padding: 1px 6px 1px 4px; font-size: 0.76rem; }
+  .lado-resultado .nota { font-size: 0.76rem; }
+  .golpe-tropecou, .golpe-especial { padding: 2px 6px; font-size: 0.98rem; letter-spacing: 0; }
+  .veredito { font-size: 1.4rem; }
+}
 .numero-painel .icone { font-size: 2rem; }
+.linha-numero { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.linha-numero .nota { flex: 1; min-width: 0; }
 .numero-dano { color: var(--perigo); }
 .numero-cura { color: var(--cura); }
 .numero-escudo { color: var(--escudo); }
@@ -2055,6 +2066,49 @@ input:focus-visible {
 .selo-fundador .icone { font-size: 1.05rem; color: #fff; stroke: var(--tinta); stroke-width: 1.4px; paint-order: stroke; }
 .carta-nova .selo-fundador { font-size: 0.9rem; }
 .carta .selo-fundador { padding: 1px 8px 1px 5px; font-size: 0.7rem; letter-spacing: 0.03em; }
+
+/* ---------- Botão de som (tudo / só efeitos / mudo) ----------
+   Sempre visível no canto; na batalha ele passa para a faixa do meio, para
+   não cobrir os botões do jogador de cima. Mudo fica cinza sólido, nunca
+   transparente. */
+.botao-som {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 8px);
+  right: max(8px, calc((100vw - 560px) / 2 + 8px));
+  z-index: 6;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 3px solid var(--tinta);
+  border-radius: var(--raio-p);
+  background: var(--superficie);
+  color: var(--tinta);
+  font-size: 28px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.botao-som[data-modo="mudo"] { color: var(--tinta-media); background: var(--chassi-alt); }
+.botao-som:focus-visible { outline: 4px solid var(--sistema); outline-offset: 2px; }
+.em-batalha #btn-som { display: none; }
+.botao-som.botao-som-faixa {
+  position: absolute;
+  top: 50%;
+  right: auto;
+  left: var(--gutter);
+  width: 44px;
+  height: 44px;
+  margin-top: -22px;
+  border-color: #8a96ab;
+  background: var(--leitura);
+  color: #fff;
+  font-size: 24px;
+}
+.botao-som.botao-som-faixa[data-modo="mudo"] { color: #c3cad6; }
+/* espaço para o botão do canto não cobrir títulos */
+.tela > h2:first-child, #escolha-titulo { padding-right: 52px; }
+#tela-inicio .logo-simbolos, .tela-centro > :first-child { margin-top: 58px; }
 
 /* ---------- Aviso de erro ---------- */
 

@@ -213,3 +213,15 @@ export function iconeQr() {
     'icone-qr',
   );
 }
+
+// Botão de som, um desenho por modo: 'tudo' (alto-falante + nota musical),
+// 'efeitos' (alto-falante com ondas) e 'mudo' (alto-falante com X).
+export function iconeSom(modo) {
+  const falante = '<path fill="currentColor" d="M3 9h4l5-4.5v15L7 15H3z"/>';
+  const extra = {
+    tudo: '<path fill="currentColor" d="M18.5 3.5v9.3a2.6 2.6 0 1 1-1.8-2.5V6.2l-2.2.6V5z"/>',
+    efeitos: '<path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>',
+    mudo: '<path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" d="M15.5 9l6 6M21.5 9l-6 6"/>',
+  }[modo] ?? '';
+  return svg(falante + extra, `icone-som som-${modo}`);
+}

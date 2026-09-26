@@ -11,7 +11,7 @@ import {
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida,
   iconeTrofeu, iconeEmpate, iconeBichinho, iconePlaca,
-  iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr,
+  iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr, iconeSom,
 } from './icones.js?v=14';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
@@ -20,6 +20,7 @@ import {
   lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, listaDeEscolha,
 } from './colecao.js?v=14';
 import { arteDaCriatura } from './arte.js?v=14';
+import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=14';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -63,6 +64,23 @@ const EFEITO_ESPECIAL = { SAP02: 'lingua', TAT01: 'bola' };
 // espera tem que valer entre abas (ver js/escaneio.js).
 const armazemEspera = () => window.localStorage;
 const armazemColecao = () => window.localStorage;
+
+// Som gerado em código (js/som.js). A escolha do botão fica no localStorage;
+// se ele não existir, o som funciona só nesta visita.
+function armazemSom() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+const som = criarSom({ janela: window, storage: armazemSom() });
+
+// O som de cada golpe (js/regras.js, golpeDaRodada), no impacto.
+const SOM_DO_GOLPE = {
+  GARRADA: 'garrada', DEFENDEU: 'defesa', TROPECOU: 'tropeco', TROPECARAM: 'tropeco',
+  CHOQUE: 'choque', GIROU: 'giro', FORA: 'fora', ESPECIAL: 'garrada',
+};
 
 // Linha do tempo da luta (ms). O total não pode passar de 1200 — medindo do
 // toque até os botões liberarem, com folga para a latência do toque. Rodada de
@@ -127,6 +145,7 @@ function movimentoReduzido() {
 }
 
 function mostrarTela(id) {
+  document.body.classList.toggle('em-batalha', id === 'tela-batalha');
   if (id !== 'tela-espera') pararNfc();
   if (id !== 'tela-batalha') cancelarContagem();
   for (const tela of document.querySelectorAll('.tela')) {
@@ -933,16 +952,17 @@ function descreverRodada(estado, resumo) {
   if (resumo.bloqueado) selo(p, 'escudo', iconeEscudoAtivo(), 'Escudo segurou');
   if (resumo.escudoAtivado) selo(v, 'escudo', iconeEscudoAtivo(), 'Escudo ligado');
 
-  // Uma nota só, e só quando a tela sozinha enganaria a criança.
+  // Uma nota só, e só quando a tela sozinha enganaria a criança. Curta na
+  // tela (cabe ao lado do bichinho em 360x640); por extenso no leitor de tela.
   let nota = null;
   if (resumo.recuo > 0 && estado.jogadores[v].vida === 0) {
-    nota = { quem: v, texto: 'Se machucou com o próprio golpe e ficou sem vida!' };
+    nota = { quem: v, texto: 'Se machucou e ficou sem vida!', falado: 'Se machucou com o próprio golpe e ficou sem vida!' };
   } else if (especial?.roubo && resumo.bloqueado) {
-    nota = { quem: v, texto: 'O dano não passou, então não rouba vida.' };
+    nota = { quem: v, texto: 'Escudo: não roubou vida.', falado: 'O dano não passou, então não rouba vida.' };
   } else if (especial?.escudo && !resumo.escudoAtivado) {
-    nota = { quem: v, texto: 'Já estava com escudo (não acumula).' };
+    nota = { quem: v, texto: 'Escudo não acumula.', falado: 'Já estava com escudo, e o escudo não acumula.' };
   } else if (resumo.modo === MIRA && !resumo.metade && resumo.bonusAcerto === 0 && resumo.acertou?.[v]) {
-    nota = { quem: v, texto: `Acertou o alvo, mas o extra da rodada já é +${resumo.bonusTropeco} pelo tropeço.` };
+    nota = { quem: v, texto: `Alvo: o extra já é +${resumo.bonusTropeco}.`, falado: `Acertou o alvo, mas o extra da rodada já é +${resumo.bonusTropeco} pelo tropeço.` };
   } else if (zerados) {
     nota = { quem: null, texto: 'Os dois ficaram sem vida!' };
   }
@@ -958,7 +978,7 @@ function descreverRodada(estado, resumo) {
     .concat(resumo.cura > 0 ? [`${nome(v)} ganhou ${resumo.cura} de vida.`] : [])
     .concat(resumo.recuo > 0 ? [`${nome(v)} perdeu ${resumo.recuo} de vida com o próprio golpe.`] : [])
     .concat(resumo.escudoAtivado ? [`${nome(v)} está com escudo.`] : [])
-    .concat(nota ? [nota.quem === null ? nota.texto : `${nome(nota.quem)}: ${nota.texto}`] : [])
+    .concat(nota ? [nota.quem === null ? nota.texto : `${nome(nota.quem)}: ${nota.falado ?? nota.texto}`] : [])
     .join(' ');
 
   return { golpe, etiquetas, nota, leitura };
@@ -1066,11 +1086,11 @@ function prepararLuta() {
     const nota = texto.nota && (texto.nota.quem === null || texto.nota.quem === i) ? texto.nota.texto : null;
     const segurou = (resumo.bloqueado && i !== resumo.vencedor) || resumo.choqueBloqueado[i];
     const golpe = el('p', { class: `veredito golpe-${texto.golpe.codigo.toLowerCase()}` }, texto.golpe.texto);
+    // a nota (se houver) fica ao lado do número, para caber em tela baixa
     c.resultado.replaceChildren(...[
       golpe,
-      numeroDoPainel(jAntes.vida, j.vida, segurou),
+      el('div', { class: 'linha-numero' }, numeroDoPainel(jAntes.vida, j.vida, segurou), nota ? el('p', { class: 'nota' }, nota) : null),
       minhas.length ? el('div', { class: 'etiquetas selos-rodada' }, ...minhas.map(etiqueta)) : null,
-      nota ? el('p', { class: 'nota' }, nota) : null,
     ].filter(Boolean));
     caberNaLargura(golpe);
     return {
@@ -1154,6 +1174,7 @@ function tocarCena({ tela, lados, resumo }, animar, em) {
   ], { duration: T, fill: 'none', easing: 'cubic-bezier(0.2, 0.9, 0.3, 1)' });
 
   const t = TEMPO_CENA.efeito;
+  em(t, () => som.tocar(`especial-${fx}`));
   if (fx === 'lingua') {
     // a língua sai da boca da arte grande e estica até o outro bichinho
     const dx = cp.x - arteEm.x;
@@ -1330,6 +1351,7 @@ function animarLuta(luta) {
   const podeAnimar = typeof Element.prototype.animate === 'function';
   if (movimentoReduzido() || !podeAnimar) {
     finalizar();
+    som.tocar(SOM_DO_GOLPE[luta.golpe]);
     return;
   }
 
@@ -1366,6 +1388,7 @@ function animarLuta(luta) {
   // 2. impacto
   em(t0 + TEMPO.impacto, () => {
     tela.classList.add('fase-impacto');
+    som.tocar(SOM_DO_GOLPE[luta.golpe]);
     lados.forEach((l, i) => {
       const de = l.avanca ? noChoque(i) : NEUTRO;
       const pose = quadro(i, POSE[l.papel.papel]);
@@ -1480,6 +1503,8 @@ function renderFim() {
       el('b', { class: 'fim-perdeu-selo' }, 'Perdeu'),
     );
     $('fim-confete').replaceChildren(...(movimentoReduzido() ? [] : confete()));
+    // fanfarra só quando a criança ganha (não quando o Rato ganha)
+    if (!campeao.rival) som.tocar('vitoria');
   }
 
   // entrada de ~600ms (reinicia a cada fim de partida)
@@ -1706,10 +1731,38 @@ function escolherModoEComecar(modo) {
   abrirEscolha(0);
 }
 
+// Os dois botões de som (canto e faixa da batalha) mostram o mesmo modo.
+function pintarBotoesSom() {
+  for (const b of [$('btn-som'), $('btn-som-batalha')]) {
+    b.hidden = !som.disponivel;
+    b.dataset.modo = som.modo();
+    b.setAttribute('aria-label', TEXTO_MODO_SOM[som.modo()]);
+    b.replaceChildren(icone(iconeSom(som.modo())));
+  }
+}
+
+function tocarBotaoSom() {
+  som.definirModo(proximoModoSom(som.modo()));
+  som.destravar();
+  pintarBotoesSom();
+  som.tocar('toque');
+}
+
 function ligarEventos() {
+  // O áudio só nasce dentro de um toque (regra do iPhone): todo toque tenta destravar.
+  for (const tipo of ['pointerdown', 'touchend', 'keydown']) {
+    document.addEventListener(tipo, () => som.destravar(), { capture: true, passive: true });
+  }
+  pintarBotoesSom();
+  $('btn-som').addEventListener('click', tocarBotaoSom);
+  $('btn-som-batalha').addEventListener('click', tocarBotaoSom);
+
   // Durante a animação da rodada, qualquer toque só pula para o final.
   document.addEventListener('click', (ev) => {
-    if (!app.animacao) return;
+    if (!app.animacao) {
+      if (ev.target.closest('button:not(.botao-som)')) som.tocar('toque');
+      return;
+    }
     ev.preventDefault();
     ev.stopPropagation();
     app.animacao.finalizar();
