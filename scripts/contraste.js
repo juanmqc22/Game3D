@@ -31,6 +31,8 @@ const pares = [
   ['sistema / chassi', P.sistema, P.chassi], ['sistema / superficie', P.sistema, P.superficie],
   ['perigo / superficie', P.perigo, P.superficie], ['perigo / chassi', P.perigo, P.chassi],
   ['escudo / superficie', P.escudo, P.superficie],
+  ['ataque / superficie (GARRADA!)', P.ataque, P.superficie], ['defesa / superficie (DEFENDEU!)', P.defesa, P.superficie],
+  ['sistema / superficie (GIROU MAIS!)', P.sistema, P.superficie2],
   ['ouro / superficie', P.ouro, P.superficie], ['ouro / chassi', P.ouro, P.chassi],
   ['branco / ataque', '#fff', P.ataque], ['branco / defesa', '#fff', P.defesa],
   ['branco / tropeco', '#fff', P.tropeco], ['branco / perigo', '#fff', P.perigo],

@@ -159,6 +159,27 @@ export function resolverRodadaModo(modo, estado, entradas) {
   throw new Error(`Modo inválido: ${modo}`);
 }
 
+// O nome do golpe da rodada, que a tela escreve em letras grandes no lugar de
+// "venceu/perdeu" (quem venceu a partida só aparece na tela de fim). Recebe o
+// resumo de uma resolução e devolve um código:
+//   ESPECIAL   — a face ESPECIAL venceu (a tela usa o nome do especial)
+//   TROPECOU   — o perdedor tirou TROPECO (vale mais que GARRADA/DEFENDEU)
+//   GARRADA    — venceu com ATAQUE;  DEFENDEU — venceu com DEFESA
+//   GIROU/FORA — Batalha: como o vencedor ganhou
+//   CHOQUE     — mesmo símbolo dos dois lados, ou empate na Batalha
+//   TROPECARAM — TROPECO x TROPECO: ninguém perde vida
+//   EMPATE     — empate sem choque (só com CHOQUE_DANO = 0)
+export function golpeDaRodada(resumo) {
+  if (resumo.choque) return 'CHOQUE';
+  if (resumo.vencedor === null) {
+    return resumo.simbolos[0] === TROPECO && resumo.simbolos[1] === TROPECO ? 'TROPECARAM' : 'EMPATE';
+  }
+  if (resumo.jeito) return resumo.jeito;
+  if (resumo.simboloVencedor === ESPECIAL) return 'ESPECIAL';
+  if (resumo.simbolos[1 - resumo.vencedor] === TROPECO) return 'TROPECOU';
+  return resumo.simboloVencedor === DEFESA ? 'DEFENDEU' : 'GARRADA';
+}
+
 // Maior dano que `atacante` consegue causar numa única rodada do modo, contra um
 // alvo com vida cheia e sem escudo. Calculado por força bruta com as próprias
 // funções de resolução, para nunca divergir das regras.

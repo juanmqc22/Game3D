@@ -118,19 +118,10 @@
           <span class="lutar-texto lutar-baixo"></span>
         </button>
         <span class="chip-rodada" id="rodada-baixo"></span>
-        <!-- O nome do especial, grande, por cima da faixa: uma linha para cada jogador. -->
-        <div class="faixa-especial" aria-hidden="true">
-          <span class="fe-cima"></span>
-          <span class="fe-baixo"></span>
-        </div>
-        <!-- camada do choque, no meio da tela: quais efeitos aparecem é decidido
-             por data-fx em #tela-batalha (lingua, bola ou estrela). Ver css/estilo.css. -->
+        <!-- camada do choque, no meio da tela (clarão e anel do golpe) -->
         <div class="choque" aria-hidden="true">
           <span class="onda"></span>
-          <svg class="estrela" viewBox="-50 -50 100 100"><polygon points="0,-46 13,-15 46,-14 20,7 29,40 0,21 -29,40 -20,7 -46,-14 -13,-15"/></svg>
           <span class="clarao"></span>
-          <span class="bola-ferro"></span>
-          <span class="gota-vida"></span>
         </div>
       </div>
 
@@ -152,15 +143,34 @@
         </div>
       </div>
 
+      <!-- A cena do especial (só nas rodadas de especial, até 2,5 s com a luta):
+           o fundo escurece, a arte entra grande, o nome aparece (uma linha para
+           cada jogador) e o efeito vai de um painel ao outro. data-fx escolhe o
+           efeito: lingua, bola ou estrela. Um toque pula. Ver tocarCena (js/app.js). -->
+      <div id="cena-especial" class="cena-especial" aria-hidden="true" hidden>
+        <div class="cena-fundo"></div>
+        <p class="cena-nome"><span class="cn-cima"></span><span class="cn-baixo"></span></p>
+        <span class="fx-lingua"></span>
+        <span class="fx-poeira"></span>
+        <span class="fx-bola"></span>
+        <span class="fx-domo"></span>
+        <svg class="fx-estrela" viewBox="-50 -50 100 100"><polygon points="0,-46 13,-15 46,-14 20,7 29,40 0,21 -29,40 -20,7 -46,-14 -13,-15"/></svg>
+        <div class="cena-arte"></div>
+        <span class="fx-coracao"></span>
+      </div>
+
       <!-- A tela conta a rodada por desenho; esta linha conta por extenso
            para quem usa leitor de tela. -->
       <p id="resultado-leitura" class="so-leitor" aria-live="polite"></p>
     </section>
 
     <!-- 8. Fim -->
-    <section id="tela-fim" class="tela" hidden>
+    <section id="tela-fim" class="tela tela-fim" hidden>
+      <div id="fim-confete" class="confete" aria-hidden="true"></div>
+      <p id="fim-venceu" class="fim-venceu">Venceu!</p>
       <div id="fim-icone" class="fim-icone" aria-hidden="true"></div>
       <h2 id="fim-titulo" class="fim-titulo"></h2>
+      <p id="fim-perdeu" class="fim-perdeu"></p>
       <p id="fim-sub" class="sub"></p>
       <div id="fim-barras" class="barras-resultado"></div>
       <p id="fim-placar" class="aviso-leve" hidden></p>

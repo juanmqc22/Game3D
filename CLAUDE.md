@@ -117,7 +117,9 @@ Regras que não podem regredir:
   box-shadow/filter, e nada de `backdrop-filter`. Efeitos decorativos rodam uma
   vez; loop infinito só onde é sinal de estado (vida baixa, escudo, leitura do QR).
 - **Teto de 1,2s por rodada**, incluindo a latência do toque. A linha do tempo
-  está em `TEMPO` no topo de `js/app.js` (hoje 1080ms internos, ~1126ms medidos).
+  está em `TEMPO` no topo de `js/app.js` (hoje 1080ms internos, ~1087ms medidos).
+  **Só as rodadas de especial** podem ir até **2,5 s**: a cena (`TEMPO_CENA`,
+  1400ms) vem antes da luta (~2486ms medidos).
 - **`prefers-reduced-motion`** desliga tudo e a informação continua completa.
 - **Alvos de toque >= 44px**; os principais em 64px (`--toque`).
 - **Sem `:has()`, `color-mix()` ou `backdrop-filter`** — faltam em WebView antiga
@@ -144,17 +146,21 @@ Regras que não podem regredir:
   A pose final de cada papel está em `POSE` (JS) e em `.fase-final
   [data-papel]` (CSS) — mantenha os dois iguais. Sem `Element.animate`, pula
   direto para o fim.
-- **A rodada é contada por desenho, não por parágrafo:** cada metade mostra o
-  veredito do seu jogador (VENCEU!, PERDEU, Tropeçou!, Choque!...) e os selos
-  (`.etiqueta`) do que aconteceu com ele, ao lado do bichinho (os botões de
-  símbolo ficam no lugar); no máximo uma `.nota`, só para o que a tela esconderia. O texto completo continua
-  em `#resultado-leitura` (`.so-leitor`), para leitor de tela — ao mexer no
-  resultado, mantenha essa linha em dia.
-- O especial tem momento próprio: o nome entra grande na `.faixa-especial` (uma
-  linha para cada jogador) e o efeito vem de `EFEITO_ESPECIAL` em `js/app.js`
-  (`data-fx`): Língua Chicote puxa a vida de um painel para o outro, Bola de
-  Ferro cai no oponente e acende o escudo; qualquer outro código (inclusive
-  desconhecido) usa a estrela genérica.
+- **A rodada é contada por desenho, não por parágrafo:** nas rodadas não existe
+  VENCEU/PERDEU. As duas metades mostram o **nome do golpe** (`golpeDaRodada` em
+  `js/regras.js`: GARRADA!, DEFENDEU!, TROPEÇOU!, CHOQUE!, o nome do especial,
+  GIROU MAIS!, PRA FORA!) e cada uma o **número** do que aconteceu com a vida
+  dela (`.numero-painel`: −3, +4, 0), mais os selos (`.etiqueta`) e no máximo
+  uma `.nota`. VENCEU!/PERDEU só na tela de fim (arte grande, nome, confete). O
+  texto completo continua em `#resultado-leitura` (`.so-leitor`), para leitor de
+  tela — ao mexer no resultado, mantenha essa linha em dia.
+- O especial tem **cena própria** (`tocarCena`, `#cena-especial`), antes da
+  luta: fundo escurece, a arte entra grande, o nome aparece (uma linha para cada
+  jogador) e o efeito vai de um painel ao outro, por `EFEITO_ESPECIAL`
+  (`data-fx`): Língua Chicote = língua rosa elástica que volta com um coração;
+  Bola de Ferro = esfera cinza que cai com poeira e tremor + escudo azul;
+  qualquer outro código usa a estrela genérica. Um toque pula; movimento
+  reduzido vai direto ao resultado.
 - Com arte, o bichinho da batalha fica grande (`.metade.tem-arte`) e reage ao
   resultado: vencedor pula, perdedor treme (≤ 0,8 s, dentro do teto da rodada).
 
