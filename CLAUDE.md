@@ -18,6 +18,16 @@ de `CRIATURAS` (escaneio, coleção, contador, Raposa e média do elenco não o 
 fundador vence o Rato 65–75% (`node scripts/balanceamento.js --rival`). A lista manual
 (`listaDeEscolha`) mostra só os escaneados, o Rato e a Série 2 travada; não há sorteio.
 
+**Tutorial do primeiro contato** (`js/tutorial.js`, puro; tela em `abrirTutorial`, `js/app.js`):
+o QR do cartão do kit abre a home sem `?b=`. Home com coleção vazia → boas-vindas (2 telas) →
+registrar o 1º e o 2º bichinho (iPhone: aviso no topo, aba nova; Android/Chrome: "Ler bichinho",
+Web NFC) → primeira partida no Rolar com dicas do coach (`proximaDica`) → fim com "próximos
+desafios". Entrou direto pela peça sem ter feito o tutorial: 1 tela curta e a leitura conta.
+Estado em localStorage `bichinhos:tutorial` = `{step, done, skipped, pecas}`; a aba antiga
+ouve `storage`. Pular não volta sozinho; coleção com 2+ peças ou tutorial concluído não mostra
+nada; "Rever tutorial" fica na home. Só envolve o que já existe (`registrarDescoberta`,
+`processarChegada`, `escutarNfc`, a partida normal).
+
 **Segundo jogo (adulto):** Raposa na Fazenda, tudo em `raposa/` — ver `RAPOSA.md`.
 A única ligação com o jogo das crianças é `js/desvio-raposa.js` (carregado antes do
 app em `index.html`): só desvia `?b=` para `raposa/` com partida da Raposa ativa.
@@ -64,6 +74,7 @@ index.html                  telas (trocadas com `hidden`)
 css/estilo.css              estilo mobile-first, alvo de toque >= 64px
 js/criaturas.js             dados dos bichinhos — único arquivo a editar p/ adicionar um; `serie` + `SERIE_ATUAL`; `RIVAL` (Rato)
 js/regras.js                lógica pura dos 3 modos (sem DOM, sem estado global)
+js/tutorial.js              tutorial do primeiro contato: estado (localStorage `bichinhos:tutorial`), plataforma, dicas; puro
 js/escaneio.js              loop de escaneio (localStorage `bichinhos:aguardando`, 10 min; vale entre abas), puro; extração do ?b= de URL/NFC
 js/colecao.js               coleção (localStorage `bichinhos:colecao`), selo de Fundador (&f=1..10), contador por série, puro
 js/app.js                   UI, navegação, batalha em tela dividida, luta animada, deep link ?b=, modos
@@ -86,6 +97,8 @@ test/som.test.js            modo do som e queda sem Web Audio
 test/trilha.test.js         trilha: durações pedidas, seções bem formadas, voltas da batalha, música < efeitos
 test/orientacao.test.js     texto girado só nas partes do jogador de cima, em todas as telas e estados (navegador headless; se pula sem Chrome/Edge)
 test/navegador.js           apoio: servidor estático + Chrome/Edge headless via DevTools Protocol
+test/tutorial.test.js       máquina de estados do tutorial, plataforma, falha do NFC, voz, dicas
+test/tutorial-navegador.test.js  tutorial no Android com NDEFReader falso (navegador headless; se pula sem Chrome/Edge)
 test/rival.test.js          Rato: dados, guarda-corpo como alvo/atacante, 65–75%, lista manual
 scripts/balanceamento.js    simulação dos confrontos (não é teste); --modo e --chance
 scripts/contraste.js        confere a paleta do CSS (WCAG); node puro, sem dependência
@@ -102,7 +115,7 @@ Todo caminho em index.html e nos imports é relativo — o Pages serve em /Game3
 
 **Cache (Pages usa max-age=600):** ao mudar qualquer `.js`, `estilo.css` ou a estrutura do
 `index.html`, aumente o `?v=N` em `index.html` (CSS e app.js), nos imports do topo de
-`js/app.js` **e** nos imports de `js/escaneio.js`, `js/colecao.js` e `js/som.js` (e, se mudar
+`js/app.js` **e** nos imports de `js/escaneio.js`, `js/colecao.js`, `js/som.js` e `js/tutorial.js` (e, se mudar
 `js/arte.js`, `criaturas.js` ou `icones.js`, nos imports de `raposa/js/app.js`). Sem isso o celular
 mistura HTML novo com JS antigo e trava. Mudar só `criaturas.js` não exige (no pior caso o
 bichinho novo aparece ~10 min depois).
@@ -147,7 +160,7 @@ Regras que não podem regredir:
 - **O celular fica na mesa entre os dois: o Jogador 1 lê de cabeça para baixo.**
   Na batalha (nos 3 modos) e na tela de fim, a metade de cima gira 180° para
   quem está do outro lado; no meio, rodada, botão do meio, "Quem ganhou?" e o
-  nome do especial vêm escritos nos dois sentidos (`-cima` = cópia girada,
+  nome do especial (e a dica do coach, `.coach-cima`) vêm escritos nos dois sentidos (`-cima` = cópia girada,
   `aria-hidden`). **Contra o Rato nada gira** (é uma criança só; as cópias somem).
   Fora disso nenhum texto gira nem inclina. `test/orientacao.test.js` percorre
   todas as telas e estados num Chrome/Edge headless (`test/navegador.js`) e falha
