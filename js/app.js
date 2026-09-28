@@ -3,24 +3,29 @@
 // Nenhuma regra de jogo mora aqui — tudo vem de js/regras.js.
 
 // ?v= igual ao de index.html (ver comentário lá).
-import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=17';
+import { CRIATURAS, ESPECIES, SERIE_ATUAL, buscarCriatura, buscarCriaturaOuRival } from './criaturas.js?v=18';
 import {
-  DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
+  ATAQUE, DEFESA, ESPECIAL, TROPECO, SIMBOLOS, ROLAR, ARENA, MIRA, MODOS, CHOQUE_DANO,
   GIROU, FORA, estadoInicial, resolverRodadaModo, golpeDaRodada,
-} from './regras.js?v=17';
+} from './regras.js?v=18';
 import {
   iconeSimbolo, iconeEspecial, iconeEscudoAtivo, iconeVida,
   iconeTrofeu, iconeBichinho, iconePlaca,
-  iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr, iconeSom,
-} from './icones.js?v=17';
+  iconeRolar, iconeArena, iconeAlvo, iconeFora, iconeErrou, iconeMisterio, iconeQr, iconeSom, iconeCelular,
+} from './icones.js?v=18';
 import {
   processarChegada, lerAguardando, limparAguardando, lerRegistrosNfc,
-} from './escaneio.js?v=17';
+} from './escaneio.js?v=18';
 import {
   lerColecao, registrarDescoberta, registrarPartida, contarDaSerie, estaDescoberta, listaDeEscolha,
-} from './colecao.js?v=17';
-import { arteDaCriatura } from './arte.js?v=17';
-import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=17';
+} from './colecao.js?v=18';
+import { arteDaCriatura } from './arte.js?v=18';
+import { criarSom, proximoModoSom, TEXTO_MODO_SOM } from './som.js?v=18';
+import {
+  CHAVE_TUTORIAL, PASSO, estadoVazio, lerTutorial, gravarTutorial, decidirEntrada, registrarLeitura,
+  comecarRegistro, soTenhoUm, parDaPartida, pular, concluir, rever, passoParaAba,
+  detectarPlataforma, motivoFalhaNfc, escolherVoz, proximaDica,
+} from './tutorial.js?v=18';
 
 const ROTULOS = {
   ATAQUE: 'ATAQUE',
@@ -121,6 +126,8 @@ const app = {
   vs: null, // { seguir } enquanto a tela de VS está no ar
   nocaute: null, // { pular, cancelar } entre o fim da última rodada e a tela de fim
   ultimoToque: null, // { jogador, campo } — o que o DESFAZER apaga
+  tutorial: null, // { tela, passo, acao, depois } enquanto a tela do tutorial está no ar
+  guia: null, // { vistas, momento } na primeira partida do tutorial (dicas do coach)
 };
 
 const $ = (id) => document.getElementById(id);
@@ -171,8 +178,13 @@ function mostrarTela(id) {
   if (faixa) som.musica(faixa);
   // saiu do VS por outro caminho (ex.: voltar do navegador): o VS não segue sozinho
   if (id !== 'tela-vs' && app.vs) { const vs = app.vs; app.vs = null; vs.cancelar?.(); }
-  if (id !== 'tela-espera') pararNfc();
-  if (id !== 'tela-batalha') cancelarContagem();
+  if (id !== 'tela-espera' && id !== 'tela-tutorial') pararNfc();
+  pararFala();
+  if (id !== 'tela-batalha') {
+    cancelarContagem();
+    $('coach').hidden = true;
+    $('painel-regras').hidden = true;
+  }
   if (id !== 'tela-batalha' && app.nocaute) app.nocaute.cancelar();
   for (const tela of document.querySelectorAll('.tela')) {
     tela.hidden = tela.id !== id;
@@ -660,6 +672,7 @@ function iniciarPartida() {
   novaRodadaLimpa();
   renderBatalha();
   mostrarTela('tela-batalha');
+  mostrarDica('inicio');
 }
 
 function novaRodadaLimpa() {
@@ -1458,6 +1471,7 @@ function animarLuta(luta) {
     }
     atualizarCentro();
     if (fim.terminou) nocaute(luta);
+    else mostrarDica('rodada', { golpe: luta.golpe });
   };
   const anim = { finalizar };
   app.animacao = anim;
@@ -1707,6 +1721,8 @@ function renderFim() {
     else if (!campeao.rival) som.tocar('vitoria');
   }
 
+  mostrarFimDoTutorial();
+
   const aviso = $('fim-placar');
   const espelhada = estado.jogadores[0].criatura.codigo === estado.jogadores[1].criatura.codigo;
   aviso.hidden = placarGravado;
@@ -1827,6 +1843,24 @@ function pararNfc() {
   app.leituraNfc = null;
 }
 
+// A leitura em si, igual para a espera da segunda peça e para o tutorial.
+// aoLer({ codigo, fundador }) na etiqueta de um bichinho; aoFalhar('leitura')
+// quando a etiqueta não deu para ler, aoFalhar('estranha') quando não é de
+// um bichinho (a leitura continua nos dois casos). Falha do scan() rejeita.
+async function escutarNfc(controle, { aoLer, aoFalhar }) {
+  const leitor = new window.NDEFReader();
+  leitor.onreadingerror = () => aoFalhar('leitura');
+  leitor.onreading = (ev) => {
+    const lido = lerRegistrosNfc(ev.message?.records);
+    if (!lido || !buscarCriatura(lido.codigo)) {
+      aoFalhar('estranha');
+      return;
+    }
+    aoLer(lido);
+  };
+  await leitor.scan({ signal: controle.signal });
+}
+
 function avisoEspera(texto) {
   const aviso = $('espera-aviso');
   aviso.textContent = texto;
@@ -1847,21 +1881,18 @@ async function lerSegundaPecaNfc() {
     status.hidden = true;
   };
   try {
-    const leitor = new window.NDEFReader();
-    leitor.onreadingerror = () => {
-      status.textContent = 'Não deu para ler. Encoste de novo, bem no meio da peça.';
-    };
-    leitor.onreading = (ev) => {
-      const lido = lerRegistrosNfc(ev.message?.records);
-      if (!lido || !buscarCriatura(lido.codigo)) {
-        status.textContent = 'Essa etiqueta não é de um bichinho. Tente outra peça.';
-        return;
-      }
-      pararNfc();
-      voltarBotao();
-      chegarCodigo(lido.codigo, lido.fundador);
-    };
-    await leitor.scan({ signal: controle.signal });
+    await escutarNfc(controle, {
+      aoFalhar: (motivo) => {
+        status.textContent = motivo === 'leitura'
+          ? 'Não deu para ler. Encoste de novo, bem no meio da peça.'
+          : 'Essa etiqueta não é de um bichinho. Tente outra peça.';
+      },
+      aoLer: (lido) => {
+        pararNfc();
+        voltarBotao();
+        chegarCodigo(lido.codigo, lido.fundador);
+      },
+    });
     botao.textContent = 'Lendo… toque para parar';
     botao.setAttribute('aria-pressed', 'true');
     status.textContent = 'Encoste a peça nas costas do celular.';
@@ -1894,9 +1925,410 @@ function recomecar() {
   irParaInicio();
 }
 
+// ---------- tutorial do primeiro contato ----------
+//
+// Do QR do cartão do kit até a primeira partida (a máquina de estados está em
+// js/tutorial.js). Só envolve o que já existe: a peça lida entra na coleção
+// por registrarDescoberta e no escaneio por processarChegada, a leitura no
+// Android é a mesma da espera (escutarNfc) e a partida é a de sempre, com
+// dicas por cima. O estado fica no localStorage: o iPhone abre uma aba nova a
+// cada leitura, e a aba antiga se atualiza pelo evento `storage`.
+
+function armazemTutorial() {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+const tutorialAtual = () => lerTutorial(armazemTutorial());
+const guardarTutorial = (estado) => gravarTutorial(armazemTutorial(), estado);
+const codigosDaColecao = () => Object.keys(colecaoAtual() ?? {});
+
+function plataforma() {
+  return detectarPlataforma({
+    userAgent: navigator.userAgent,
+    maxTouchPoints: navigator.maxTouchPoints ?? 0,
+    temNdef: temNfc(),
+  });
+}
+
+// "Ouvir": lê a tela em voz alta (pt-BR), para quem ainda não lê.
+function vozDisponivel() {
+  return typeof window.speechSynthesis !== 'undefined' && typeof window.SpeechSynthesisUtterance === 'function';
+}
+
+function falar(texto) {
+  if (!vozDisponivel() || !texto) return;
+  try {
+    window.speechSynthesis.cancel();
+    const fala = new window.SpeechSynthesisUtterance(texto);
+    fala.lang = 'pt-BR';
+    fala.rate = 0.95;
+    const voz = escolherVoz(window.speechSynthesis.getVoices());
+    if (voz) fala.voice = voz;
+    window.speechSynthesis.speak(fala);
+  } catch {
+    // sem voz: o texto continua na tela
+  }
+}
+
+function pararFala() {
+  try {
+    if (vozDisponivel()) window.speechSynthesis.cancel();
+  } catch {
+    // nada falando
+  }
+}
+
+// Onde encostar: o iPhone lê pelo topo; o Android, pelo meio das costas.
+function frasesDeLeitura(p) {
+  if (p === 'ios') {
+    return {
+      encoste: 'Encoste o topo do celular na face do X',
+      como: 'Toque no aviso que aparecer no topo da tela. Vai abrir outra aba: tudo bem!',
+    };
+  }
+  if (p === 'android') {
+    return { encoste: 'Encoste as costas do celular na face do X', como: 'Toque em Ler bichinho e encoste.' };
+  }
+  if (p === 'android-sem-leitor') {
+    return {
+      encoste: 'Encoste as costas do celular na face do X',
+      como: 'O jogo abre sozinho. Não abriu? Ligue o NFC em Configurações.',
+    };
+  }
+  return {
+    encoste: 'Este aparelho não lê os bichinhos',
+    como: 'Abra o jogo num celular com NFC (iPhone ou Android).',
+  };
+}
+
+const COMO_LIGAR_NFC = 'Configurações › Conexões › NFC (ou Dispositivos conectados › NFC)';
+
+// Por que o "Ler bichinho" não começou (motivoFalhaNfc em js/tutorial.js).
+const FALHA_NFC = {
+  permissao: 'O celular não deixou usar o NFC. Toque em Ler bichinho de novo e escolha Permitir.',
+  desligado: `O NFC está desligado. Ligue em ${COMO_LIGAR_NFC} e toque em Ler bichinho de novo.`,
+  'sem-suporte': `Este celular não leu o NFC. Confira se ele está ligado em ${COMO_LIGAR_NFC}.`,
+  outro: `O NFC não funcionou agora. Confira se ele está ligado em ${COMO_LIGAR_NFC} e tente de novo.`,
+};
+
+function ajudaDeLeitura(p) {
+  const android = p === 'android' || p === 'android-sem-leitor';
+  return [
+    'Tire a capinha grossa do celular.',
+    'Segure parado por 2 segundos.',
+    android ? 'Use o meio das costas do celular.' : 'Use a parte de cima do celular.',
+    android ? `Confira se o NFC está ligado: ${COMO_LIGAR_NFC}.` : null,
+    'Só a face do X funciona: vire a peça.',
+    'Não deu? Chame um adulto.',
+  ].filter(Boolean);
+}
+
+// A figura de cada tela. Encostar: o pião com a face do X destacada e o
+// celular chegando (de frente, pelo topo, no iPhone; de costas no Android).
+function figuraEncostar(p) {
+  const costas = p === 'android' || p === 'android-sem-leitor';
+  return el('div', { class: `encostar${costas ? ' encostar-costas' : ''}` },
+    el('span', { class: 'encostar-peca', 'data-especie': 'sapo' }, icone(iconeBichinho('sapo', TROPECO))),
+    el('span', { class: 'encostar-alvo' }),
+    el('span', { class: 'encostar-onda' }),
+    el('span', { class: 'encostar-celular' }, icone(iconeCelular(costas ? 'costas' : 'frente'))),
+  );
+}
+
+function figuraDupla(a, b, meio) {
+  const lado = (c, especie) => el('span', { class: 'figura-bicho', 'data-especie': c?.especie ?? especie },
+    (c && imagemArte(c, 120, { lazy: false })) ?? icone(iconeBichinho(c?.especie ?? especie, c ? null : 'VAZIO')));
+  return el('div', { class: 'figura-dupla' }, lado(a, 'tatu'), meio, lado(b, 'sapo'));
+}
+
+// Trilha de 4 pontos: boas-vindas, 1º, 2º, partida.
+function trilhaDoTutorial(passo) {
+  return [PASSO.BOAS_VINDAS, PASSO.PRIMEIRO, PASSO.SEGUNDO, PASSO.PARTIDA].map((p) =>
+    el('span', { class: `ponto${p === passo ? ' atual' : ''}${p < passo ? ' feito' : ''}` }));
+}
+
+// Conteúdo de cada tela: { passo, figura, titulo, texto, extra, principal, acao, ajuda, soUm }.
+function telaDoTutorial(tela, { depois } = {}) {
+  const t = tutorialAtual() ?? estadoVazio();
+  const juiz = el('span', { class: 'figura-juiz', 'data-especie': 'rato' }, icone(iconeCelular('frente')));
+  const mais = el('span', { class: 'figura-mais' }, icone(iconeQr()));
+  if (tela === 'boas-vindas-1') {
+    return {
+      passo: PASSO.BOAS_VINDAS,
+      figura: figuraDupla(null, null, juiz),
+      titulo: 'Oi!',
+      texto: 'Seus bichinhos são piões de verdade. O celular é o juiz da batalha.',
+      principal: 'Continuar',
+      acao: () => abrirTutorial('boas-vindas-2'),
+    };
+  }
+  if (tela === 'boas-vindas-2') {
+    return {
+      passo: PASSO.BOAS_VINDAS,
+      figura: figuraDupla(null, null, mais),
+      titulo: 'Sua coleção',
+      texto: 'Primeiro, vamos colocar os 2 bichinhos do kit na sua coleção.',
+      principal: 'Vamos lá',
+      acao: () => {
+        guardarTutorial(comecarRegistro(tutorialAtual() ?? estadoVazio()));
+        abrirTutorial('registro');
+      },
+    };
+  }
+  if (tela === 'curta') {
+    // entrou direto pela peça: uma tela só, e a peça lida já conta
+    return {
+      passo: t.step,
+      figura: figuraDupla(null, null, juiz),
+      titulo: 'Oi!',
+      texto: 'Seus bichinhos são piões de verdade, e o celular é o juiz. Vamos colocar os bichinhos do kit na sua coleção.',
+      principal: 'Continuar',
+      acao: depois,
+    };
+  }
+  if (tela === 'partida') {
+    const par = parDaPartida(t);
+    const rato = Boolean(par?.[1].rival);
+    return {
+      passo: PASSO.PARTIDA,
+      figura: figuraDupla(par?.[0], par?.[1], el('span', { class: 'figura-vs' }, 'VS')),
+      titulo: 'Primeira partida!',
+      texto: rato
+        ? 'Você contra o Rato do Mato. Modo Rolar: gire o seu pião e toque no desenho que ficou pra cima.'
+        : 'Modo Rolar: girem os piões e toquem no desenho que ficou pra cima.',
+      principal: 'Começar',
+      acao: comecarPartidaGuiada,
+    };
+  }
+  // registro do 1º ou do 2º bichinho
+  const p = plataforma();
+  const frases = frasesDeLeitura(p);
+  const segundo = t.step === PASSO.SEGUNDO;
+  const podeLer = p !== 'sem-nfc';
+  return {
+    passo: segundo ? PASSO.SEGUNDO : PASSO.PRIMEIRO,
+    figura: figuraEncostar(p),
+    titulo: segundo ? 'Agora o outro bichinho' : frases.encoste,
+    texto: segundo ? frases.encoste : null,
+    extra: frases.como,
+    principal: p === 'android' ? 'Ler bichinho' : null,
+    acao: lerPecaNoTutorial,
+    ajuda: podeLer,
+    soUm: segundo,
+  };
+}
+
+// tela: 'boas-vindas-1' | 'boas-vindas-2' | 'curta' | 'registro' | 'partida'.
+// aviso: texto de erro no topo; depois: o que 'curta' faz ao continuar.
+function abrirTutorial(tela, { aviso = null, depois = null } = {}) {
+  pararNfc();
+  const c = telaDoTutorial(tela, { depois });
+  app.tutorial = { tela, passo: c.passo, acao: c.acao };
+  $('tutorial-trilha').replaceChildren(...trilhaDoTutorial(c.passo));
+  $('tutorial-figura').replaceChildren(c.figura);
+  $('tutorial-titulo').textContent = c.titulo;
+  const texto = $('tutorial-texto');
+  texto.hidden = !c.texto;
+  texto.textContent = c.texto ?? '';
+  const extra = $('tutorial-extra');
+  extra.hidden = !c.extra;
+  extra.textContent = c.extra ?? '';
+  const erro = $('tutorial-aviso');
+  erro.hidden = !aviso;
+  erro.textContent = aviso ?? '';
+  $('tutorial-status').hidden = true;
+  const principal = $('btn-tutorial-principal');
+  principal.hidden = !c.principal;
+  principal.textContent = c.principal ?? '';
+  principal.setAttribute('aria-pressed', 'false');
+  $('btn-tutorial-ouvir').hidden = !vozDisponivel();
+  $('btn-tutorial-ajuda').hidden = !c.ajuda;
+  $('btn-tutorial-ajuda').setAttribute('aria-expanded', 'false');
+  $('btn-tutorial-so-um').hidden = !c.soUm;
+  $('tutorial-ajuda').hidden = true;
+  $('tutorial-ajuda-lista').replaceChildren(...ajudaDeLeitura(plataforma()).map((item) => el('li', {}, item)));
+  app.tutorial.fala = [aviso, c.titulo, c.texto, c.extra].filter(Boolean).join('. ');
+  mostrarTela('tela-tutorial');
+}
+
+// Outra aba avançou (ou acabou/pulou) o tutorial: esta acompanha.
+function sincronizarTutorial() {
+  if (!app.tutorial || $('tela-tutorial').hidden) return;
+  const r = passoParaAba(app.tutorial.passo, tutorialAtual());
+  if (r === 'sair') irParaInicio();
+  else if (r === PASSO.PARTIDA) abrirTutorial('partida');
+  else if (r) abrirTutorial('registro');
+}
+
+// Android (Chrome): "Ler bichinho" lê a peça sem sair da página. Um toque
+// durante a leitura para.
+async function lerPecaNoTutorial() {
+  const botao = $('btn-tutorial-principal');
+  const status = $('tutorial-status');
+  if (app.leituraNfc) {
+    pararNfc();
+    botao.textContent = 'Ler bichinho';
+    botao.setAttribute('aria-pressed', 'false');
+    status.hidden = true;
+    return;
+  }
+  $('tutorial-aviso').hidden = true;
+  const controle = new AbortController();
+  app.leituraNfc = controle;
+  const voltarBotao = () => {
+    if (app.leituraNfc === controle) app.leituraNfc = null;
+    botao.textContent = 'Ler bichinho';
+    botao.setAttribute('aria-pressed', 'false');
+    status.hidden = true;
+  };
+  try {
+    await escutarNfc(controle, {
+      aoFalhar: (motivo) => {
+        status.textContent = motivo === 'leitura'
+          ? 'Não deu para ler. Segure parado na face do X.'
+          : 'Essa etiqueta não é de um bichinho.';
+      },
+      aoLer: (lido) => {
+        pararNfc();
+        voltarBotao();
+        chegarNoTutorial(lido.codigo, lido.fundador);
+      },
+    });
+    botao.textContent = 'Lendo… toque para parar';
+    botao.setAttribute('aria-pressed', 'true');
+    status.textContent = 'Encoste agora a face do X no meio das costas do celular.';
+    status.hidden = false;
+  } catch (erro) {
+    voltarBotao();
+    const motivo = motivoFalhaNfc(erro);
+    if (motivo === 'cancelado') return;
+    const aviso = $('tutorial-aviso');
+    aviso.textContent = FALHA_NFC[motivo];
+    aviso.hidden = false;
+  }
+}
+
+// Uma peça chegou durante o tutorial (URL da etiqueta ou "Ler bichinho").
+// curta: entrou direto pela peça; mostra a tela curta de boas-vindas antes.
+function chegarNoTutorial(codigo, fundador = null, { curta = false } = {}) {
+  const criatura = buscarCriatura(codigo);
+  if (!criatura) {
+    const lido = String(codigo).trim().slice(0, 12).toUpperCase();
+    abrirTutorial('registro', { aviso: `Não achamos o código "${lido}". Essa etiqueta não é de um bichinho.` });
+    return;
+  }
+  const descoberta = registrarDescoberta(armazemColecao(), criatura.codigo, new Date(), fundador);
+  processarChegada(criatura.codigo, armazemEspera()); // o loop de escaneio segue em dia
+  const { estado, repetido } = registrarLeitura(tutorialAtual() ?? estadoVazio(), criatura.codigo);
+  guardarTutorial(estado);
+  // a partida do tutorial sai da lista de peças lidas, não da espera
+  if (estado.step >= PASSO.PARTIDA) limparAguardando(armazemEspera());
+  const proxima = estado.step >= PASSO.PARTIDA ? 'partida' : 'registro';
+  const seguir = () => {
+    if (repetido && !descoberta.ganhouSelo) {
+      abrirTutorial('registro', { aviso: `${criatura.nome} já entrou. Agora encoste o outro bichinho.` });
+      return;
+    }
+    celebrarNoTutorial(descoberta, () => abrirTutorial(proxima));
+  };
+  if (curta) abrirTutorial('curta', { depois: seguir });
+  else seguir();
+}
+
+// A comemoração: a carta grande de sempre (arte, nome, selo de Fundador).
+function celebrarNoTutorial(descoberta, depois) {
+  const c = descoberta.criatura;
+  const numero = descoberta.colecao?.[c.codigo]?.fundador ?? null;
+  $('desbloqueio-chamada').textContent = descoberta.nova ? `${c.nome} entrou na sua coleção!` : `${c.nome} está na sua coleção!`;
+  $('desbloqueio-cartao').replaceChildren(cartaoDesbloqueio(c, numero));
+  app.depoisDoDesbloqueio = depois;
+  $('tela-desbloqueio').classList.add('celebracao');
+  mostrarTela('tela-desbloqueio');
+  som.tocar('vitoria');
+}
+
+// Etapa 4: modo Rolar, com as dicas do coach por cima da partida de sempre.
+function comecarPartidaGuiada() {
+  const par = parDaPartida(tutorialAtual() ?? estadoVazio());
+  if (!par) {
+    abrirTutorial('registro');
+    return;
+  }
+  app.modo = ROLAR;
+  app.escolhas = [...par];
+  app.escolhaRestrita = false;
+  app.guia = { vistas: new Set(), momento: null };
+  abrirVs(iniciarPartida);
+}
+
+// Dica do coach (proximaDica em js/tutorial.js): uma por vez, fecha num toque.
+function mostrarDica(momento, extra = {}) {
+  if (!app.guia) return;
+  const dica = proximaDica(momento, app.guia.vistas, { ...extra, contraRival: contraRival() });
+  if (!dica) return;
+  app.guia.vistas.add(dica.id);
+  app.guia.momento = momento;
+  const coach = $('coach');
+  for (const balao of coach.querySelectorAll('.coach-balao')) balao.textContent = dica.texto;
+  coach.hidden = false;
+}
+
+function fecharDica() {
+  $('coach').hidden = true;
+  // depois do "girem", a dica de tocar no desenho
+  if (app.guia?.momento === 'inicio') mostrarDica('escolha');
+}
+
+// Etapa 5: a tela de fim de sempre, mais o recado e os próximos desafios.
+function mostrarFimDoTutorial() {
+  const bloco = $('fim-tutorial');
+  bloco.hidden = !app.guia;
+  $('tela-fim').classList.toggle('no-tutorial', Boolean(app.guia));
+  if (!app.guia) return;
+  app.guia = null;
+  guardarTutorial(concluir(tutorialAtual()));
+  $('fim-tutorial-texto').textContent = contraRival() ? 'Pronto! Agora você já sabe jogar.' : 'Pronto! Agora vocês já sabem jogar.';
+  $('fim-desafios').replaceChildren(
+    el('span', { class: 'fim-desafios-rotulo' }, 'Próximos', el('br'), 'desafios:'),
+    ...[ARENA, MIRA].map((modo) => el('button', { type: 'button', class: 'botao botao-secundario botao-desafio', 'data-modo': modo },
+      icone(INFO_MODO[modo].icone()), INFO_MODO[modo].nome)),
+  );
+}
+
+// ---------- "?": quem vence quem ----------
+
+function montarRegras() {
+  const s = (simbolo, nome) => el('span', { class: 'regra-simbolo' }, seloSimbolo(simbolo), el('b', {}, nome));
+  const linha = (...partes) => el('li', {}, ...partes);
+  const meio = (texto) => el('span', { class: 'regra-meio' }, texto);
+  $('regras-lista').replaceChildren(
+    linha(s(ATAQUE, 'Garras'), meio('ganha do'), s(DEFESA, 'Escudo')),
+    linha(s(DEFESA, 'Escudo'), meio('ganha da'), s(ESPECIAL, 'Estrela')),
+    linha(s(ESPECIAL, 'Estrela'), meio('ganha das'), s(ATAQUE, 'Garras')),
+    el('li', { class: 'regra-sozinha' }, s(TROPECO, 'X'), 'perde pra tudo'),
+    el('li', { class: 'regra-texto' }, `Mesmo desenho: choque, os dois perdem ${CHOQUE_DANO}.`),
+  );
+}
+
+function abrirRegras() {
+  // a rodada não resolve sozinha com o painel aberto
+  cancelarContagem();
+  $('painel-regras').hidden = false;
+  $('btn-regras-fechar').focus();
+}
+
+function fecharRegras() {
+  $('painel-regras').hidden = true;
+  if (app.fase === 'escolha' && !$('tela-batalha').hidden) atualizarEntradas();
+}
+
 // ---------- início ----------
 
 function irParaInicio() {
+  app.guia = null;
   atualizarBotaoColecao();
   $('inicio-erro').hidden = true;
   // Uma peça já escaneada continua esperando a segunda (até expirar).
@@ -1998,6 +2430,56 @@ function ligarEventos() {
 
   $('btn-revanche').addEventListener('click', iniciarPartida);
   $('btn-fim-nova').addEventListener('click', irParaInicio);
+  $('fim-desafios').addEventListener('click', (ev) => {
+    const botao = ev.target.closest('[data-modo]');
+    if (!botao) return;
+    app.modo = botao.dataset.modo;
+    iniciarPartida();
+  });
+
+  // "?" e dicas da primeira partida: não deixam o toque chegar na batalha
+  $('btn-regras').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (!app.nocaute) abrirRegras();
+  });
+  $('painel-regras').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (ev.target === ev.currentTarget || ev.target.closest('#btn-regras-fechar')) fecharRegras();
+  });
+  $('coach').addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    fecharDica();
+  });
+
+  // tutorial
+  $('btn-rever-tutorial').addEventListener('click', () => {
+    guardarTutorial(rever());
+    abrirTutorial('boas-vindas-1');
+  });
+  $('btn-tutorial-principal').addEventListener('click', () => app.tutorial?.acao?.());
+  $('btn-tutorial-ouvir').addEventListener('click', () => falar(app.tutorial?.fala ?? ''));
+  $('btn-tutorial-ajuda').addEventListener('click', () => {
+    const painel = $('tutorial-ajuda');
+    painel.hidden = !painel.hidden;
+    $('btn-tutorial-ajuda').setAttribute('aria-expanded', String(!painel.hidden));
+    if (!painel.hidden) painel.scrollIntoView?.({ block: 'nearest', behavior: movimentoReduzido() ? 'auto' : 'smooth' });
+  });
+  $('btn-tutorial-so-um').addEventListener('click', () => {
+    guardarTutorial(soTenhoUm(tutorialAtual() ?? estadoVazio(), codigosDaColecao()));
+    limparAguardando(armazemEspera());
+    comecarPartidaGuiada();
+  });
+  $('btn-tutorial-pular').addEventListener('click', () => {
+    guardarTutorial(pular(tutorialAtual()));
+    irParaInicio();
+  });
+  // iPhone: a leitura abre outra aba. Quando ela avança o tutorial, esta se atualiza.
+  window.addEventListener('storage', (ev) => {
+    if (ev.key === CHAVE_TUTORIAL || ev.key === null) sincronizarTutorial();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) sincronizarTutorial();
+  });
 }
 
 // Chegada por ?b=CODIGO (QR ou NFC da peça).
@@ -2031,6 +2513,7 @@ function iniciar() {
   // a vida que a Língua Chicote puxa de um painel para o outro (cena do especial)
   document.querySelector('#cena-especial .fx-coracao').replaceChildren(icone(iconeVida()));
   montarListaEscolha();
+  montarRegras();
   ligarEventos();
 
   // Deep link do QR da peça: index.html?b=TAT01 (ou só ?b=TAT01 na raiz)
@@ -2038,8 +2521,13 @@ function iniciar() {
   const codigo = parametros.get('b');
   // &f=N: número da peça fundadora (1 a 10), validado em js/colecao.js
   const fundador = parametros.get('f');
+  // Tutorial do primeiro contato (js/tutorial.js): decide com a coleção de
+  // antes de a peça que chegou entrar nela.
+  const entrada = decidirEntrada(tutorialAtual(), { via: codigo === null ? 'inicio' : 'peca', codigos: codigosDaColecao() });
+  if (entrada) guardarTutorial(entrada.estado);
   if (codigo === null) {
-    irParaInicio();
+    if (!entrada) irParaInicio();
+    else abrirTutorial(entrada.passo === PASSO.BOAS_VINDAS ? 'boas-vindas-1' : 'registro');
     return;
   }
   // Tira o ?b= da barra de endereço: recarregar a página não conta como um novo scan.
@@ -2049,7 +2537,8 @@ function iniciar() {
     // sem history API: segue com a URL como está
   }
 
-  chegarCodigo(codigo, fundador);
+  if (entrada) chegarNoTutorial(codigo, fundador, { curta: entrada.curta });
+  else chegarCodigo(codigo, fundador);
 }
 
 // Uma peça chegou, pela URL (?b=) ou pelo NFC lido na tela de espera: entra na
@@ -2061,6 +2550,7 @@ function chegarCodigo(codigo, fundador = null) {
   if (descoberta.nova || descoberta.ganhouSelo) {
     const numero = descoberta.colecao?.[descoberta.criatura.codigo]?.fundador ?? null;
     $('desbloqueio-chamada').textContent = descoberta.nova ? 'Novo bichinho!' : 'Selo de Fundador!';
+    $('tela-desbloqueio').classList.remove('celebracao');
     $('desbloqueio-cartao').replaceChildren(cartaoDesbloqueio(descoberta.criatura, numero));
     app.depoisDoDesbloqueio = () => tratarChegada(chegada);
     mostrarTela('tela-desbloqueio');

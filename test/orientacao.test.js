@@ -21,6 +21,7 @@ describe('orientação: checagem estática', () => {
       .map((m) => m[1].replace(/\/\*[\s\S]*?\*\//g, '').trim());
     assert.deepEqual(regras, [
       '.metade-0', '.chip-rodada-cima', '.lutar-cima', '.qg-titulo-cima', '.cena-nome .cn-cima', '.fim-metade-0 .fim-conteudo',
+      '.coach-cima',
     ]);
     assert.doesNotMatch(html, /rotate\(\s*180deg\s*\)/);
   });
@@ -46,7 +47,7 @@ const GIRADOS = `(() => {
       if (r.width < 1 || r.height < 1 || cs.visibility === 'hidden' || el.closest('[hidden]')) continue;
       const g = giro(el);
       const esperado = el.closest('#tela-fim:not(.contra-rival) #fim-metade-0, '
-        + '#tela-batalha:not(.contra-rival) :is(#metade-0, .chip-rodada-cima, .lutar-cima, .qg-titulo-cima, .cn-cima)') ? 180 : 0;
+        + '#tela-batalha:not(.contra-rival) :is(#metade-0, .chip-rodada-cima, .lutar-cima, .qg-titulo-cima, .cn-cima, .coach-cima)') ? 180 : 0;
       const erro = Math.abs((((g - esperado) % 360) + 540) % 360 - 180);
       if (erro > 0.5) fora.push(el.textContent.trim().slice(0, 24) + ' (' + g.toFixed(1) + '°)');
     }
@@ -105,6 +106,8 @@ describe('orientação: auditoria no navegador (todas as telas e estados)', { sk
     await p.movimentoReduzido(true);
     await p.ir(base);
     await p.js('localStorage.clear()');
+    // o tutorial do primeiro contato tem teste próprio (abaixo)
+    await p.js(`localStorage.setItem('bichinhos:tutorial', JSON.stringify({ step: 5, done: true }))`);
     await p.ir(base);
     await conferir('início');
     await p.tocar('#inicio-modos [data-modo="ROLAR"]');
@@ -124,6 +127,96 @@ describe('orientação: auditoria no navegador (todas as telas e estados)', { sk
     await p.ir(base);
     await p.tocar('#btn-colecao');
     await conferir('coleção');
+  });
+
+  test('tutorial do primeiro contato: home vazia até o fim da primeira partida', async () => {
+    await p.movimentoReduzido(true);
+    await p.ir(base);
+    await p.js('localStorage.clear()');
+    await p.ir(base);
+    assert.equal(await telaAtual(), 'tela-tutorial', 'home vazia abre o tutorial');
+    await conferir('tutorial: boas-vindas 1');
+    await p.tocar('#btn-tutorial-principal');
+    await conferir('tutorial: boas-vindas 2');
+    await p.tocar('#btn-tutorial-principal');
+    assert.equal(await p.js(`document.getElementById('btn-tutorial-so-um').hidden`), true);
+    await p.tocar('#btn-tutorial-ajuda');
+    await conferir('tutorial: 1º bichinho, com a ajuda aberta');
+    // a leitura chega pela URL (iPhone: aba nova)
+    await p.ir(`${base}?b=SAP02&f=3`);
+    assert.equal(await telaAtual(), 'tela-desbloqueio');
+    assert.equal(await p.js(`document.getElementById('desbloqueio-chamada').textContent`), 'Bocão entrou na sua coleção!');
+    assert.equal(await p.js(`Boolean(document.querySelector('#desbloqueio-cartao .selo-fundador'))`), true);
+    await conferir('tutorial: comemoração com Fundador');
+    await p.tocar('#btn-desbloqueio-continuar');
+    assert.equal(await p.js(`document.getElementById('tutorial-titulo').textContent`), 'Agora o outro bichinho');
+    assert.equal(await p.js(`document.getElementById('btn-tutorial-so-um').hidden`), false);
+    await conferir('tutorial: 2º bichinho');
+    // outra aba leu o 2º: esta ouve o evento storage e pula para a partida
+    await p.js(`localStorage.setItem('bichinhos:tutorial', JSON.stringify({ step: 4, done: false, skipped: false, pecas: ['SAP02', 'TAT01'] }));
+      window.dispatchEvent(new StorageEvent('storage', { key: 'bichinhos:tutorial' }))`);
+    assert.equal(await p.js(`document.getElementById('tutorial-titulo').textContent`), 'Primeira partida!');
+    await conferir('tutorial: primeira partida');
+    await p.tocar('#btn-tutorial-principal');
+    await p.tocar('#tela-vs');
+    assert.equal(await telaAtual(), 'tela-batalha');
+    assert.equal(await p.js(`document.getElementById('tela-batalha').dataset.modo`), 'ROLAR');
+    assert.equal(await p.js(`document.getElementById('coach-texto').textContent`), 'Girem os dois ao mesmo tempo');
+    await conferir('tutorial: dica antes do 1º giro');
+    await p.tocar('#coach');
+    assert.equal(await p.js(`document.getElementById('coach-texto').textContent`), 'Toque no desenho que ficou virado pra cima');
+    await p.tocar('#coach');
+    assert.equal(await p.js(`document.getElementById('coach').hidden`), true);
+    await p.tocar('#btn-regras');
+    await conferir('quem vence quem');
+    await p.tocar('#btn-regras-fechar');
+    await rodada('DEFESA', 'DEFESA');
+    await esperarFim();
+    assert.equal(await p.js(`document.getElementById('coach-texto').textContent`), 'Mesmo desenho: os dois perdem 1');
+    await conferir('tutorial: dica do choque');
+    await p.tocar('#coach');
+    await p.tocar('#metade-0 .palco-luta');
+    await rodada('ATAQUE', 'TROPECO');
+    await esperarFim();
+    assert.equal(await p.js(`document.getElementById('coach-texto').textContent`), 'O X perde pra tudo');
+    await p.tocar('#coach');
+    await jogarAteOFim('ATAQUE', 'DEFESA');
+    assert.equal(await p.js(`document.getElementById('fim-tutorial').hidden`), false);
+    await conferir('tutorial: fim com os próximos desafios');
+    assert.equal(await p.js(`JSON.parse(localStorage.getItem('bichinhos:tutorial')).done`), true);
+    await p.ir(base);
+    assert.equal(await telaAtual(), 'tela-inicio', 'concluído: não aparece mais');
+  });
+
+  test('tutorial: entrada direto pela peça, "Só tenho 1" e pular', async () => {
+    await p.movimentoReduzido(true);
+    await p.ir(base);
+    await p.js('localStorage.clear()');
+    await p.ir(`${base}?b=TAT01`);
+    assert.equal(await telaAtual(), 'tela-tutorial');
+    await conferir('tutorial: boas-vindas curta (NFC)');
+    await p.tocar('#btn-tutorial-principal');
+    assert.equal(await telaAtual(), 'tela-desbloqueio');
+    await p.tocar('#btn-desbloqueio-continuar');
+    await p.tocar('#btn-tutorial-so-um');
+    await p.tocar('#tela-vs');
+    assert.equal(await telaAtual(), 'tela-batalha');
+    assert.equal(await p.js(`document.getElementById('metade-0').classList.contains('metade-rival')`), true);
+    assert.match(await p.js(`document.getElementById('coach-texto').textContent`), /Rato/);
+    await conferir('tutorial: dica contra o Rato (nada girado)');
+    await p.tocar('#coach');
+    await p.tocar('#coach');
+    // pular: não volta sozinho
+    await p.js('localStorage.clear()');
+    await p.ir(base);
+    await p.tocar('#btn-tutorial-pular');
+    assert.equal(await telaAtual(), 'tela-inicio');
+    await p.ir(base);
+    assert.equal(await telaAtual(), 'tela-inicio');
+    await p.tocar('#btn-rever-tutorial');
+    assert.equal(await telaAtual(), 'tela-tutorial');
+    assert.deepEqual(p.erros, []);
+    await p.js(`localStorage.setItem('bichinhos:tutorial', JSON.stringify({ step: 5, done: true }))`);
   });
 
   test('VS animado', async () => {

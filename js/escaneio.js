@@ -8,7 +8,7 @@
 // abas. A expiração de 10 minutos impede que uma peça esquecida vire Jogador 1
 // da próxima brincadeira.
 
-import { buscarCriatura } from './criaturas.js?v=17';
+import { buscarCriatura } from './criaturas.js?v=18';
 
 export const CHAVE_AGUARDANDO = 'bichinhos:aguardando';
 export const EXPIRACAO_MS = 10 * 60 * 1000;

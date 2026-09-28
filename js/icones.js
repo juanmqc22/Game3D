@@ -225,3 +225,26 @@ export function iconeSom(modo) {
   }[modo] ?? '';
   return svg(falante + extra, `icone-som som-${modo}`);
 }
+
+// Tutorial: o celular que encosta na face do X (ilustração, js/app.js).
+// 'frente' — iPhone, com o topo destacado (é o topo que lê a etiqueta);
+// 'costas' — Android, com o círculo do NFC no meio das costas destacado.
+// viewBox 0 0 40 72; o corpo usa currentColor.
+export function iconeCelular(lado = 'frente') {
+  const corpo = '<rect x="2" y="2" width="36" height="68" rx="7" fill="currentColor"/>';
+  if (lado === 'costas') {
+    return '<svg class="icone celular" viewBox="0 0 40 72" aria-hidden="true" focusable="false">'
+      + corpo
+      + '<rect x="6" y="6" width="12" height="15" rx="3.5" fill="#39455a"/>'
+      + '<circle cx="12" cy="10.5" r="2.6" fill="#0a1120"/><circle cx="12" cy="16.5" r="2.6" fill="#0a1120"/>'
+      + '<circle class="celular-destaque" cx="20" cy="38" r="8.5" fill="none" stroke-width="3"/>'
+      + '<path class="celular-destaque" d="M16.5 38a3.5 3.5 0 0 1 7 0" fill="none" stroke-width="2.2" stroke-linecap="round"/>'
+      + '</svg>';
+  }
+  return '<svg class="icone celular" viewBox="0 0 40 72" aria-hidden="true" focusable="false">'
+    + corpo
+    + '<rect x="5.5" y="10" width="29" height="53" rx="2.5" fill="#dfe8f2"/>'
+    + '<rect x="14" y="4.6" width="12" height="3" rx="1.5" fill="#39455a"/>'
+    + '<path class="celular-destaque" d="M8 2.2h24" fill="none" stroke-width="4.4" stroke-linecap="round"/>'
+    + '</svg>';
+}

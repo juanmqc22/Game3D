@@ -17,10 +17,10 @@
   <!-- ?v=: ao mudar app.js, icones.js, regras.js, escaneio.js, colecao.js, estilo.css
        ou index.html, aumente o número aqui E nos imports do topo de js/app.js.
        Sem isso o celular pode misturar HTML novo com JS antigo do cache. -->
-  <link rel="stylesheet" href="./css/estilo.css?v=17">
+  <link rel="stylesheet" href="./css/estilo.css?v=18">
   <!-- Desvio NFC para /raposa/ (jogo adulto) só com partida da Raposa ativa. Script
        clássico e síncrono: precisa rodar antes do app ler o ?b=. -->
-  <script src="./js/desvio-raposa.js?v=17"></script>
+  <script src="./js/desvio-raposa.js?v=18"></script>
   <script>
     // Qualquer erro vira um aviso com botão de recarregar, em vez de a tela parar em silêncio.
     window.mostrarFalha = function () {
@@ -30,7 +30,7 @@
     window.addEventListener('error', function () { window.mostrarFalha(); });
     window.addEventListener('unhandledrejection', function () { window.mostrarFalha(); });
   </script>
-  <script type="module" src="./js/app.js?v=17" onerror="window.mostrarFalha()"></script>
+  <script type="module" src="./js/app.js?v=18" onerror="window.mostrarFalha()"></script>
 </head>
 <body>
   <main id="app">
@@ -46,6 +46,31 @@
       <button type="button" class="botao botao-secundario botao-colecao" id="btn-colecao">
         <span id="btn-colecao-texto">Minha coleção</span>
       </button>
+      <button type="button" class="botao-link botao-rever" id="btn-rever-tutorial">Como jogar · rever tutorial</button>
+    </section>
+
+    <!-- 1b. Tutorial do primeiro contato (js/tutorial.js + abrirTutorial em js/app.js):
+         boas-vindas, registrar os 2 bichinhos do kit, primeira partida. Uma tela
+         por passo, um botão principal; o conteúdo vem do JS. Tudo é pulável. -->
+    <section id="tela-tutorial" class="tela tela-centro tela-tutorial" hidden>
+      <p id="tutorial-trilha" class="tutorial-trilha" aria-hidden="true"></p>
+      <div id="tutorial-figura" class="tutorial-figura" aria-hidden="true"></div>
+      <h2 id="tutorial-titulo" class="tutorial-titulo"></h2>
+      <p id="tutorial-texto" class="tutorial-texto"></p>
+      <p id="tutorial-extra" class="tutorial-extra" hidden></p>
+      <p id="tutorial-aviso" class="erro" role="alert" hidden></p>
+      <p id="tutorial-status" class="aviso-leve" role="status" hidden></p>
+      <button type="button" class="botao botao-principal" id="btn-tutorial-principal" aria-pressed="false"></button>
+      <div class="tutorial-links">
+        <button type="button" class="botao-link" id="btn-tutorial-ouvir" hidden>Ouvir</button>
+        <button type="button" class="botao-link" id="btn-tutorial-ajuda" aria-expanded="false" aria-controls="tutorial-ajuda" hidden>Não leu?</button>
+        <button type="button" class="botao-link" id="btn-tutorial-so-um" hidden>Só tenho 1 bichinho</button>
+        <button type="button" class="botao-link" id="btn-tutorial-pular">Pular</button>
+      </div>
+      <div id="tutorial-ajuda" class="tutorial-ajuda chapa" hidden>
+        <p class="tutorial-ajuda-titulo">Não leu? Tente assim:</p>
+        <ol id="tutorial-ajuda-lista"></ol>
+      </div>
     </section>
 
     <!-- 2. Novo bichinho descoberto -->
@@ -124,6 +149,8 @@
         <button type="button" class="botao-link botao-sair" id="btn-sair">Sair</button>
         <!-- Som (na batalha ele mora aqui; nas outras telas, no canto: #btn-som) -->
         <button type="button" class="botao-som botao-som-faixa" id="btn-som-batalha" hidden></button>
+        <!-- "Quem vence quem" (#painel-regras) -->
+        <button type="button" class="botao-regras" id="btn-regras" aria-label="Quem vence quem" aria-controls="painel-regras">?</button>
         <span class="chip-rodada chip-rodada-cima" id="rodada-cima" aria-hidden="true"></span>
         <!-- Não há botão de lutar: a rodada resolve sozinha quando os dois
              responderam. O meio mostra VS, DESFAZER (1,5 s, com o anel fechando)
@@ -176,6 +203,24 @@
         <span class="fx-coracao"></span>
       </div>
 
+      <!-- Dica da primeira partida (tutorial): uma por vez, fecha num toque. Como o
+           meio da tela, vem escrita nos dois sentidos (a de cima, girada, para o
+           Jogador 1; contra o Rato ela some). -->
+      <div id="coach" class="coach" role="dialog" aria-modal="true" aria-labelledby="coach-texto" hidden>
+        <p class="coach-balao coach-cima" aria-hidden="true"></p>
+        <p class="coach-balao" id="coach-texto"></p>
+        <p class="coach-fechar">Toque para continuar</p>
+      </div>
+
+      <!-- "?": quem vence quem. De pé (o jogador de cima gira o celular). -->
+      <div id="painel-regras" class="painel-regras" role="dialog" aria-modal="true" aria-labelledby="regras-titulo" hidden>
+        <div class="regras-caixa chapa">
+          <p class="regras-titulo" id="regras-titulo">Quem vence quem</p>
+          <ul class="regras-lista" id="regras-lista"></ul>
+          <button type="button" class="botao botao-principal" id="btn-regras-fechar">Entendi</button>
+        </div>
+      </div>
+
       <!-- A tela conta a rodada por desenho; esta linha conta por extenso
            para quem usa leitor de tela. -->
       <p id="resultado-leitura" class="so-leitor" aria-live="polite"></p>
@@ -191,6 +236,11 @@
         <h2 id="fim-titulo" class="so-leitor"></h2>
         <p id="fim-sub" class="fim-sub"></p>
         <p id="fim-placar" class="fim-placar" hidden></p>
+        <!-- Fim da primeira partida do tutorial: os próximos desafios -->
+        <div id="fim-tutorial" class="fim-tutorial" hidden>
+          <p class="fim-tutorial-texto" id="fim-tutorial-texto"></p>
+          <div class="fim-desafios" id="fim-desafios"></div>
+        </div>
         <div class="fim-botoes">
           <button type="button" class="botao botao-principal" id="btn-revanche">Revanche</button>
           <button type="button" class="botao botao-secundario" id="btn-fim-nova">Nova batalha</button>
